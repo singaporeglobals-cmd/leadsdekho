@@ -20,16 +20,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  const text = await file.text();
   const fileName = file.name.toLowerCase();
 
   let rows: Record<string, string>[] = [];
   let headers: string[] = [];
 
   if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
-    // Parse XLS/XLSX file
+    // Parse XLS/XLSX file - must read as ArrayBuffer (binary), NOT as text
     try {
-      const workbook = XLSX.read(text, { type: "string" });
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const workbook = XLSX.read(uint8Array, { type: "array" });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: "" });
@@ -41,10 +42,12 @@ export async function POST(req: NextRequest) {
       headers = Object.keys(jsonData[0]);
       rows = jsonData;
     } catch (e) {
-      return NextResponse.json({ error: "Failed to parse XLS/XLSX file" }, { status: 400 });
+      console.error("XLS parse error:", e);
+      return NextResponse.json({ error: "Failed to parse XLS/XLSX file. Please check the file format." }, { status: 400 });
     }
   } else {
-    // Parse CSV file
+    // Parse CSV file - read as text
+    const text = await file.text();
     const lines = text.split("\n").filter((line) => line.trim());
 
     if (lines.length < 2) {
@@ -71,7 +74,7 @@ export async function POST(req: NextRequest) {
     const normalizedRow: Record<string, string> = {};
     const lowerRow: Record<string, string> = {};
     Object.keys(row).forEach((key) => {
-      lowerRow[key.toLowerCase().trim()] = row[key];
+      lowerRow[key.toLowerCase().trim()] = String(row[key] || "");
     });
 
     // Map columns: DATE, LEAD SOURCE, NAME, NUMBER, MAIL ID, PROJECT NAME
