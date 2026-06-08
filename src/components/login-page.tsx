@@ -51,7 +51,7 @@ export function LoginPage() {
               <Building2 className="h-6 w-6" />
             </div>
             <CardTitle className="text-2xl font-bold text-gray-900">
-              Welcome to PropCRM
+              Welcome to CRM Pro
             </CardTitle>
             <p className="text-sm text-gray-500">
               Sign in to your account to continue

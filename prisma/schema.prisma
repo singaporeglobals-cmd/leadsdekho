@@ -24,6 +24,7 @@ model User {
   siteVisits    SiteVisit[]
   assignedFrom  LeadAssignment[] @relation("AssignedFrom")
   assignedTo    LeadAssignment[] @relation("AssignedTo")
+  timeline      TimelineEvent[]
 }
 
 model Lead {
@@ -111,6 +112,7 @@ model TimelineEvent {
   leadId      String
   lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
   eventType   String
   description String
   createdAt   DateTime @default(now())

@@ -63,14 +63,25 @@ const SOURCES = [
 ];
 
 const statusColors: Record<string, string> = {
-  New: "bg-slate-100 text-slate-700",
-  Contacted: "bg-blue-100 text-blue-700",
-  Qualified: "bg-emerald-100 text-emerald-700",
-  "Visit Scheduled": "bg-amber-100 text-amber-700",
-  Visited: "bg-violet-100 text-violet-700",
-  Negotiation: "bg-orange-100 text-orange-700",
-  Won: "bg-green-100 text-green-700",
-  Lost: "bg-red-100 text-red-700",
+  New: "bg-slate-500 text-white",
+  Contacted: "bg-blue-500 text-white",
+  Qualified: "bg-cyan-500 text-white",
+  "Visit Scheduled": "bg-amber-500 text-white",
+  Visited: "bg-purple-500 text-white",
+  Negotiation: "bg-orange-500 text-white",
+  Won: "bg-emerald-500 text-white",
+  Lost: "bg-red-500 text-white",
+};
+
+const borderColorMap: Record<string, string> = {
+  New: "border-l-slate-500",
+  Contacted: "border-l-blue-500",
+  Qualified: "border-l-cyan-500",
+  "Visit Scheduled": "border-l-amber-500",
+  Visited: "border-l-purple-500",
+  Negotiation: "border-l-orange-500",
+  Won: "border-l-emerald-500",
+  Lost: "border-l-red-500",
 };
 
 interface Lead {
@@ -511,7 +522,7 @@ export function LeadList() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {leads.map((lead) => (
-            <Card key={lead.id} className="transition-all hover:shadow-md">
+            <Card key={lead.id} className={`transition-all hover:shadow-md border-l-4 ${borderColorMap[lead.pipelineStatus] || "border-l-gray-300"}`}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="min-w-0 flex-1">

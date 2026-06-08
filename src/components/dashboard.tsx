@@ -23,14 +23,14 @@ interface DashboardData {
 }
 
 const statusColors: Record<string, string> = {
-  New: "bg-slate-100 text-slate-700",
-  Contacted: "bg-blue-100 text-blue-700",
-  Qualified: "bg-emerald-100 text-emerald-700",
-  "Visit Scheduled": "bg-amber-100 text-amber-700",
-  Visited: "bg-violet-100 text-violet-700",
-  Negotiation: "bg-orange-100 text-orange-700",
-  Won: "bg-green-100 text-green-700",
-  Lost: "bg-red-100 text-red-700",
+  New: "bg-slate-500 text-white",
+  Contacted: "bg-blue-500 text-white",
+  Qualified: "bg-cyan-500 text-white",
+  "Visit Scheduled": "bg-amber-500 text-white",
+  Visited: "bg-purple-500 text-white",
+  Negotiation: "bg-orange-500 text-white",
+  Won: "bg-emerald-500 text-white",
+  Lost: "bg-red-500 text-white",
 };
 
 export function AdminDashboard() {
@@ -116,7 +116,7 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-violet-500">
+        <Card className="border-l-4 border-l-cyan-500">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -125,14 +125,14 @@ export function AdminDashboard() {
                   {data.totalProperties as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-violet-50 p-3">
-                <Home className="h-5 w-5 text-violet-600" />
+              <div className="rounded-lg bg-cyan-50 p-3">
+                <Home className="h-5 w-5 text-cyan-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500">
+        <Card className="border-l-4 border-l-emerald-600">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -141,8 +141,8 @@ export function AdminDashboard() {
                   {statusCounts["Won"] || 0}
                 </p>
               </div>
-              <div className="rounded-lg bg-green-50 p-3">
-                <TrendingUp className="h-5 w-5 text-green-600" />
+              <div className="rounded-lg bg-emerald-50 p-3">
+                <TrendingUp className="h-5 w-5 text-emerald-600" />
               </div>
             </div>
           </CardContent>
@@ -360,7 +360,7 @@ export function TelecallingDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-sky-500">
+        <Card className="border-l-4 border-l-blue-500">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -369,8 +369,8 @@ export function TelecallingDashboard() {
                   {data.allLeadsCount as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-sky-50 p-3">
-                <Building2 className="h-5 w-5 text-sky-600" />
+              <div className="rounded-lg bg-blue-50 p-3">
+                <Building2 className="h-5 w-5 text-blue-600" />
               </div>
             </div>
           </CardContent>
@@ -392,7 +392,7 @@ export function TelecallingDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-violet-500">
+        <Card className="border-l-4 border-l-purple-500">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -401,8 +401,8 @@ export function TelecallingDashboard() {
                   {data.myCallLogsCount as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-violet-50 p-3">
-                <Phone className="h-5 w-5 text-violet-600" />
+              <div className="rounded-lg bg-purple-50 p-3">
+                <Phone className="h-5 w-5 text-purple-600" />
               </div>
             </div>
           </CardContent>
@@ -613,7 +613,7 @@ export function SalesDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500">
+        <Card className="border-l-4 border-l-emerald-600">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -622,8 +622,8 @@ export function SalesDashboard() {
                   {data.wonDeals as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-green-50 p-3">
-                <TrendingUp className="h-5 w-5 text-green-600" />
+              <div className="rounded-lg bg-emerald-50 p-3">
+                <TrendingUp className="h-5 w-5 text-emerald-600" />
               </div>
             </div>
           </CardContent>

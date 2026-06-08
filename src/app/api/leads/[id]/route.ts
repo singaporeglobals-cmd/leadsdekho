@@ -21,7 +21,7 @@ export async function GET(
       followUps: { include: { user: { select: { id: true, name: true } } }, orderBy: { scheduledAt: "desc" } },
       siteVisits: { include: { user: { select: { id: true, name: true } } }, orderBy: { scheduledAt: "desc" } },
       assignments: { include: { fromUser: { select: { name: true } }, toUser: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
-      timeline: { include: { user: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
+      timeline: { orderBy: { createdAt: "desc" } },
     },
   });
 
@@ -34,7 +34,20 @@ export async function GET(
     }
   }
 
-  return NextResponse.json(lead);
+  // Enrich timeline with user names manually
+  const timelineUserIds = lead.timeline.map((t: { userId: string | null }) => t.userId).filter(Boolean) as string[];
+  const uniqueUserIds = [...new Set(timelineUserIds)];
+  const timelineUsers = uniqueUserIds.length > 0
+    ? await db.user.findMany({ where: { id: { in: uniqueUserIds } }, select: { id: true, name: true } })
+    : [];
+  const userMap = Object.fromEntries(timelineUsers.map((u: { id: string; name: string }) => [u.id, u.name]));
+
+  const enrichedTimeline = lead.timeline.map((t: { userId: string | null; [key: string]: unknown }) => ({
+    ...t,
+    user: t.userId ? { name: userMap[t.userId] || "Unknown" } : null,
+  }));
+
+  return NextResponse.json({ ...lead, timeline: enrichedTimeline });
 }
 
 // PUT /api/leads/[id] - Update a lead

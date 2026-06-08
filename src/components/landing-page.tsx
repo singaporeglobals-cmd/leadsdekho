@@ -28,7 +28,7 @@ export function LandingPage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 text-white">
             <Building2 className="h-5 w-5" />
           </div>
-          <span className="text-xl font-bold text-gray-900">PropCRM</span>
+          <span className="text-xl font-bold text-gray-900">CRM Pro</span>
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -229,7 +229,7 @@ export function LandingPage() {
             Ready to Transform Your Sales Process?
           </h2>
           <p className="mb-8 text-emerald-100">
-            Join hundreds of real estate teams already using PropCRM to close
+            Join hundreds of real estate teams already using CRM Pro to close
             more deals.
           </p>
           <Button
@@ -251,7 +251,7 @@ export function LandingPage() {
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-600 text-white">
               <Building2 className="h-4 w-4" />
             </div>
-            <span className="font-semibold text-gray-900">PropCRM</span>
+            <span className="font-semibold text-gray-900">CRM Pro</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-gray-500">
             <span>Real Estate CRM</span>
