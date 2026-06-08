@@ -19,7 +19,7 @@ import {
 import {
   Download, Calendar, TrendingUp, Building2, Users, Phone,
   Clock, MapPin, ChevronDown, ChevronUp, FileSpreadsheet,
-  BarChart3, Target,
+  BarChart3, Target, Pencil, ExternalLink,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 
@@ -87,6 +87,57 @@ function formatDate(dateStr: string) {
   if (!dateStr) return "";
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+// ─── Lead Row with Update Button ───
+function LeadRow({ lead }: { lead: Record<string, unknown> }) {
+  const { setSelectedLeadId, setPage } = useAppStore();
+  const handleUpdate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedLeadId(lead.id as string);
+    setPage("lead-detail");
+  };
+  return (
+    <TableRow>
+      <TableCell className="font-medium">{lead.name as string}</TableCell>
+      <TableCell>{lead.phone as string}</TableCell>
+      <TableCell><Badge variant="outline" className="text-xs">{lead.source as string}</Badge></TableCell>
+      <TableCell>{(lead.project as Record<string, string>)?.name || "-"}</TableCell>
+      <TableCell><StatusBadge status={lead.pipelineStatus as string} /></TableCell>
+      <TableCell>{(lead.currentOwner as Record<string, string>)?.name || "-"}</TableCell>
+      <TableCell className="text-right">
+        <Button size="sm" variant="ghost" className="h-7 gap-1 text-brand hover:text-brand-dark" onClick={handleUpdate}>
+          <Pencil className="h-3.5 w-3.5" /> Update
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+// ─── Lead Row with Update Button (flexible columns) ───
+function LeadRowSimple({ lead, showSource, showCreated }: { lead: Record<string, unknown>; showSource?: boolean; showCreated?: boolean }) {
+  const { setSelectedLeadId, setPage } = useAppStore();
+  const handleUpdate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedLeadId(lead.id as string);
+    setPage("lead-detail");
+  };
+  return (
+    <TableRow>
+      <TableCell className="font-medium">{lead.name as string}</TableCell>
+      <TableCell>{lead.phone as string}</TableCell>
+      {showSource && <TableCell><Badge variant="outline" className="text-xs">{lead.source as string}</Badge></TableCell>}
+      <TableCell>{(lead.project as Record<string, string>)?.name || "-"}</TableCell>
+      <TableCell><StatusBadge status={lead.pipelineStatus as string} /></TableCell>
+      <TableCell>{(lead.currentOwner as Record<string, string>)?.name || "-"}</TableCell>
+      {showCreated && <TableCell className="text-xs text-muted-foreground">{formatDate(((lead.createdAt as string) || "").split("T")[0])}</TableCell>}
+      <TableCell className="text-right">
+        <Button size="sm" variant="ghost" className="h-7 gap-1 text-brand hover:text-brand-dark" onClick={handleUpdate}>
+          <Pencil className="h-3.5 w-3.5" /> Update
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
 }
 
 async function handleExport(type: string, from?: string, to?: string) {
@@ -259,18 +310,12 @@ function DateWiseReport() {
                                         <TableHead>Project</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Owner</TableHead>
+                                        <TableHead className="text-right">Action</TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                       {leads.map((lead) => (
-                                        <TableRow key={lead.id as string}>
-                                          <TableCell className="font-medium">{lead.name as string}</TableCell>
-                                          <TableCell>{lead.phone as string}</TableCell>
-                                          <TableCell><Badge variant="outline" className="text-xs">{lead.source as string}</Badge></TableCell>
-                                          <TableCell>{(lead.project as Record<string, string>)?.name || "-"}</TableCell>
-                                          <TableCell><StatusBadge status={lead.pipelineStatus as string} /></TableCell>
-                                          <TableCell>{(lead.currentOwner as Record<string, string>)?.name || "-"}</TableCell>
-                                        </TableRow>
+                                        <LeadRow key={lead.id as string} lead={lead} />
                                       ))}
                                     </TableBody>
                                   </Table>
@@ -468,18 +513,12 @@ function SourceWiseReport() {
                                         <TableHead>Status</TableHead>
                                         <TableHead>Owner</TableHead>
                                         <TableHead>Created</TableHead>
+                                        <TableHead className="text-right">Action</TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                       {leads.map((lead) => (
-                                        <TableRow key={lead.id as string}>
-                                          <TableCell className="font-medium">{lead.name as string}</TableCell>
-                                          <TableCell>{lead.phone as string}</TableCell>
-                                          <TableCell>{(lead.project as Record<string, string>)?.name || "-"}</TableCell>
-                                          <TableCell><StatusBadge status={lead.pipelineStatus as string} /></TableCell>
-                                          <TableCell>{(lead.currentOwner as Record<string, string>)?.name || "-"}</TableCell>
-                                          <TableCell className="text-xs text-muted-foreground">{formatDate(((lead.createdAt as string) || "").split("T")[0])}</TableCell>
-                                        </TableRow>
+                                        <LeadRowSimple key={lead.id as string} lead={lead} showCreated showSource={false} />
                                       ))}
                                     </TableBody>
                                   </Table>
@@ -705,18 +744,12 @@ function ProjectWiseReport() {
                                         <TableHead>Status</TableHead>
                                         <TableHead>Owner</TableHead>
                                         <TableHead>Created</TableHead>
+                                        <TableHead className="text-right">Action</TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                       {leads.map((lead) => (
-                                        <TableRow key={lead.id as string}>
-                                          <TableCell className="font-medium">{lead.name as string}</TableCell>
-                                          <TableCell>{lead.phone as string}</TableCell>
-                                          <TableCell><Badge variant="outline" className="text-xs">{lead.source as string}</Badge></TableCell>
-                                          <TableCell><StatusBadge status={lead.pipelineStatus as string} /></TableCell>
-                                          <TableCell>{(lead.currentOwner as Record<string, string>)?.name || "-"}</TableCell>
-                                          <TableCell className="text-xs text-muted-foreground">{formatDate(((lead.createdAt as string) || "").split("T")[0])}</TableCell>
-                                        </TableRow>
+                                        <LeadRowSimple key={lead.id as string} lead={lead} showCreated showSource />
                                       ))}
                                     </TableBody>
                                   </Table>
