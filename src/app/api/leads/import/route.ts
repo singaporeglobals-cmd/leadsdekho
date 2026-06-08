@@ -21,17 +21,45 @@ export async function POST(req: NextRequest) {
   }
 
   const fileName = file.name.toLowerCase();
+  const isXls = fileName.endsWith(".xlsx") || fileName.endsWith(".xls");
 
   let rows: Record<string, string>[] = [];
   let headers: string[] = [];
 
-  if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
-    // Parse XLS/XLSX file - must read as ArrayBuffer (binary), NOT as text
+  if (isXls) {
+    // Parse XLS/XLSX file - binary format, must read as ArrayBuffer
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      const workbook = XLSX.read(uint8Array, { type: "array" });
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Try multiple parsing approaches for maximum compatibility
+      let workbook: XLSX.WorkBook | null = null;
+
+      // Approach 1: Read from Buffer with "buffer" type
+      try {
+        workbook = XLSX.read(buffer, { type: "buffer" });
+      } catch (e1) {
+        console.log("XLS approach 1 (buffer) failed, trying approach 2...");
+        // Approach 2: Read from base64
+        try {
+          const base64 = buffer.toString("base64");
+          workbook = XLSX.read(base64, { type: "base64" });
+        } catch (e2) {
+          console.log("XLS approach 2 (base64) failed, trying approach 3...");
+          // Approach 3: Read from Uint8Array
+          const uint8Array = new Uint8Array(arrayBuffer);
+          workbook = XLSX.read(uint8Array, { type: "array" });
+        }
+      }
+
+      if (!workbook) {
+        return NextResponse.json({ error: "Failed to parse XLS/XLSX file. Please try saving it as .xlsx format or CSV." }, { status: 400 });
+      }
+
       const sheetName = workbook.SheetNames[0];
+      if (!sheetName) {
+        return NextResponse.json({ error: "File has no sheets" }, { status: 400 });
+      }
       const sheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: "" });
 
@@ -43,26 +71,35 @@ export async function POST(req: NextRequest) {
       rows = jsonData;
     } catch (e) {
       console.error("XLS parse error:", e);
-      return NextResponse.json({ error: "Failed to parse XLS/XLSX file. Please check the file format." }, { status: 400 });
+      return NextResponse.json({
+        error: "Failed to parse XLS/XLSX file. Please try exporting as CSV (.csv) or modern Excel (.xlsx) format and upload again."
+      }, { status: 400 });
     }
   } else {
-    // Parse CSV file - read as text
-    const text = await file.text();
-    const lines = text.split("\n").filter((line) => line.trim());
+    // Parse CSV file - plain text
+    try {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter((line) => line.trim());
 
-    if (lines.length < 2) {
-      return NextResponse.json({ error: "CSV file must have headers and at least one row" }, { status: 400 });
-    }
+      if (lines.length < 2) {
+        return NextResponse.json({ error: "CSV file must have headers and at least one row" }, { status: 400 });
+      }
 
-    headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+      // Handle CSV with comma separation, respect quotes
+      headers = parseCSVLine(lines[0]).map((h) => h.trim().toLowerCase());
 
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(",").map((v) => v.trim().replace(/^["']|["']$/g, ""));
-      const row: Record<string, string> = {};
-      headers.forEach((header, idx) => {
-        row[header] = values[idx] || "";
-      });
-      rows.push(row);
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const values = parseCSVLine(lines[i]);
+        const row: Record<string, string> = {};
+        headers.forEach((header, idx) => {
+          row[header] = (values[idx] || "").trim();
+        });
+        rows.push(row);
+      }
+    } catch (e) {
+      console.error("CSV parse error:", e);
+      return NextResponse.json({ error: "Failed to parse CSV file. Please check the format." }, { status: 400 });
     }
   }
 
@@ -74,7 +111,7 @@ export async function POST(req: NextRequest) {
     const normalizedRow: Record<string, string> = {};
     const lowerRow: Record<string, string> = {};
     Object.keys(row).forEach((key) => {
-      lowerRow[key.toLowerCase().trim()] = String(row[key] || "");
+      lowerRow[key.toLowerCase().trim()] = String(row[key] || "").trim();
     });
 
     // Map columns: DATE, LEAD SOURCE, NAME, NUMBER, MAIL ID, PROJECT NAME
@@ -88,13 +125,13 @@ export async function POST(req: NextRequest) {
       normalizedRow.name = lowerRow["lead_name"] || lowerRow["name"] || "";
     }
     if (lowerRow["number"] || lowerRow["phone"] || lowerRow["mobile"]) {
-      normalizedRow.phone = lowerRow["number"] || lowerRow["phone"] || lowerRow["mobile"] || "";
+      normalizedRow.phone = String(lowerRow["number"] || lowerRow["phone"] || lowerRow["mobile"] || "");
     }
     if (lowerRow["mail id"] || lowerRow["mail_id"] || lowerRow["mail"] || lowerRow["email"]) {
       normalizedRow.email = lowerRow["mail id"] || lowerRow["mail_id"] || lowerRow["mail"] || lowerRow["email"] || "";
     }
-    if (lowerRow["project_name"] || lowerRow["project"]) {
-      normalizedRow.projectName = lowerRow["project_name"] || lowerRow["project"] || "";
+    if (lowerRow["project_name"] || lowerRow["project name"] || lowerRow["project"]) {
+      normalizedRow.projectName = lowerRow["project_name"] || lowerRow["project name"] || lowerRow["project"] || "";
       if (normalizedRow.projectName) {
         projectNames.add(normalizedRow.projectName);
       }
@@ -155,4 +192,32 @@ export async function POST(req: NextRequest) {
     duplicateCount: rowsWithDuplicates.filter((r) => r.isDuplicate).length,
     projectNames: Array.from(projectNames),
   });
+}
+
+// Simple CSV line parser that handles quoted values
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+        // Escaped quote
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === "," && !inQuotes) {
+      result.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current);
+  return result;
 }
