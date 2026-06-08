@@ -51,7 +51,7 @@ export function AdminDashboard() {
         {[...Array(4)].map((_, i) => (
           <Card key={i} className="animate-pulse">
             <CardContent className="p-6">
-              <div className="h-16 rounded bg-gray-200" />
+              <div className="h-16 rounded bg-muted" />
             </CardContent>
           </Card>
         ))}
@@ -88,8 +88,8 @@ export function AdminDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Total Leads</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">Total Leads</p>
+                <p className="text-2xl font-bold text-foreground">
                   {data.totalLeads as number}
                 </p>
               </div>
@@ -104,13 +104,13 @@ export function AdminDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Today Follow-ups</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">Today Follow-ups</p>
+                <p className="text-2xl font-bold text-foreground">
                   {data.todayFollowUps as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-amber-50 p-3">
-                <CalendarCheck className="h-5 w-5 text-amber-600" />
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-950 p-3">
+                <CalendarCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
           </CardContent>
@@ -120,13 +120,13 @@ export function AdminDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Total Properties</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">Total Properties</p>
+                <p className="text-2xl font-bold text-foreground">
                   {data.totalProperties as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-cyan-50 p-3">
-                <Home className="h-5 w-5 text-cyan-600" />
+              <div className="rounded-lg bg-cyan-50 dark:bg-cyan-950 p-3">
+                <Home className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
               </div>
             </div>
           </CardContent>
@@ -136,8 +136,8 @@ export function AdminDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Won Deals</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">Won Deals</p>
+                <p className="text-2xl font-bold text-foreground">
                   {statusCounts["Won"] || 0}
                 </p>
               </div>
@@ -157,7 +157,7 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent className="space-y-2">
             {Object.entries(statusCounts).length === 0 ? (
-              <p className="text-sm text-gray-500">No leads yet</p>
+              <p className="text-sm text-muted-foreground">No leads yet</p>
             ) : (
               Object.entries(statusCounts)
                 .sort((a, b) => b[1] - a[1])
@@ -172,7 +172,7 @@ export function AdminDashboard() {
                     >
                       {status}
                     </Badge>
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-medium text-foreground">
                       {count as number}
                     </span>
                   </div>
@@ -188,7 +188,7 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent className="space-y-2">
             {Object.entries(sourceCounts).length === 0 ? (
-              <p className="text-sm text-gray-500">No data</p>
+              <p className="text-sm text-muted-foreground">No data</p>
             ) : (
               Object.entries(sourceCounts)
                 .sort((a, b) => b[1] - a[1])
@@ -197,8 +197,8 @@ export function AdminDashboard() {
                     key={source}
                     className="flex items-center justify-between"
                   >
-                    <span className="text-sm text-gray-600">{source}</span>
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm text-muted-foreground">{source}</span>
+                    <span className="text-sm font-medium text-foreground">
                       {count as number}
                     </span>
                   </div>
@@ -214,19 +214,19 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent className="space-y-3">
             {teamMembers.length === 0 ? (
-              <p className="text-sm text-gray-500">No team members</p>
+              <p className="text-sm text-muted-foreground">No team members</p>
             ) : (
               teamMembers.map((member) => (
                 <div key={member.id} className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium text-foreground">
                       {member.name}
                     </span>
                     <Badge variant="outline" className="text-xs">
                       {member.role}
                     </Badge>
                   </div>
-                  <div className="flex gap-3 text-xs text-gray-500">
+                  <div className="flex gap-3 text-xs text-muted-foreground">
                     <span>{member._count.currentLeads} owned</span>
                     <span>{member._count.callLogs} calls</span>
                   </div>
@@ -252,7 +252,7 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent>
           {recentLeads.length === 0 ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               No leads yet. Create your first lead!
             </p>
           ) : (
@@ -260,11 +260,11 @@ export function AdminDashboard() {
               {recentLeads.map((lead) => (
                 <div
                   key={lead.id}
-                  className="flex items-center justify-between rounded-lg border border-gray-100 p-3 transition-colors hover:bg-gray-50"
+                  className="flex items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-muted"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">
+                      <span className="font-medium text-foreground">
                         {lead.name}
                       </span>
                       <Badge
@@ -274,7 +274,7 @@ export function AdminDashboard() {
                         {lead.pipelineStatus}
                       </Badge>
                     </div>
-                    <div className="mt-0.5 text-sm text-gray-500">
+                    <div className="mt-0.5 text-sm text-muted-foreground">
                       {lead.phone} · Owner: {lead.currentOwner.name}
                     </div>
                   </div>
@@ -316,7 +316,7 @@ export function TelecallingDashboard() {
         {[...Array(4)].map((_, i) => (
           <Card key={i} className="animate-pulse">
             <CardContent className="p-6">
-              <div className="h-16 rounded bg-gray-200" />
+              <div className="h-16 rounded bg-muted" />
             </CardContent>
           </Card>
         ))}
@@ -348,8 +348,8 @@ export function TelecallingDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">My Leads</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">My Leads</p>
+                <p className="text-2xl font-bold text-foreground">
                   {data.myLeadsCount as number}
                 </p>
               </div>
@@ -364,13 +364,13 @@ export function TelecallingDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">All Leads</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">All Leads</p>
+                <p className="text-2xl font-bold text-foreground">
                   {data.allLeadsCount as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-blue-50 p-3">
-                <Building2 className="h-5 w-5 text-blue-600" />
+              <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-3">
+                <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </CardContent>
@@ -380,13 +380,13 @@ export function TelecallingDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Today Follow-ups</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">Today Follow-ups</p>
+                <p className="text-2xl font-bold text-foreground">
                   {todayFollowUps.length}
                 </p>
               </div>
-              <div className="rounded-lg bg-amber-50 p-3">
-                <CalendarCheck className="h-5 w-5 text-amber-600" />
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-950 p-3">
+                <CalendarCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
           </CardContent>
@@ -396,13 +396,13 @@ export function TelecallingDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Calls Made</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">Calls Made</p>
+                <p className="text-2xl font-bold text-foreground">
                   {data.myCallLogsCount as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-purple-50 p-3">
-                <Phone className="h-5 w-5 text-purple-600" />
+              <div className="rounded-lg bg-purple-50 dark:bg-purple-950 p-3">
+                <Phone className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
           </CardContent>
@@ -417,7 +417,7 @@ export function TelecallingDashboard() {
           </CardHeader>
           <CardContent className="space-y-2">
             {Object.entries(statusCounts).length === 0 ? (
-              <p className="text-sm text-gray-500">No leads yet</p>
+              <p className="text-sm text-muted-foreground">No leads yet</p>
             ) : (
               Object.entries(statusCounts)
                 .sort((a, b) => b[1] - a[1])
@@ -432,7 +432,7 @@ export function TelecallingDashboard() {
                     >
                       {status}
                     </Badge>
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-medium text-foreground">
                       {count as number}
                     </span>
                   </div>
@@ -456,7 +456,7 @@ export function TelecallingDashboard() {
           </CardHeader>
           <CardContent>
             {todayFollowUps.length === 0 ? (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 No follow-ups scheduled for today
               </p>
             ) : (
@@ -464,13 +464,13 @@ export function TelecallingDashboard() {
                 {todayFollowUps.map((fu) => (
                   <div
                     key={fu.id}
-                    className="rounded-lg border border-gray-100 p-3"
+                    className="rounded-lg border border-border p-3"
                   >
-                    <div className="font-medium text-gray-900">
+                    <div className="font-medium text-foreground">
                       {fu.lead.name}
                     </div>
-                    <div className="text-sm text-gray-500">{fu.lead.phone}</div>
-                    <div className="mt-1 text-xs text-gray-400">
+                    <div className="text-sm text-muted-foreground">{fu.lead.phone}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
                       {fu.notes}
                     </div>
                   </div>
@@ -488,19 +488,19 @@ export function TelecallingDashboard() {
         </CardHeader>
         <CardContent>
           {recentCallLogs.length === 0 ? (
-            <p className="text-sm text-gray-500">No calls logged yet</p>
+            <p className="text-sm text-muted-foreground">No calls logged yet</p>
           ) : (
             <div className="space-y-2">
               {recentCallLogs.map((log) => (
                 <div
                   key={log.id}
-                  className="flex items-center justify-between rounded-lg border border-gray-100 p-3"
+                  className="flex items-center justify-between rounded-lg border border-border p-3"
                 >
                   <div>
-                    <div className="font-medium text-gray-900">
+                    <div className="font-medium text-foreground">
                       {log.lead.name}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                       {log.notes.substring(0, 80)}
                       {log.notes.length > 80 ? "..." : ""}
                     </div>
@@ -536,7 +536,7 @@ export function SalesDashboard() {
         {[...Array(4)].map((_, i) => (
           <Card key={i} className="animate-pulse">
             <CardContent className="p-6">
-              <div className="h-16 rounded bg-gray-200" />
+              <div className="h-16 rounded bg-muted" />
             </CardContent>
           </Card>
         ))}
@@ -569,8 +569,8 @@ export function SalesDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">My Leads</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">My Leads</p>
+                <p className="text-2xl font-bold text-foreground">
                   {data.myLeadsCount as number}
                 </p>
               </div>
@@ -585,13 +585,13 @@ export function SalesDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Visits Scheduled</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">Visits Scheduled</p>
+                <p className="text-2xl font-bold text-foreground">
                   {data.visitsScheduled as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-amber-50 p-3">
-                <MapPin className="h-5 w-5 text-amber-600" />
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-950 p-3">
+                <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
           </CardContent>
@@ -601,13 +601,13 @@ export function SalesDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">In Negotiation</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">In Negotiation</p>
+                <p className="text-2xl font-bold text-foreground">
                   {data.dealsInNegotiation as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-orange-50 p-3">
-                <Phone className="h-5 w-5 text-orange-600" />
+              <div className="rounded-lg bg-orange-50 dark:bg-orange-950 p-3">
+                <Phone className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               </div>
             </div>
           </CardContent>
@@ -617,8 +617,8 @@ export function SalesDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Won Deals</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">Won Deals</p>
+                <p className="text-2xl font-bold text-foreground">
                   {data.wonDeals as number}
                 </p>
               </div>
@@ -637,7 +637,7 @@ export function SalesDashboard() {
           </CardHeader>
           <CardContent className="space-y-2">
             {Object.entries(statusCounts).length === 0 ? (
-              <p className="text-sm text-gray-500">No leads yet</p>
+              <p className="text-sm text-muted-foreground">No leads yet</p>
             ) : (
               Object.entries(statusCounts)
                 .sort((a, b) => b[1] - a[1])
@@ -652,7 +652,7 @@ export function SalesDashboard() {
                     >
                       {status}
                     </Badge>
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-medium text-foreground">
                       {count as number}
                     </span>
                   </div>
@@ -667,7 +667,7 @@ export function SalesDashboard() {
           </CardHeader>
           <CardContent>
             {todayFollowUps.length === 0 ? (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 No follow-ups for today
               </p>
             ) : (
@@ -675,13 +675,13 @@ export function SalesDashboard() {
                 {todayFollowUps.map((fu) => (
                   <div
                     key={fu.id}
-                    className="rounded-lg border border-gray-100 p-3"
+                    className="rounded-lg border border-border p-3"
                   >
-                    <div className="font-medium text-gray-900">
+                    <div className="font-medium text-foreground">
                       {fu.lead.name}
                     </div>
-                    <div className="text-sm text-gray-500">{fu.lead.phone}</div>
-                    <div className="mt-1 text-xs text-gray-400">{fu.notes}</div>
+                    <div className="text-sm text-muted-foreground">{fu.lead.phone}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{fu.notes}</div>
                   </div>
                 ))}
               </div>
@@ -705,17 +705,17 @@ export function SalesDashboard() {
         </CardHeader>
         <CardContent>
           {recentLeads.length === 0 ? (
-            <p className="text-sm text-gray-500">No leads yet</p>
+            <p className="text-sm text-muted-foreground">No leads yet</p>
           ) : (
             <div className="space-y-2">
               {recentLeads.map((lead) => (
                 <div
                   key={lead.id}
-                  className="flex items-center justify-between rounded-lg border border-gray-100 p-3 hover:bg-gray-50"
+                  className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted"
                 >
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">
+                      <span className="font-medium text-foreground">
                         {lead.name}
                       </span>
                       <Badge
@@ -725,7 +725,7 @@ export function SalesDashboard() {
                         {lead.pipelineStatus}
                       </Badge>
                     </div>
-                    <div className="text-sm text-gray-500">{lead.phone}</div>
+                    <div className="text-sm text-muted-foreground">{lead.phone}</div>
                   </div>
                   <Button
                     variant="ghost"

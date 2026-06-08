@@ -17,7 +17,12 @@ export async function POST(
     return NextResponse.json({ error: "Target user is required" }, { status: 400 });
   }
 
-  const lead = await db.lead.findUnique({ where: { id } });
+  const lead = await db.lead.findUnique({
+    where: { id },
+    include: {
+      primaryOwner: { select: { id: true, name: true, role: true } },
+    },
+  });
   if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
 
   // Only currentOwner or Admin can assign
@@ -40,10 +45,17 @@ export async function POST(
     },
   });
 
-  // Update current owner
+  // Determine if primaryOwner should also be updated
+  // If current primaryOwner is admin, update primaryOwner to new assignee
+  const updateData: Record<string, string> = { currentOwnerId: toUserId };
+  if (lead.primaryOwner.role === "admin") {
+    updateData.primaryOwnerId = toUserId;
+  }
+
+  // Update lead
   const updated = await db.lead.update({
     where: { id },
-    data: { currentOwnerId: toUserId },
+    data: updateData,
     include: {
       primaryOwner: { select: { id: true, name: true, email: true, role: true } },
       currentOwner: { select: { id: true, name: true, email: true, role: true } },

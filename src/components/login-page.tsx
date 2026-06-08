@@ -34,26 +34,26 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-light via-white to-steel-light px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-light via-background to-steel-light px-4">
       <div className="w-full max-w-md">
         {/* Back button */}
         <button
           onClick={() => setPage("landing")}
-          className="mb-6 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+          className="mb-6 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to home
         </button>
 
-        <Card className="border-gray-200 shadow-lg">
+        <Card className="border-border shadow-lg">
           <CardHeader className="text-center">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand text-white">
               <Building2 className="h-6 w-6" />
             </div>
-            <CardTitle className="text-2xl font-bold text-gray-900">
+            <CardTitle className="text-2xl font-bold text-foreground">
               Welcome to Leads Dekho
             </CardTitle>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Sign in to your account to continue
             </p>
           </CardHeader>
@@ -86,7 +86,7 @@ export function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -98,7 +98,7 @@ export function LoginPage() {
               </div>
 
               {error && (
-                <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+                <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
                   {error}
                 </div>
               )}
@@ -113,8 +113,8 @@ export function LoginPage() {
             </form>
 
             {/* Demo credentials */}
-            <div className="mt-6 border-t border-gray-200 pt-4">
-              <p className="mb-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <div className="mt-6 border-t border-border pt-4">
+              <p className="mb-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Demo Accounts
               </p>
               <div className="space-y-2">
@@ -144,13 +144,13 @@ export function LoginPage() {
                       setEmail(demo.email);
                       setPassword(demo.password);
                     }}
-                    className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-left transition-colors hover:bg-gray-50"
+                    className="flex w-full items-center justify-between rounded-lg border border-border px-3 py-2 text-left transition-colors hover:bg-muted"
                   >
                     <div>
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-foreground">
                         {demo.email}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-muted-foreground">
                         Password: {demo.password}
                       </div>
                     </div>

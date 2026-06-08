@@ -21,6 +21,14 @@ export async function GET(
       followUps: { include: { user: { select: { id: true, name: true } } }, orderBy: { scheduledAt: "desc" } },
       siteVisits: { include: { user: { select: { id: true, name: true } } }, orderBy: { scheduledAt: "desc" } },
       assignments: { include: { fromUser: { select: { name: true } }, toUser: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
+      leadProperties: {
+        include: {
+          property: {
+            select: { id: true, name: true, type: true, status: true, price: true, location: true, size: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      },
       timeline: { orderBy: { createdAt: "desc" } },
     },
   });

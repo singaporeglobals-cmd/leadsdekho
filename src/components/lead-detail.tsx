@@ -38,6 +38,8 @@ import {
   Plus,
   CheckCircle2,
   XCircle,
+  Home,
+  Trash2,
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -62,6 +64,20 @@ const statusColors: Record<string, string> = {
   Lost: "bg-red-500 text-white",
 };
 
+interface LeadProperty {
+  id: string;
+  property: {
+    id: string;
+    name: string;
+    type: string;
+    status: string;
+    price: number | null;
+    location: string | null;
+    size: string | null;
+  };
+  createdAt: string;
+}
+
 interface LeadDetail {
   id: string;
   name: string;
@@ -77,6 +93,7 @@ interface LeadDetail {
   primaryOwner: { id: string; name: string; email: string; role: string };
   currentOwner: { id: string; name: string; email: string; role: string };
   project: { id: string; name: string } | null;
+  leadProperties: LeadProperty[];
   callLogs: Array<{
     id: string;
     notes: string;
@@ -133,6 +150,17 @@ export function LeadDetail() {
   const [lostReasonOpen, setLostReasonOpen] = useState(false);
   const [lostReason, setLostReason] = useState("");
 
+  // Properties
+  const [addPropertyOpen, setAddPropertyOpen] = useState(false);
+  const [availableProperties, setAvailableProperties] = useState<Array<{
+    id: string;
+    name: string;
+    type: string;
+    status: string;
+    price: number | null;
+  }>>([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState("");
+
   const [users, setUsers] = useState<Array<{ id: string; name: string; role: string }>>([]);
 
   const fetchLead = async () => {
@@ -155,22 +183,13 @@ export function LeadDetail() {
     setLoading(false);
   };
 
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch("/api/users");
-      if (res.ok) setUsers(await res.json());
-    } catch {
-      // ignore
-    }
-  };
-
   useEffect(() => {
     let cancelled = false;
-    if (!selectedLeadId) {
-      setLoading(false);
-      return;
-    }
     (async () => {
+      if (!selectedLeadId) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       const res = await fetch(`/api/leads/${selectedLeadId}`);
       if (!cancelled && res.ok) {
@@ -289,11 +308,46 @@ export function LeadDetail() {
     }
   };
 
+  // Property management
+  const handleAddProperty = async () => {
+    if (!lead || !selectedPropertyId) return;
+    const res = await fetch(`/api/leads/${lead.id}/properties`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ propertyId: selectedPropertyId }),
+    });
+    if (res.ok) {
+      setAddPropertyOpen(false);
+      setSelectedPropertyId("");
+      fetchLead();
+    }
+  };
+
+  const handleRemoveProperty = async (propertyId: string) => {
+    if (!lead) return;
+    const res = await fetch(`/api/leads/${lead.id}/properties`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ propertyId }),
+    });
+    if (res.ok) {
+      fetchLead();
+    }
+  };
+
+  const fetchAvailableProperties = async () => {
+    const res = await fetch("/api/properties");
+    if (res.ok) {
+      const data = await res.json();
+      setAvailableProperties(data.properties || []);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-10 w-32 animate-pulse rounded bg-gray-200" />
-        <div className="h-48 animate-pulse rounded-lg bg-gray-200" />
+        <div className="h-10 w-32 animate-pulse rounded bg-muted" />
+        <div className="h-48 animate-pulse rounded-lg bg-muted" />
       </div>
     );
   }
@@ -301,7 +355,7 @@ export function LeadDetail() {
   if (!lead) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Lead not found</p>
+        <p className="text-muted-foreground">Lead not found</p>
         <Button variant="outline" className="mt-4" onClick={() => setPage("leads")}>
           Back to Leads
         </Button>
@@ -321,8 +375,8 @@ export function LeadDetail() {
           <ArrowLeft className="mr-1 h-4 w-4" /> Back
         </Button>
         <div className="flex-1">
-          <h2 className="text-xl font-bold text-gray-900">{lead.name}</h2>
-          <p className="text-sm text-gray-500">{lead.phone}</p>
+          <h2 className="text-xl font-bold text-foreground">{lead.name}</h2>
+          <p className="text-sm text-muted-foreground">{lead.phone}</p>
         </div>
         {canEdit && !editing && (
           <Button
@@ -351,9 +405,9 @@ export function LeadDetail() {
 
       {/* View-only banner */}
       {isViewOnly && (
-        <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3">
-          <Lock className="h-4 w-4 text-amber-600" />
-          <span className="text-sm text-amber-700">
+        <div className="flex items-center gap-2 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-3">
+          <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <span className="text-sm text-amber-700 dark:text-amber-300">
             Read-only — This lead is now with {lead.currentOwner.name}
           </span>
         </div>
@@ -371,7 +425,7 @@ export function LeadDetail() {
                 className={`flex items-center gap-1 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
                   lead.pipelineStatus === stage
                     ? `${statusColors[stage]} ring-2 ring-offset-1 ring-brand`
-                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    : "bg-muted text-muted-foreground hover:bg-accent"
                 } ${!canEdit ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
               >
                 {stage}
@@ -379,7 +433,7 @@ export function LeadDetail() {
             ))}
           </div>
           {lead.lostReason && (
-            <div className="mt-2 text-sm text-red-600">
+            <div className="mt-2 text-sm text-red-600 dark:text-red-400">
               Lost Reason: {lead.lostReason}
             </div>
           )}
@@ -474,27 +528,103 @@ export function LeadDetail() {
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <div className="text-xs text-gray-500">Email</div>
-                    <div className="text-sm">{lead.email || "—"}</div>
+                    <div className="text-xs text-muted-foreground">Email</div>
+                    <div className="text-sm text-foreground">{lead.email || "—"}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Source</div>
-                    <div className="text-sm">{lead.source}</div>
+                    <div className="text-xs text-muted-foreground">Source</div>
+                    <div className="text-sm text-foreground">{lead.source}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Budget</div>
-                    <div className="text-sm">{lead.budget || "—"}</div>
+                    <div className="text-xs text-muted-foreground">Budget</div>
+                    <div className="text-sm text-foreground">{lead.budget || "—"}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Project</div>
-                    <div className="text-sm">
+                    <div className="text-xs text-muted-foreground">Project</div>
+                    <div className="text-sm text-foreground">
                       {lead.project?.name || "—"}
                     </div>
                   </div>
                   <div className="sm:col-span-2">
-                    <div className="text-xs text-gray-500">Notes</div>
-                    <div className="text-sm">{lead.notes || "—"}</div>
+                    <div className="text-xs text-muted-foreground">Notes</div>
+                    <div className="text-sm text-foreground">{lead.notes || "—"}</div>
                   </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Linked Properties */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Home className="h-4 w-4" />
+                Properties ({lead.leadProperties?.length || 0})
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  fetchAvailableProperties();
+                  setAddPropertyOpen(true);
+                }}
+              >
+                <Plus className="mr-1 h-3 w-3" /> Add Property
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {!lead.leadProperties || lead.leadProperties.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No properties linked to this lead yet.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {lead.leadProperties.map((lp) => (
+                    <div
+                      key={lp.id}
+                      className="flex items-center justify-between rounded-lg border border-border p-3"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-foreground text-sm">
+                            {lp.property.name}
+                          </span>
+                          <Badge variant="outline" className="text-[10px]">
+                            {lp.property.type}
+                          </Badge>
+                          <Badge
+                            variant="secondary"
+                            className={`text-[10px] ${
+                              lp.property.status === "Available"
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+                                : lp.property.status === "Sold"
+                                ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                                : "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+                            }`}
+                          >
+                            {lp.property.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                          {lp.property.location && <span>{lp.property.location}</span>}
+                          {lp.property.price && (
+                            <span className="font-medium text-foreground">
+                              ₹{lp.property.price.toLocaleString()}
+                            </span>
+                          )}
+                          {lp.property.size && <span>{lp.property.size}</span>}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleRemoveProperty(lp.property.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
@@ -527,7 +657,7 @@ export function LeadDetail() {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-red-600 hover:text-red-700"
+                className="text-destructive hover:text-destructive"
                 onClick={() => setLostReasonOpen(true)}
               >
                 <XCircle className="mr-1 h-3 w-3" /> Mark Lost
@@ -553,7 +683,7 @@ export function LeadDetail() {
               <Card>
                 <CardContent className="p-4">
                   {lead.timeline.length === 0 ? (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       No timeline events yet
                     </p>
                   ) : (
@@ -561,13 +691,13 @@ export function LeadDetail() {
                       {lead.timeline.map((event) => (
                         <div
                           key={event.id}
-                          className="flex gap-3 border-l-2 border-gray-200 pl-3"
+                          className="flex gap-3 border-l-2 border-border pl-3"
                         >
                           <div>
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-foreground">
                               {event.description}
                             </div>
-                            <div className="text-xs text-gray-400">
+                            <div className="text-xs text-muted-foreground">
                               {event.user?.name || "System"} ·{" "}
                               {new Date(event.createdAt).toLocaleString()}
                             </div>
@@ -583,24 +713,24 @@ export function LeadDetail() {
               <Card>
                 <CardContent className="p-4">
                   {lead.callLogs.length === 0 ? (
-                    <p className="text-sm text-gray-500">No calls logged</p>
+                    <p className="text-sm text-muted-foreground">No calls logged</p>
                   ) : (
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {lead.callLogs.map((log) => (
                         <div
                           key={log.id}
-                          className="rounded-lg border border-gray-100 p-3"
+                          className="rounded-lg border border-border p-3"
                         >
                           <div className="flex items-center justify-between">
                             <Badge variant="outline">{log.callType}</Badge>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-muted-foreground">
                               {new Date(log.callDate).toLocaleString()}
                             </span>
                           </div>
-                          <div className="mt-1 text-sm text-gray-700">
+                          <div className="mt-1 text-sm text-foreground">
                             {log.notes}
                           </div>
-                          <div className="mt-1 text-xs text-gray-400">
+                          <div className="mt-1 text-xs text-muted-foreground">
                             by {log.user.name}
                           </div>
                         </div>
@@ -614,7 +744,7 @@ export function LeadDetail() {
               <Card>
                 <CardContent className="p-4">
                   {lead.followUps.length === 0 ? (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       No follow-ups scheduled
                     </p>
                   ) : (
@@ -622,19 +752,19 @@ export function LeadDetail() {
                       {lead.followUps.map((fu) => (
                         <div
                           key={fu.id}
-                          className="flex items-start justify-between rounded-lg border border-gray-100 p-3"
+                          className="flex items-start justify-between rounded-lg border border-border p-3"
                         >
                           <div>
-                            <div className="text-sm text-gray-700">
+                            <div className="text-sm text-foreground">
                               {fu.notes}
                             </div>
-                            <div className="text-xs text-gray-400">
+                            <div className="text-xs text-muted-foreground">
                               {new Date(fu.scheduledAt).toLocaleString()} · by{" "}
                               {fu.user.name}
                             </div>
                           </div>
                           {fu.completed ? (
-                            <Badge className="bg-green-100 text-green-700">
+                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
                               <CheckCircle2 className="mr-1 h-3 w-3" /> Done
                             </Badge>
                           ) : (
@@ -651,7 +781,7 @@ export function LeadDetail() {
               <Card>
                 <CardContent className="p-4">
                   {lead.siteVisits.length === 0 ? (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       No site visits scheduled
                     </p>
                   ) : (
@@ -659,32 +789,32 @@ export function LeadDetail() {
                       {lead.siteVisits.map((visit) => (
                         <div
                           key={visit.id}
-                          className="rounded-lg border border-gray-100 p-3"
+                          className="rounded-lg border border-border p-3"
                         >
                           <div className="flex items-center justify-between">
                             <Badge
                               variant="secondary"
                               className={
                                 visit.status === "Completed"
-                                  ? "bg-green-100 text-green-700"
+                                  ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                                   : visit.status === "Cancelled"
-                                    ? "bg-red-100 text-red-700"
+                                    ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
                                     : visit.status === "No Show"
-                                      ? "bg-gray-100 text-gray-700"
-                                      : "bg-amber-100 text-amber-700"
+                                      ? "bg-muted text-muted-foreground"
+                                      : "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
                               }
                             >
                               {visit.status}
                             </Badge>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-muted-foreground">
                               {new Date(visit.scheduledAt).toLocaleString()}
                             </span>
                           </div>
-                          <div className="mt-1 text-sm text-gray-700">
+                          <div className="mt-1 text-sm text-foreground">
                             {visit.notes}
                           </div>
                           {visit.feedback && (
-                            <div className="mt-1 text-sm text-gray-500">
+                            <div className="mt-1 text-sm text-muted-foreground">
                               Feedback: {visit.feedback}
                             </div>
                           )}
@@ -707,10 +837,10 @@ export function LeadDetail() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <div className="text-xs text-gray-500">Primary Owner</div>
+                <div className="text-xs text-muted-foreground">Primary Owner</div>
                 <div className="flex items-center gap-2 mt-1">
-                  <User className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm font-medium">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">
                     {lead.primaryOwner.name}
                   </span>
                   <Badge variant="outline" className="text-[10px]">
@@ -720,10 +850,10 @@ export function LeadDetail() {
               </div>
               <Separator />
               <div>
-                <div className="text-xs text-gray-500">Current Owner</div>
+                <div className="text-xs text-muted-foreground">Current Owner</div>
                 <div className="flex items-center gap-2 mt-1">
                   <User className="h-4 w-4 text-brand" />
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium text-foreground">
                     {lead.currentOwner.name}
                   </span>
                   <Badge variant="outline" className="text-[10px]">
@@ -747,15 +877,15 @@ export function LeadDetail() {
                   {lead.assignments.map((a) => (
                     <div
                       key={a.id}
-                      className="text-xs text-gray-600 border-l-2 border-gray-200 pl-2"
+                      className="text-xs text-foreground border-l-2 border-border pl-2"
                     >
                       <div>
                         {a.fromUser.name} → {a.toUser.name}
                       </div>
                       {a.reason && (
-                        <div className="text-gray-400">{a.reason}</div>
+                        <div className="text-muted-foreground">{a.reason}</div>
                       )}
-                      <div className="text-gray-400">
+                      <div className="text-muted-foreground">
                         {new Date(a.createdAt).toLocaleString()}
                       </div>
                     </div>
@@ -769,14 +899,14 @@ export function LeadDetail() {
           <Card>
             <CardContent className="p-4 space-y-2">
               <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-gray-400" />
-                <span className="text-gray-500">Created:</span>
-                <span>{new Date(lead.createdAt).toLocaleDateString()}</span>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Created:</span>
+                <span className="text-foreground">{new Date(lead.createdAt).toLocaleDateString()}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-gray-400" />
-                <span className="text-gray-500">Updated:</span>
-                <span>{new Date(lead.updatedAt).toLocaleDateString()}</span>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Updated:</span>
+                <span className="text-foreground">{new Date(lead.updatedAt).toLocaleDateString()}</span>
               </div>
             </CardContent>
           </Card>
@@ -831,10 +961,50 @@ export function LeadDetail() {
             </div>
             <Button
               onClick={handleMarkLost}
-              className="w-full bg-red-600 hover:bg-red-700"
+              className="w-full bg-destructive hover:bg-destructive/90"
               disabled={!lostReason}
             >
               Mark as Lost
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Property Dialog */}
+      <Dialog open={addPropertyOpen} onOpenChange={setAddPropertyOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Property</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Select Property</Label>
+              <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a property..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableProperties
+                    .filter(
+                      (p) =>
+                        !lead.leadProperties?.some(
+                          (lp) => lp.property.id === p.id
+                        )
+                    )
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name} — {p.type} {p.price ? `(₹${p.price.toLocaleString()})` : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              onClick={handleAddProperty}
+              className="w-full bg-brand hover:bg-brand-dark"
+              disabled={!selectedPropertyId}
+            >
+              Link Property
             </Button>
           </div>
         </DialogContent>

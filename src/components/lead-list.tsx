@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +38,8 @@ import {
   Filter,
   Upload,
   RefreshCw,
+  Send,
+  UserPlus,
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -73,15 +74,15 @@ const statusColors: Record<string, string> = {
   Lost: "bg-red-500 text-white",
 };
 
-const borderColorMap: Record<string, string> = {
-  New: "border-l-slate-500",
-  Contacted: "border-l-blue-500",
-  Qualified: "border-l-cyan-500",
-  "Visit Scheduled": "border-l-amber-500",
-  Visited: "border-l-purple-500",
-  Negotiation: "border-l-orange-500",
-  Won: "border-l-emerald-500",
-  Lost: "border-l-red-500",
+const dotColors: Record<string, string> = {
+  New: "bg-slate-500",
+  Contacted: "bg-blue-500",
+  Qualified: "bg-cyan-500",
+  "Visit Scheduled": "bg-amber-500",
+  Visited: "bg-purple-500",
+  Negotiation: "bg-orange-500",
+  Won: "bg-emerald-500",
+  Lost: "bg-red-500",
 };
 
 interface Lead {
@@ -147,7 +148,7 @@ export function LeadList() {
     assignTo: "",
   });
 
-  // Feedback dialog
+  // Feedback dialog (for dropdown menu)
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackLead, setFeedbackLead] = useState<Lead | null>(null);
   const [feedbackForm, setFeedbackForm] = useState({
@@ -157,7 +158,7 @@ export function LeadList() {
     assignTo: "",
   });
 
-  // Assign dialog
+  // Assign dialog (for dropdown menu)
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignLead, setAssignLead] = useState<Lead | null>(null);
   const [assignTo, setAssignTo] = useState("");
@@ -165,6 +166,14 @@ export function LeadList() {
 
   // Delete confirm
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Inline feedback state per lead
+  const [inlineFeedback, setInlineFeedback] = useState<Record<string, string>>({});
+  const [submittingFeedback, setSubmittingFeedback] = useState<Record<string, boolean>>({});
+
+  // Inline assign state per lead
+  const [inlineAssign, setInlineAssign] = useState<Record<string, string>>({});
+  const [submittingAssign, setSubmittingAssign] = useState<Record<string, boolean>>({});
 
   const doRefresh = () => setRefresh((r) => r + 1);
 
@@ -278,6 +287,42 @@ export function LeadList() {
     }
   };
 
+  // Inline feedback submit
+  const handleInlineFeedback = async (leadId: string) => {
+    const notes = inlineFeedback[leadId];
+    if (!notes?.trim()) return;
+
+    setSubmittingFeedback((prev) => ({ ...prev, [leadId]: true }));
+    const res = await fetch(`/api/leads/${leadId}/call-logs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notes: notes.trim(), callType: "Feedback" }),
+    });
+    if (res.ok) {
+      setInlineFeedback((prev) => ({ ...prev, [leadId]: "" }));
+      doRefresh();
+    }
+    setSubmittingFeedback((prev) => ({ ...prev, [leadId]: false }));
+  };
+
+  // Inline assign submit
+  const handleInlineAssign = async (leadId: string) => {
+    const toUserId = inlineAssign[leadId];
+    if (!toUserId) return;
+
+    setSubmittingAssign((prev) => ({ ...prev, [leadId]: true }));
+    const res = await fetch(`/api/leads/${leadId}/assign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ toUserId, reason: "Quick assign from lead list" }),
+    });
+    if (res.ok) {
+      setInlineAssign((prev) => ({ ...prev, [leadId]: "" }));
+      doRefresh();
+    }
+    setSubmittingAssign((prev) => ({ ...prev, [leadId]: false }));
+  };
+
   const canEdit = (lead: Lead) => {
     if (!user) return false;
     return user.role === "admin" || lead.currentOwnerId === user.id;
@@ -294,9 +339,9 @@ export function LeadList() {
     <div className="space-y-4">
       {/* Filters Bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-center gap-2">
+        <div className="flex flex-1 items-center gap-2 flex-wrap">
           <div className="relative flex-1 sm:max-w-xs">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search leads..."
               value={search}
@@ -495,60 +540,175 @@ export function LeadList() {
       </div>
 
       {/* Count */}
-      <div className="text-sm text-gray-500">
+      <div className="text-sm text-muted-foreground">
         {total} lead{total !== 1 ? "s" : ""} found
       </div>
 
-      {/* Lead Cards */}
+      {/* Lead List - Flat Line-by-Line Layout */}
       {loading ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-2">
           {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-4">
-                <div className="h-24 rounded bg-gray-200" />
-              </CardContent>
-            </Card>
+            <div key={i} className="h-24 animate-pulse rounded-lg bg-muted" />
           ))}
         </div>
       ) : leads.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-lg font-medium text-gray-500">No leads found</p>
-            <p className="text-sm text-gray-400">
-              Create a new lead or adjust your filters
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-lg border border-border py-12 text-center">
+          <p className="text-lg font-medium text-muted-foreground">No leads found</p>
+          <p className="text-sm text-muted-foreground">
+            Create a new lead or adjust your filters
+          </p>
+        </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-lg border border-border overflow-hidden">
+          {/* Header row */}
+          <div className="hidden md:grid md:grid-cols-[1fr_1fr_auto] gap-4 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border">
+            <div>Lead Info</div>
+            <div>Details</div>
+            <div className="min-w-[280px]">Actions</div>
+          </div>
+
+          {/* Lead rows */}
           {leads.map((lead) => (
-            <Card key={lead.id} className={`transition-all hover:shadow-md border-l-4 ${borderColorMap[lead.pipelineStatus] || "border-l-gray-300"}`}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-900 truncate">
-                        {lead.name}
-                      </span>
-                      <Badge
-                        variant="secondary"
-                        className={`text-[10px] px-1.5 py-0 shrink-0 ${statusColors[lead.pipelineStatus] || ""}`}
-                      >
-                        {lead.pipelineStatus}
-                      </Badge>
-                      {canViewOnly(lead) && (
-                        <Lock className="h-3 w-3 text-gray-400 shrink-0" />
-                      )}
-                    </div>
-                    <div className="mt-1 text-sm text-gray-500">
-                      {lead.phone}
-                      {lead.email && ` · ${lead.email}`}
-                    </div>
+            <div
+              key={lead.id}
+              className="border-b border-border last:border-b-0 px-4 py-3 hover:bg-muted/30 transition-colors"
+            >
+              {/* Row 1: Main info */}
+              <div className="flex flex-col md:grid md:grid-cols-[1fr_1fr_auto] gap-2 md:gap-4">
+                {/* Left: Lead Info */}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className={`h-2 w-2 rounded-full shrink-0 ${dotColors[lead.pipelineStatus] || "bg-gray-400"}`} />
+                    <span className="font-semibold text-foreground text-sm truncate">
+                      {lead.name}
+                    </span>
+                    <Badge
+                      variant="secondary"
+                      className={`text-[10px] px-1.5 py-0 shrink-0 ${statusColors[lead.pipelineStatus] || ""}`}
+                    >
+                      {lead.pipelineStatus}
+                    </Badge>
+                    {canViewOnly(lead) && (
+                      <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+                    )}
                   </div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {lead.phone}
+                    {lead.email && ` · ${lead.email}`}
+                  </div>
+                </div>
+
+                {/* Middle: Details */}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                    <span>Source: {lead.source}</span>
+                    {lead.project && <span>· {lead.project.name}</span>}
+                    {lead.budget && <span>· {lead.budget}</span>}
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs">
+                    <span className="text-muted-foreground">
+                      Owner: <span className="text-foreground font-medium">{lead.currentOwner.name}</span>
+                    </span>
+                    {canViewOnly(lead) && (
+                      <span className="text-amber-600 dark:text-amber-400 font-medium">
+                        (View Only)
+                      </span>
+                    )}
+                  </div>
+                  {/* Last feedback */}
+                  {lead.callLogs.length > 0 && (
+                    <div className="mt-1 text-xs text-muted-foreground truncate max-w-md">
+                      Last: &quot;{lead.callLogs[0].notes}&quot;
+                    </div>
+                  )}
+                </div>
+
+                {/* Right: Inline Actions */}
+                <div className="flex items-center gap-2 min-w-0 md:min-w-[280px]">
+                  {/* Quick Feedback - inline */}
+                  {canEdit(lead) && (
+                    <div className="flex items-center gap-1 flex-1 min-w-0">
+                      <Input
+                        placeholder="Quick feedback..."
+                        value={inlineFeedback[lead.id] || ""}
+                        onChange={(e) =>
+                          setInlineFeedback((prev) => ({
+                            ...prev,
+                            [lead.id]: e.target.value,
+                          }))
+                        }
+                        className="h-7 text-xs min-w-0"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleInlineFeedback(lead.id);
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 shrink-0 text-brand hover:text-brand-dark"
+                        disabled={
+                          !inlineFeedback[lead.id]?.trim() ||
+                          submittingFeedback[lead.id]
+                        }
+                        onClick={() => handleInlineFeedback(lead.id)}
+                      >
+                        <Send className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Quick Assign - inline (admin only) */}
+                  {user?.role === "admin" && users.length > 0 && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Select
+                        value={inlineAssign[lead.id] || ""}
+                        onValueChange={(v) =>
+                          setInlineAssign((prev) => ({ ...prev, [lead.id]: v }))
+                        }
+                      >
+                        <SelectTrigger className="h-7 w-[120px] text-xs">
+                          <UserPlus className="mr-1 h-3 w-3 shrink-0" />
+                          <SelectValue placeholder="Assign" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {users
+                            .filter((u) => u.isActive && u.id !== lead.currentOwnerId)
+                            .map((u) => (
+                              <SelectItem key={u.id} value={u.id}>
+                                {u.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 shrink-0 text-brand hover:text-brand-dark"
+                        disabled={!inlineAssign[lead.id] || submittingAssign[lead.id]}
+                        onClick={() => handleInlineAssign(lead.id)}
+                      >
+                        <Send className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* View + Dropdown */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 shrink-0"
+                    onClick={() => {
+                      setSelectedLeadId(lead.id);
+                      setPage("lead-detail");
+                    }}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </Button>
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                        <MoreVertical className="h-4 w-4" />
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0">
+                        <MoreVertical className="h-3.5 w-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -590,7 +750,7 @@ export function LeadList() {
                       )}
                       {user?.role === "admin" && (
                         <DropdownMenuItem
-                          className="text-red-600"
+                          className="text-destructive"
                           onClick={() => setDeleteId(lead.id)}
                         >
                           <Trash2 className="mr-2 h-3 w-3" /> Delete Lead
@@ -599,72 +759,8 @@ export function LeadList() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                  <span>Source: {lead.source}</span>
-                  {lead.project && <span>· {lead.project.name}</span>}
-                  {lead.budget && <span>· {lead.budget}</span>}
-                </div>
-
-                <div className="mt-1 text-xs text-gray-400">
-                  Owner: {lead.currentOwner.name}
-                  {canViewOnly(lead) && (
-                    <span className="ml-1 text-amber-600 font-medium">
-                      (View Only)
-                    </span>
-                  )}
-                </div>
-
-                {/* Last feedback */}
-                {lead.callLogs.length > 0 && (
-                  <div className="mt-2 rounded-md bg-gray-50 p-2">
-                    <div className="text-xs font-medium text-gray-500">
-                      Last Feedback
-                    </div>
-                    <div className="text-xs text-gray-700 line-clamp-2">
-                      {lead.callLogs[0].notes}
-                    </div>
-                    <div className="text-[10px] text-gray-400">
-                      by {lead.callLogs[0].user.name}
-                    </div>
-                  </div>
-                )}
-
-                {/* Quick action buttons */}
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => {
-                      setSelectedLeadId(lead.id);
-                      setPage("lead-detail");
-                    }}
-                  >
-                    <Eye className="mr-1 h-3 w-3" /> View
-                  </Button>
-                  {canEdit(lead) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => {
-                        setFeedbackLead(lead);
-                        setFeedbackForm({
-                          notes: "",
-                          callType: "Feedback",
-                          callDate: new Date().toISOString().slice(0, 16),
-                          assignTo: "",
-                        });
-                        setFeedbackOpen(true);
-                      }}
-                    >
-                      <MessageSquare className="mr-1 h-3 w-3" /> Feedback
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -677,14 +773,14 @@ export function LeadList() {
           </DialogHeader>
           <div className="space-y-3">
             {feedbackLead?.callLogs && feedbackLead.callLogs.length > 0 && (
-              <div className="rounded-md bg-gray-50 p-3">
-                <div className="text-xs font-medium text-gray-500 mb-1">
+              <div className="rounded-md bg-muted p-3">
+                <div className="text-xs font-medium text-muted-foreground mb-1">
                   Last Feedback
                 </div>
-                <div className="text-sm text-gray-700">
+                <div className="text-sm text-foreground">
                   {feedbackLead.callLogs[0].notes}
                 </div>
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-muted-foreground">
                   by {feedbackLead.callLogs[0].user.name}
                 </div>
               </div>
@@ -776,7 +872,7 @@ export function LeadList() {
             <DialogTitle>Assign Lead — {assignLead?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-muted-foreground">
               Current Owner: {assignLead?.currentOwner.name}
             </div>
             <div className="space-y-1">
@@ -822,7 +918,7 @@ export function LeadList() {
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Are you sure you want to delete this lead? This action cannot be
             undone.
           </p>

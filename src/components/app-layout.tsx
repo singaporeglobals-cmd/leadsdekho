@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useTheme } from "next-themes";
 import {
   LayoutDashboard,
   Users,
@@ -17,6 +18,8 @@ import {
   Menu,
   X,
   ChevronRight,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 interface NavItem {
@@ -39,6 +42,7 @@ const navItems: NavItem[] = [
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, currentPage, setPage, logout, sidebarOpen, setSidebarOpen } =
     useAppStore();
+  const { theme, setTheme } = useTheme();
 
   const filteredNavItems = navItems.filter(
     (item) => !item.roles || item.roles.includes(user?.role || "")
@@ -79,7 +83,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-background">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -159,10 +163,26 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           </div>
+
+          {/* Theme Toggle */}
           <Button
             variant="ghost"
             size="sm"
-            className="mt-3 w-full justify-start text-gray-400 hover:text-red-400 hover:bg-gray-800"
+            className="mt-3 w-full justify-start text-gray-400 hover:text-white hover:bg-gray-800"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          >
+            {theme === "dark" ? (
+              <Sun className="mr-2 h-4 w-4" />
+            ) : (
+              <Moon className="mr-2 h-4 w-4" />
+            )}
+            {theme === "dark" ? "Light Mode" : "Dark Mode"}
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-1 w-full justify-start text-gray-400 hover:text-red-400 hover:bg-gray-800"
             onClick={logout}
           >
             <LogOut className="mr-2 h-4 w-4" />
@@ -174,14 +194,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="flex h-16 items-center gap-4 border-b border-gray-200 bg-white px-4 lg:px-6">
+        <header className="flex h-16 items-center gap-4 border-b border-border bg-background px-4 lg:px-6">
           <button
             className="lg:hidden"
             onClick={() => setSidebarOpen(true)}
           >
-            <Menu className="h-5 w-5 text-gray-600" />
+            <Menu className="h-5 w-5 text-foreground" />
           </button>
-          <h1 className="text-lg font-semibold text-gray-900">
+          <h1 className="text-lg font-semibold text-foreground flex-1">
             {currentPage === "dashboard" && "Dashboard"}
             {currentPage === "leads" && "Lead Management"}
             {currentPage === "lead-detail" && "Lead Details"}
@@ -191,6 +211,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {currentPage === "reports" && "Reports"}
             {currentPage === "users" && "User Management"}
           </h1>
+          {/* Header theme toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          >
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
+            <span className="sr-only">Toggle theme</span>
+          </Button>
         </header>
 
         {/* Page content */}

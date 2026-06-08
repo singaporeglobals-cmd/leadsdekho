@@ -51,6 +51,7 @@ model Lead {
   siteVisits      SiteVisit[]
   assignments     LeadAssignment[]
   timeline        TimelineEvent[]
+  leadProperties  LeadProperty[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -142,6 +143,18 @@ model Property {
   description String?
   projectId   String?
   project     Project? @relation(fields: [projectId], references: [id])
+  leadProperties LeadProperty[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model LeadProperty {
+  id         String   @id @default(cuid())
+  leadId     String
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([leadId, propertyId])
 }

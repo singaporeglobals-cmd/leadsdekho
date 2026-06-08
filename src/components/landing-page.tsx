@@ -11,7 +11,6 @@ import {
   BarChart3,
   Shield,
   ArrowRight,
-  CheckCircle2,
   MapPin,
   Home,
   Target,
@@ -21,20 +20,20 @@ export function LandingPage() {
   const { setPage } = useAppStore();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-light via-white to-steel-light">
+    <div className="min-h-screen bg-gradient-to-br from-brand-light via-background to-steel-light">
       {/* Navigation */}
       <nav className="flex items-center justify-between px-6 py-4 lg:px-12">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-white">
             <Building2 className="h-5 w-5" />
           </div>
-          <span className="text-xl font-bold text-gray-900">Leads Dekho</span>
+          <span className="text-xl font-bold text-foreground">Leads Dekho</span>
         </div>
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             onClick={() => setPage("login")}
-            className="text-gray-600 hover:text-gray-900"
+            className="text-muted-foreground hover:text-foreground"
           >
             Sign In
           </Button>
@@ -54,11 +53,11 @@ export function LandingPage() {
             <Target className="h-4 w-4" />
             Real Estate CRM Built for Growth
           </div>
-          <h1 className="mb-6 text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl">
+          <h1 className="mb-6 text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             Close More Deals with
             <span className="text-brand"> Smart Lead Management</span>
           </h1>
-          <p className="mx-auto mb-8 max-w-2xl text-lg text-gray-600">
+          <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground">
             From first call to closed deal — manage your entire real estate sales
             pipeline with intelligent tracking, team collaboration, and powerful
             analytics.
@@ -88,7 +87,7 @@ export function LandingPage() {
       </section>
 
       {/* Stats Bar */}
-      <section className="border-y border-gray-200 bg-white/80 px-6 py-8 lg:px-12">
+      <section className="border-y border-border bg-card/80 px-6 py-8 lg:px-12">
         <div className="mx-auto grid max-w-5xl grid-cols-2 gap-8 lg:grid-cols-4">
           {[
             { value: "500+", label: "Active Teams" },
@@ -100,7 +99,7 @@ export function LandingPage() {
               <div className="text-2xl font-bold text-brand lg:text-3xl">
                 {stat.value}
               </div>
-              <div className="text-sm text-gray-500">{stat.label}</div>
+              <div className="text-sm text-muted-foreground">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -110,10 +109,10 @@ export function LandingPage() {
       <section id="features" className="px-6 py-16 lg:px-12 lg:py-24">
         <div className="mx-auto max-w-6xl">
           <div className="mb-12 text-center">
-            <h2 className="mb-3 text-3xl font-bold text-gray-900">
+            <h2 className="mb-3 text-3xl font-bold text-foreground">
               Everything You Need to Close Deals
             </h2>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Purpose-built features for real estate sales teams
             </p>
           </div>
@@ -158,7 +157,7 @@ export function LandingPage() {
             ].map((feature) => (
               <Card
                 key={feature.title}
-                className="border-gray-200 bg-white/80 transition-all hover:shadow-lg hover:-translate-y-1"
+                className="border-border bg-card/80 transition-all hover:shadow-lg hover:-translate-y-1"
               >
                 <CardContent className="p-6">
                   <div
@@ -168,10 +167,10 @@ export function LandingPage() {
                       className={`h-6 w-6 text-${feature.color}-600`}
                     />
                   </div>
-                  <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                  <h3 className="mb-2 text-lg font-semibold text-foreground">
                     {feature.title}
                   </h3>
-                  <p className="text-sm text-gray-600">{feature.desc}</p>
+                  <p className="text-sm text-muted-foreground">{feature.desc}</p>
                 </CardContent>
               </Card>
             ))}
@@ -180,13 +179,13 @@ export function LandingPage() {
       </section>
 
       {/* How It Works */}
-      <section className="bg-white px-6 py-16 lg:px-12 lg:py-24">
+      <section className="bg-card px-6 py-16 lg:px-12 lg:py-24">
         <div className="mx-auto max-w-4xl">
           <div className="mb-12 text-center">
-            <h2 className="mb-3 text-3xl font-bold text-gray-900">
+            <h2 className="mb-3 text-3xl font-bold text-foreground">
               How It Works
             </h2>
-            <p className="text-gray-600">Get started in minutes</p>
+            <p className="text-muted-foreground">Get started in minutes</p>
           </div>
           <div className="space-y-8">
             {[
@@ -211,10 +210,10 @@ export function LandingPage() {
                   {item.step}
                 </div>
                 <div>
-                  <h3 className="mb-1 text-lg font-semibold text-gray-900">
+                  <h3 className="mb-1 text-lg font-semibold text-foreground">
                     {item.title}
                   </h3>
-                  <p className="text-gray-600">{item.desc}</p>
+                  <p className="text-muted-foreground">{item.desc}</p>
                 </div>
               </div>
             ))}
@@ -245,15 +244,15 @@ export function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 bg-gray-50 px-6 py-8 lg:px-12">
+      <footer className="border-t border-border bg-muted px-6 py-8 lg:px-12">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-brand text-white">
               <Building2 className="h-4 w-4" />
             </div>
-            <span className="font-semibold text-gray-900">Leads Dekho</span>
+            <span className="font-semibold text-foreground">Leads Dekho</span>
           </div>
-          <div className="flex items-center gap-6 text-sm text-gray-500">
+          <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <span>Real Estate CRM</span>
             <span>Built with Next.js</span>
           </div>
