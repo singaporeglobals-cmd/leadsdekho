@@ -41,9 +41,9 @@ import {
   RefreshCw,
   Send,
   UserPlus,
-  CheckSquare,
   UsersRound,
   Sparkles,
+  CalendarClock,
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -120,7 +120,7 @@ interface Lead {
 interface UserItem {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   role: string;
   isActive: boolean;
 }
@@ -167,7 +167,7 @@ export function LeadList() {
     assignTo: "",
   });
 
-  // Feedback dialog (for dropdown menu)
+  // Feedback dialog (for dropdown menu + direct button)
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackLead, setFeedbackLead] = useState<Lead | null>(null);
   const [feedbackForm, setFeedbackForm] = useState({
@@ -179,7 +179,7 @@ export function LeadList() {
     dropLead: false,
   });
 
-  // Assign dialog (for dropdown menu)
+  // Assign dialog (for dropdown menu + direct button)
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignLead, setAssignLead] = useState<Lead | null>(null);
   const [assignTo, setAssignTo] = useState("");
@@ -224,7 +224,7 @@ export function LeadList() {
     return () => { cancelled = true; };
   }, [search, statusFilter, sourceFilter, refresh]);
 
-  // Fetch users, projects, and properties for ALL roles (not just admin)
+  // Fetch users, projects, and properties for ALL roles
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -232,12 +232,12 @@ export function LeadList() {
       const uRes = await fetch("/api/users");
       if (!cancelled && uRes.ok) {
         const userData = await uRes.json();
-        // Only admin gets full user list, others get filtered
         if (user?.role === "admin") {
           setUsers(userData);
         } else {
-          // For telecaller/sales, show all active non-admin users
-          setUsers(userData.filter((u: UserItem) => u.isActive && u.role !== "admin"));
+          // For telecaller/sales, show all active users including themselves
+          // They need to see other people to assign to
+          setUsers(userData.filter((u: UserItem) => u.isActive));
         }
       }
       // Fetch projects
@@ -462,9 +462,41 @@ export function LeadList() {
     return lead.primaryOwnerId === user.id && lead.currentOwnerId !== user.id;
   };
 
+  // Whether current user can assign this lead (admin always can, current owner can, primary owner can reassign)
+  const canAssign = (lead: Lead) => {
+    if (!user) return false;
+    if (user.role === "admin") return true;
+    if (lead.currentOwnerId === user.id) return true;
+    // Primary owner who is not current owner can also assign
+    if (lead.primaryOwnerId === user.id) return true;
+    return false;
+  };
+
   // Filter users for assign dropdown based on role
   const getAssignableUsers = (excludeUserId?: string) => {
-    return users.filter((u) => u.isActive && u.id !== excludeUserId);
+    return users.filter((u) => u.isActive && u.id !== excludeUserId && u.role !== "admin");
+  };
+
+  // Open feedback dialog for a lead
+  const openFeedbackDialog = (lead: Lead) => {
+    setFeedbackLead(lead);
+    setFeedbackForm({
+      notes: "",
+      callType: "Feedback",
+      callDate: new Date().toISOString().slice(0, 16),
+      assignTo: "",
+      followUpDate: "",
+      dropLead: false,
+    });
+    setFeedbackOpen(true);
+  };
+
+  // Open assign dialog for a lead
+  const openAssignDialog = (lead: Lead) => {
+    setAssignLead(lead);
+    setAssignTo("");
+    setAssignReason("");
+    setAssignOpen(true);
   };
 
   return (
@@ -757,7 +789,7 @@ export function LeadList() {
             </div>
             <div>Lead Info</div>
             <div>Details</div>
-            <div className="min-w-[280px]">Actions</div>
+            <div className="min-w-[340px]">Actions</div>
           </div>
 
           {/* Lead rows */}
@@ -837,73 +869,58 @@ export function LeadList() {
                 </div>
 
                 {/* Right: Inline Actions */}
-                <div className="flex items-center gap-2 min-w-0 md:min-w-[280px]">
-                  {/* Quick Feedback - inline */}
+                <div className="flex items-center gap-1.5 min-w-0 md:min-w-[340px] flex-wrap">
+                  {/* Quick Feedback button - visible for all roles who can edit */}
                   {canEdit(lead) && (
-                    <div className="flex items-center gap-1 flex-1 min-w-0">
-                      <Input
-                        placeholder="Quick feedback..."
-                        value={inlineFeedback[lead.id] || ""}
-                        onChange={(e) =>
-                          setInlineFeedback((prev) => ({
-                            ...prev,
-                            [lead.id]: e.target.value,
-                          }))
-                        }
-                        className="h-7 text-xs min-w-0"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleInlineFeedback(lead.id);
-                        }}
-                      />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 w-7 p-0 shrink-0 text-brand hover:text-brand-dark"
-                        disabled={
-                          !inlineFeedback[lead.id]?.trim() ||
-                          submittingFeedback[lead.id]
-                        }
-                        onClick={() => handleInlineFeedback(lead.id)}
-                      >
-                        <Send className="h-3 w-3" />
-                      </Button>
-                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs px-2 shrink-0"
+                      onClick={() => openFeedbackDialog(lead)}
+                    >
+                      <MessageSquare className="mr-1 h-3 w-3" />
+                      Feedback
+                    </Button>
                   )}
 
-                  {/* Quick Assign - inline (all roles can see assign) */}
-                  {getAssignableUsers(lead.currentOwnerId).length > 0 && (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Select
-                        value={inlineAssign[lead.id] || ""}
-                        onValueChange={(v) =>
-                          setInlineAssign((prev) => ({ ...prev, [lead.id]: v }))
-                        }
-                      >
-                        <SelectTrigger className="h-7 w-[120px] text-xs">
-                          <UserPlus className="mr-1 h-3 w-3 shrink-0" />
-                          <SelectValue placeholder="Assign" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAssignableUsers(lead.currentOwnerId).map((u) => (
-                            <SelectItem key={u.id} value={u.id}>
-                              {u.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 w-7 p-0 shrink-0 text-brand hover:text-brand-dark"
-                        disabled={!inlineAssign[lead.id] || submittingAssign[lead.id]}
-                        onClick={() => handleInlineAssign(lead.id)}
-                      >
-                        <Send className="h-3 w-3" />
-                      </Button>
-                    </div>
+                  {/* Follow-up button - visible for all roles who can edit */}
+                  {canEdit(lead) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs px-2 shrink-0"
+                      onClick={() => {
+                        setFeedbackLead(lead);
+                        setFeedbackForm({
+                          notes: "",
+                          callType: "Follow-up",
+                          callDate: new Date().toISOString().slice(0, 16),
+                          assignTo: "",
+                          followUpDate: "",
+                          dropLead: false,
+                        });
+                        setFeedbackOpen(true);
+                      }}
+                    >
+                      <CalendarClock className="mr-1 h-3 w-3" />
+                      Follow Up
+                    </Button>
                   )}
 
-                  {/* View + Dropdown */}
+                  {/* Assign button - visible if user can assign this lead */}
+                  {canAssign(lead) && getAssignableUsers(lead.currentOwnerId).length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs px-2 shrink-0"
+                      onClick={() => openAssignDialog(lead)}
+                    >
+                      <UserPlus className="mr-1 h-3 w-3" />
+                      Assign
+                    </Button>
+                  )}
+
+                  {/* View button */}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -933,12 +950,15 @@ export function LeadList() {
                       </DropdownMenuItem>
                       {canEdit(lead) && (
                         <>
+                          <DropdownMenuItem onClick={() => openFeedbackDialog(lead)}>
+                            <MessageSquare className="mr-2 h-3 w-3" /> Quick Feedback
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
                               setFeedbackLead(lead);
                               setFeedbackForm({
                                 notes: "",
-                                callType: "Feedback",
+                                callType: "Follow-up",
                                 callDate: new Date().toISOString().slice(0, 16),
                                 assignTo: "",
                                 followUpDate: "",
@@ -947,18 +967,13 @@ export function LeadList() {
                               setFeedbackOpen(true);
                             }}
                           >
-                            <MessageSquare className="mr-2 h-3 w-3" /> Quick Feedback
+                            <CalendarClock className="mr-2 h-3 w-3" /> Follow Up
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setAssignLead(lead);
-                              setAssignTo("");
-                              setAssignReason("");
-                              setAssignOpen(true);
-                            }}
-                          >
-                            Assign Lead
-                          </DropdownMenuItem>
+                          {canAssign(lead) && (
+                            <DropdownMenuItem onClick={() => openAssignDialog(lead)}>
+                              <UserPlus className="mr-2 h-3 w-3" /> Assign Lead
+                            </DropdownMenuItem>
+                          )}
                         </>
                       )}
                       {user?.role === "admin" && (
@@ -980,9 +995,11 @@ export function LeadList() {
 
       {/* Quick Feedback Dialog */}
       <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Quick Feedback — {feedbackLead?.name}</DialogTitle>
+            <DialogTitle>
+              {feedbackForm.callType === "Follow-up" ? "Follow Up" : "Quick Feedback"} — {feedbackLead?.name}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             {feedbackLead?.callLogs && feedbackLead.callLogs.length > 0 && (
@@ -1082,8 +1099,7 @@ export function LeadList() {
                     <SelectValue placeholder="Keep current owner" />
                   </SelectTrigger>
                   <SelectContent>
-                    {users
-                      .filter((u) => u.isActive)
+                    {getAssignableUsers()
                       .map((u) => (
                         <SelectItem key={u.id} value={u.id}>
                           {u.name} ({u.role})
@@ -1099,7 +1115,7 @@ export function LeadList() {
               className="w-full bg-brand hover:bg-brand-dark"
               disabled={!feedbackForm.notes}
             >
-              Submit Feedback
+              Submit {feedbackForm.callType === "Follow-up" ? "Follow Up" : "Feedback"}
             </Button>
           </div>
         </DialogContent>
@@ -1119,10 +1135,10 @@ export function LeadList() {
               <Label>Assign To *</Label>
               <Select value={assignTo} onValueChange={setAssignTo}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select user" />
+                  <SelectValue placeholder="Select user to assign" />
                 </SelectTrigger>
                 <SelectContent>
-                  {getAssignableUsers(assignLead?.currentOwnerId).map((u) => (
+                  {assignLead && getAssignableUsers(assignLead.currentOwnerId).map((u) => (
                     <SelectItem key={u.id} value={u.id}>
                       {u.name} ({u.role})
                     </SelectItem>
@@ -1131,11 +1147,11 @@ export function LeadList() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Reason</Label>
+              <Label>Reason (Optional)</Label>
               <Textarea
                 value={assignReason}
                 onChange={(e) => setAssignReason(e.target.value)}
-                placeholder="Reason for reassignment"
+                placeholder="Reason for assignment"
                 rows={2}
               />
             </div>
@@ -1154,14 +1170,11 @@ export function LeadList() {
       <Dialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Bulk Assign — {selectedLeadIds.size} Leads</DialogTitle>
+            <DialogTitle>Bulk Assign — {selectedLeadIds.size} leads</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="text-sm text-muted-foreground">
-              You are about to assign {selectedLeadIds.size} leads to a single person.
-            </div>
             <div className="space-y-1">
-              <Label>Assign To *</Label>
+              <Label>Assign All Selected Leads To *</Label>
               <Select value={bulkAssignTo} onValueChange={setBulkAssignTo}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select user" />
@@ -1189,16 +1202,15 @@ export function LeadList() {
       </Dialog>
 
       {/* Delete Confirm Dialog */}
-      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogTitle>Delete Lead</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete this lead? This action cannot be
-            undone.
+            Are you sure you want to delete this lead? This action cannot be undone.
           </p>
-          <div className="flex justify-end gap-2">
+          <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={() => setDeleteId(null)}>
               Cancel
             </Button>

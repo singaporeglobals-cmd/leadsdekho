@@ -25,9 +25,9 @@ export async function POST(
   });
   if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
 
-  // Only currentOwner or Admin can assign
-  if (user.role !== "admin" && lead.currentOwnerId !== user.id) {
-    return NextResponse.json({ error: "Only current owner or admin can assign leads" }, { status: 403 });
+  // Only currentOwner, primaryOwner, or Admin can assign
+  if (user.role !== "admin" && lead.currentOwnerId !== user.id && lead.primaryOwnerId !== user.id) {
+    return NextResponse.json({ error: "Only current owner, primary owner or admin can assign leads" }, { status: 403 });
   }
 
   const targetUser = await db.user.findUnique({ where: { id: toUserId } });

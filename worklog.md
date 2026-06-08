@@ -107,3 +107,34 @@ Implemented 8 feature changes requested by user.
 
 ### Build Verification
 - Build passes with zero errors and zero warnings
+
+---
+Task ID: 4
+Agent: main
+Task: Fix ASSIGN option, add QUICK FEEDBACK/FOLLOW UP buttons for telecaller/sales, update import feature
+
+Work Log:
+- Fixed assign API to allow primary owners to reassign leads (not just current owners)
+- Added visible Feedback and Follow Up buttons directly on lead rows for all roles
+- Added Assign button visible on lead rows when user is admin, current owner, or primary owner
+- Updated lead-list.tsx: new canAssign() function, openFeedbackDialog(), openAssignDialog() helpers
+- Fixed users fetch for non-admin: now includes all active users (not just non-admin) for assign dropdown
+- Updated assign API: now allows currentOwner, primaryOwner, or admin to assign
+- Updated import API to support XLS/XLSX files using xlsx library
+- Added MAIL ID (email) column to import format
+- Added duplicate detection: checks existing leads by phone number, highlights duplicates in RED
+- Added duplicate handling: skip duplicates checkbox, visual red highlighting in import table
+- Made project name editable per lead row in import (not auto-mapped from file)
+- Import now has 5 steps: Upload → Review & Edit → Map Properties → Confirm → Done
+- Added xlsx dependency for XLS/XLSX file parsing
+- Removed unused imports (X, CheckSquare from lead-list.tsx)
+
+Stage Summary:
+- Build passes successfully
+- All 3 user requests implemented:
+  1. ASSIGN option fixed - now works for admin, current owner, and primary owner
+  2. QUICK FEEDBACK & FOLLOW UP buttons now visible on lead rows for telecaller/sales + ASSIGN if they are primary owner
+  3. IMPORT LEAD supports XLS and CSV formats with columns: DATE(DD.MM.YY), LEAD SOURCE, NAME, NUMBER, MAIL ID, PROJECT NAME
+     - Project name is editable per lead (not auto-mapped from file)
+     - Duplicate leads are highlighted in RED
+     - Skip duplicates option during import

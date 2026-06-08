@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
-// POST /api/leads/import/confirm - Confirm CSV import with property mapping
+// POST /api/leads/import/confirm - Confirm CSV/XLS import with property mapping
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 
-  const { rows, assignTo, propertyMapping } = await req.json();
+  const { rows, assignTo, propertyMapping, skipDuplicates } = await req.json();
 
   if (!rows || !Array.isArray(rows) || rows.length === 0) {
     return NextResponse.json({ error: "No rows to import" }, { status: 400 });
@@ -37,9 +37,16 @@ export async function POST(req: NextRequest) {
   const propMapping: Record<string, string> = propertyMapping || {};
 
   const created = [];
+  const skipped = [];
 
   for (const row of rows) {
     if (!row.name || !row.phone) continue;
+
+    // Skip duplicates if requested
+    if (skipDuplicates && row.isDuplicate) {
+      skipped.push(row);
+      continue;
+    }
 
     // Find or create project by name
     let projectId: string | null = null;
@@ -55,8 +62,13 @@ export async function POST(req: NextRequest) {
     // Handle date field
     let source = row.source || "CSV Import";
     if (row.date) {
-      // Include the date in the source or notes
       source = row.source || "CSV Import";
+    }
+
+    // Format the import date in notes if present
+    let notes = row.notes || null;
+    if (row.date) {
+      notes = notes ? `${notes} | Import Date: ${row.date}` : `Import Date: ${row.date}`;
     }
 
     const lead = await db.lead.create({
@@ -66,7 +78,7 @@ export async function POST(req: NextRequest) {
         email: row.email || null,
         source,
         budget: row.budget || null,
-        notes: row.notes || (row.date ? `Import Date: ${row.date}` : null),
+        notes,
         primaryOwnerId: ownerId,
         currentOwnerId: ownerId,
         projectId,
@@ -78,7 +90,7 @@ export async function POST(req: NextRequest) {
         leadId: lead.id,
         userId: user.id,
         eventType: "Created",
-        description: `Lead imported via CSV by ${user.name}`,
+        description: `Lead imported via CSV/XLS by ${user.name}`,
       },
     });
 
@@ -114,5 +126,8 @@ export async function POST(req: NextRequest) {
     created.push(lead);
   }
 
-  return NextResponse.json({ imported: created.length }, { status: 201 });
+  return NextResponse.json({
+    imported: created.length,
+    skipped: skipped.length,
+  }, { status: 201 });
 }
