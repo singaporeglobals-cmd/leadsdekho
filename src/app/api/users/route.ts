@@ -7,28 +7,43 @@ import bcrypt from "bcryptjs";
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (user.role !== "admin") return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
-  const users = await db.user.findMany({
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      isActive: true,
-      createdAt: true,
-      _count: {
-        select: {
-          currentLeads: true,
-          primaryLeads: true,
-          callLogs: true,
+  // Admin gets full user list with counts
+  // Non-admin gets limited list for assign dropdown
+  if (user.role === "admin") {
+    const users = await db.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        _count: {
+          select: {
+            currentLeads: true,
+            primaryLeads: true,
+            callLogs: true,
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return NextResponse.json(users);
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json(users);
+  } else {
+    // Non-admin: return active users for assign dropdown (limited info)
+    const users = await db.user.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        isActive: true,
+      },
+      orderBy: { name: "asc" },
+    });
+    return NextResponse.json(users);
+  }
 }
 
 // POST /api/users

@@ -263,7 +263,7 @@ export function LeadDetail() {
     }
   };
 
-  const handleLogCall = async (notes: string, callType: string) => {
+  const handleLogCall = async (notes: string, callType: string, followUpDate?: string, dropLead?: boolean) => {
     if (!lead) return;
     const res = await fetch(`/api/leads/${lead.id}/call-logs`, {
       method: "POST",
@@ -271,6 +271,30 @@ export function LeadDetail() {
       body: JSON.stringify({ notes, callType }),
     });
     if (res.ok) {
+      // If follow-up date set, schedule it
+      if (followUpDate) {
+        await fetch(`/api/leads/${lead.id}/follow-ups`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scheduledAt: followUpDate,
+            notes: `Follow-up after call: ${notes.substring(0, 100)}`,
+          }),
+        });
+      }
+
+      // If drop lead selected
+      if (dropLead) {
+        await fetch(`/api/leads/${lead.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pipelineStatus: "Lost",
+            lostReason: "Dropped after feedback",
+          }),
+        });
+      }
+
       setCallLogOpen(false);
       fetchLead();
     }
@@ -1017,10 +1041,12 @@ export function LeadDetail() {
 function CallLogForm({
   onSubmit,
 }: {
-  onSubmit: (notes: string, callType: string) => void;
+  onSubmit: (notes: string, callType: string, followUpDate?: string, dropLead?: boolean) => void;
 }) {
   const [notes, setNotes] = useState("");
   const [callType, setCallType] = useState("Feedback");
+  const [followUpDate, setFollowUpDate] = useState("");
+  const [dropLead, setDropLead] = useState(false);
 
   return (
     <div className="space-y-3">
@@ -1046,8 +1072,29 @@ function CallLogForm({
           rows={3}
         />
       </div>
+      <div className="space-y-1">
+        <Label>Schedule Follow-up Date (Optional)</Label>
+        <Input
+          type="datetime-local"
+          value={followUpDate}
+          onChange={(e) => setFollowUpDate(e.target.value)}
+          placeholder="Select follow-up date & time"
+        />
+      </div>
+      <div className="flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800 p-3">
+        <input
+          type="checkbox"
+          id="dropLeadDetail"
+          checked={dropLead}
+          onChange={(e) => setDropLead(e.target.checked)}
+          className="rounded border-gray-300"
+        />
+        <label htmlFor="dropLeadDetail" className="text-sm text-red-600 dark:text-red-400 cursor-pointer">
+          Drop this lead (mark as Lost)
+        </label>
+      </div>
       <Button
-        onClick={() => onSubmit(notes, callType)}
+        onClick={() => onSubmit(notes, callType, followUpDate || undefined, dropLead)}
         className="w-full bg-brand hover:bg-brand-dark"
         disabled={!notes}
       >

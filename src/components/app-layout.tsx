@@ -32,7 +32,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "leads", label: "Leads", icon: Users },
-  { id: "lead-import", label: "Import Leads", icon: ChevronRight },
+  { id: "lead-import", label: "Import Leads", icon: ChevronRight, roles: ["admin"] },
   { id: "site-visits", label: "Site Visits", icon: MapPin },
   { id: "properties", label: "Properties", icon: Home, roles: ["admin"] },
   { id: "reports", label: "Reports", icon: BarChart3 },

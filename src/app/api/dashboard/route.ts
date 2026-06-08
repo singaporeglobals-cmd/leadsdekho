@@ -24,6 +24,7 @@ async function getAdminDashboard() {
     recentLeads,
     teamMembers,
     todayFollowUps,
+    pendingFollowUps,
     totalProperties,
   ] = await Promise.all([
     db.lead.count(),
@@ -62,6 +63,11 @@ async function getAdminDashboard() {
         completed: false,
       },
     }),
+    db.followUp.count({
+      where: {
+        completed: false,
+      },
+    }),
     db.property.count(),
   ]);
 
@@ -83,6 +89,7 @@ async function getAdminDashboard() {
     recentLeads,
     teamMembers,
     todayFollowUps,
+    pendingFollowUps,
     totalProperties,
   });
 }
@@ -92,6 +99,8 @@ async function getTelecallingDashboard(userId: string) {
     myLeadsCount,
     myLeadsByStatus,
     todayFollowUps,
+    pendingFollowUps,
+    pendingFollowUpsList,
     myCallLogsCount,
     allLeads,
     recentCallLogs,
@@ -102,7 +111,7 @@ async function getTelecallingDashboard(userId: string) {
       where: { currentOwnerId: userId },
       _count: true,
     }),
-    db.followUp.findMany({
+    db.followUp.count({
       where: {
         userId,
         scheduledAt: {
@@ -111,8 +120,21 @@ async function getTelecallingDashboard(userId: string) {
         },
         completed: false,
       },
+    }),
+    db.followUp.count({
+      where: {
+        userId,
+        completed: false,
+      },
+    }),
+    db.followUp.findMany({
+      where: {
+        userId,
+        completed: false,
+      },
       include: { lead: { select: { id: true, name: true, phone: true } } },
       orderBy: { scheduledAt: "asc" },
+      take: 10,
     }),
     db.callLog.count({ where: { userId } }),
     db.lead.count(),
@@ -135,6 +157,8 @@ async function getTelecallingDashboard(userId: string) {
     allLeadsCount: allLeads,
     statusCounts,
     todayFollowUps,
+    pendingFollowUps,
+    pendingFollowUpsList,
     myCallLogsCount,
     recentCallLogs,
   });
@@ -149,6 +173,8 @@ async function getSalesDashboard(userId: string) {
     wonDeals,
     recentLeads,
     todayFollowUps,
+    pendingFollowUps,
+    pendingFollowUpsList,
   ] = await Promise.all([
     db.lead.count({
       where: { OR: [{ currentOwnerId: userId }, { primaryOwnerId: userId }] },
@@ -186,7 +212,7 @@ async function getSalesDashboard(userId: string) {
         primaryOwner: { select: { name: true } },
       },
     }),
-    db.followUp.findMany({
+    db.followUp.count({
       where: {
         userId,
         scheduledAt: {
@@ -195,7 +221,21 @@ async function getSalesDashboard(userId: string) {
         },
         completed: false,
       },
+    }),
+    db.followUp.count({
+      where: {
+        userId,
+        completed: false,
+      },
+    }),
+    db.followUp.findMany({
+      where: {
+        userId,
+        completed: false,
+      },
       include: { lead: { select: { id: true, name: true, phone: true } } },
+      orderBy: { scheduledAt: "asc" },
+      take: 10,
     }),
   ]);
 
@@ -213,5 +253,7 @@ async function getSalesDashboard(userId: string) {
     wonDeals,
     recentLeads,
     todayFollowUps,
+    pendingFollowUps,
+    pendingFollowUpsList,
   });
 }

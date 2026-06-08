@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +41,9 @@ import {
   RefreshCw,
   Send,
   UserPlus,
+  CheckSquare,
+  UsersRound,
+  Sparkles,
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -61,6 +65,9 @@ const SOURCES = [
   "Walk-in",
   "Call",
   "CSV Import",
+  "Housing.com",
+  "99acres",
+  "MagicBricks",
 ];
 
 const statusColors: Record<string, string> = {
@@ -123,11 +130,22 @@ interface Project {
   name: string;
 }
 
+interface PropertyItem {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  price: number | null;
+  location: string | null;
+  project: { id: string; name: string } | null;
+}
+
 export function LeadList() {
   const { user, setPage, setSelectedLeadId } = useAppStore();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [properties, setProperties] = useState<PropertyItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -145,6 +163,7 @@ export function LeadList() {
     budget: "",
     notes: "",
     projectId: "",
+    propertyId: "",
     assignTo: "",
   });
 
@@ -156,6 +175,8 @@ export function LeadList() {
     callType: "Feedback",
     callDate: new Date().toISOString().slice(0, 16),
     assignTo: "",
+    followUpDate: "",
+    dropLead: false,
   });
 
   // Assign dialog (for dropdown menu)
@@ -174,6 +195,11 @@ export function LeadList() {
   // Inline assign state per lead
   const [inlineAssign, setInlineAssign] = useState<Record<string, string>>({});
   const [submittingAssign, setSubmittingAssign] = useState<Record<string, boolean>>({});
+
+  // Bulk select & assign
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [bulkAssignTo, setBulkAssignTo] = useState("");
 
   const doRefresh = () => setRefresh((r) => r + 1);
 
@@ -198,32 +224,65 @@ export function LeadList() {
     return () => { cancelled = true; };
   }, [search, statusFilter, sourceFilter, refresh]);
 
-  // Fetch users and projects
+  // Fetch users, projects, and properties for ALL roles (not just admin)
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (user?.role === "admin") {
-        const res = await fetch("/api/users");
-        if (!cancelled && res.ok) {
-          setUsers(await res.json());
+      // Fetch users for all roles (needed for assign dropdown)
+      const uRes = await fetch("/api/users");
+      if (!cancelled && uRes.ok) {
+        const userData = await uRes.json();
+        // Only admin gets full user list, others get filtered
+        if (user?.role === "admin") {
+          setUsers(userData);
+        } else {
+          // For telecaller/sales, show all active non-admin users
+          setUsers(userData.filter((u: UserItem) => u.isActive && u.role !== "admin"));
         }
       }
+      // Fetch projects
       const pRes = await fetch("/api/projects");
       if (!cancelled && pRes.ok) {
         setProjects(await pRes.json());
+      }
+      // Fetch properties
+      const propRes = await fetch("/api/properties");
+      if (!cancelled && propRes.ok) {
+        const propData = await propRes.json();
+        setProperties(propData.properties || []);
       }
     })();
     return () => { cancelled = true; };
   }, [user?.role]);
 
   const handleCreateLead = async () => {
+    const body: Record<string, string> = {
+      name: createForm.name,
+      phone: createForm.phone,
+      email: createForm.email,
+      source: createForm.source,
+      budget: createForm.budget,
+      notes: createForm.notes,
+      projectId: createForm.projectId,
+      assignTo: createForm.assignTo,
+    };
+
     const res = await fetch("/api/leads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(createForm),
+      body: JSON.stringify(body),
     });
 
     if (res.ok) {
+      const lead = await res.json();
+      // If property selected, link it to the lead
+      if (createForm.propertyId && lead.id) {
+        await fetch(`/api/leads/${lead.id}/properties`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ propertyId: createForm.propertyId }),
+        });
+      }
       setCreateOpen(false);
       setCreateForm({
         name: "",
@@ -233,6 +292,7 @@ export function LeadList() {
         budget: "",
         notes: "",
         projectId: "",
+        propertyId: "",
         assignTo: "",
       });
       doRefresh();
@@ -245,10 +305,39 @@ export function LeadList() {
     const res = await fetch(`/api/leads/${feedbackLead.id}/call-logs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(feedbackForm),
+      body: JSON.stringify({
+        notes: feedbackForm.notes,
+        callType: feedbackForm.callType,
+        callDate: feedbackForm.callDate,
+        assignTo: feedbackForm.assignTo || undefined,
+      }),
     });
 
     if (res.ok) {
+      // If follow-up date set, schedule it
+      if (feedbackForm.followUpDate) {
+        await fetch(`/api/leads/${feedbackLead.id}/follow-ups`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scheduledAt: feedbackForm.followUpDate,
+            notes: `Follow-up after feedback: ${feedbackForm.notes.substring(0, 100)}`,
+          }),
+        });
+      }
+
+      // If drop lead selected
+      if (feedbackForm.dropLead) {
+        await fetch(`/api/leads/${feedbackLead.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pipelineStatus: "Lost",
+            lostReason: "Dropped after feedback",
+          }),
+        });
+      }
+
       setFeedbackOpen(false);
       setFeedbackLead(null);
       setFeedbackForm({
@@ -256,6 +345,8 @@ export function LeadList() {
         callType: "Feedback",
         callDate: new Date().toISOString().slice(0, 16),
         assignTo: "",
+        followUpDate: "",
+        dropLead: false,
       });
       doRefresh();
     }
@@ -323,6 +414,42 @@ export function LeadList() {
     setSubmittingAssign((prev) => ({ ...prev, [leadId]: false }));
   };
 
+  // Bulk assign handler
+  const handleBulkAssign = async () => {
+    if (!bulkAssignTo || selectedLeadIds.size === 0) return;
+
+    for (const leadId of selectedLeadIds) {
+      await fetch(`/api/leads/${leadId}/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toUserId: bulkAssignTo, reason: "Bulk assignment" }),
+      });
+    }
+    setBulkAssignOpen(false);
+    setBulkAssignTo("");
+    setSelectedLeadIds(new Set());
+    doRefresh();
+  };
+
+  // Toggle select lead
+  const toggleSelectLead = (id: string) => {
+    setSelectedLeadIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // Select/deselect all
+  const toggleSelectAll = () => {
+    if (selectedLeadIds.size === leads.length) {
+      setSelectedLeadIds(new Set());
+    } else {
+      setSelectedLeadIds(new Set(leads.map((l) => l.id)));
+    }
+  };
+
   const canEdit = (lead: Lead) => {
     if (!user) return false;
     return user.role === "admin" || lead.currentOwnerId === user.id;
@@ -333,6 +460,11 @@ export function LeadList() {
     if (user.role === "admin") return false;
     if (user.role === "telecalling") return false;
     return lead.primaryOwnerId === user.id && lead.currentOwnerId !== user.id;
+  };
+
+  // Filter users for assign dropdown based on role
+  const getAssignableUsers = (excludeUserId?: string) => {
+    return users.filter((u) => u.isActive && u.id !== excludeUserId);
   };
 
   return (
@@ -376,6 +508,18 @@ export function LeadList() {
               ))}
             </SelectContent>
           </Select>
+          {/* Fresh Leads quick filter for telecaller/sales */}
+          {(user?.role === "telecalling" || user?.role === "sales") && (
+            <Button
+              variant={statusFilter === "New" ? "default" : "outline"}
+              size="sm"
+              className="h-9"
+              onClick={() => setStatusFilter(statusFilter === "New" ? "all" : "New")}
+            >
+              <Sparkles className="mr-1 h-3 w-3" />
+              Fresh Leads
+            </Button>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -383,14 +527,30 @@ export function LeadList() {
             <RefreshCw className="mr-1 h-3 w-3" />
             Refresh
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage("lead-import")}
-          >
-            <Upload className="mr-1 h-3 w-3" />
-            Import
-          </Button>
+          {/* Import only for admin */}
+          {user?.role === "admin" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage("lead-import")}
+            >
+              <Upload className="mr-1 h-3 w-3" />
+              Import
+            </Button>
+          )}
+
+          {/* Bulk Assign button (admin only, when leads selected) */}
+          {user?.role === "admin" && selectedLeadIds.size > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-brand border-brand hover:bg-brand hover:text-white"
+              onClick={() => setBulkAssignOpen(true)}
+            >
+              <UsersRound className="mr-1 h-3 w-3" />
+              Assign ({selectedLeadIds.size})
+            </Button>
+          )}
 
           {/* Create Lead Dialog */}
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -400,7 +560,7 @@ export function LeadList() {
                 Add Lead
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Lead</DialogTitle>
               </DialogHeader>
@@ -475,7 +635,7 @@ export function LeadList() {
                     <Select
                       value={createForm.projectId}
                       onValueChange={(v) =>
-                        setCreateForm({ ...createForm, projectId: v })
+                        setCreateForm({ ...createForm, projectId: v, propertyId: "" })
                       }
                     >
                       <SelectTrigger>
@@ -490,6 +650,31 @@ export function LeadList() {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+                {/* Property dropdown - shows properties (filtered by selected project if any) */}
+                <div className="space-y-1">
+                  <Label>Property</Label>
+                  <Select
+                    value={createForm.propertyId}
+                    onValueChange={(v) =>
+                      setCreateForm({ ...createForm, propertyId: v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select property" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {properties
+                        .filter((p) =>
+                          !createForm.projectId || p.project?.id === createForm.projectId
+                        )
+                        .map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name} {p.project ? `(${p.project.name})` : ""} {p.price ? `- ₹${p.price.toLocaleString()}` : ""}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 {user?.role === "admin" && users.length > 0 && (
                   <div className="space-y-1">
@@ -561,7 +746,15 @@ export function LeadList() {
       ) : (
         <div className="rounded-lg border border-border overflow-hidden">
           {/* Header row */}
-          <div className="hidden md:grid md:grid-cols-[1fr_1fr_auto] gap-4 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border">
+          <div className="hidden md:grid md:grid-cols-[auto_1fr_1fr_auto] gap-4 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border">
+            <div className="w-8">
+              {user?.role === "admin" && (
+                <Checkbox
+                  checked={selectedLeadIds.size === leads.length && leads.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+              )}
+            </div>
             <div>Lead Info</div>
             <div>Details</div>
             <div className="min-w-[280px]">Actions</div>
@@ -571,13 +764,33 @@ export function LeadList() {
           {leads.map((lead) => (
             <div
               key={lead.id}
-              className="border-b border-border last:border-b-0 px-4 py-3 hover:bg-muted/30 transition-colors"
+              className={`border-b border-border last:border-b-0 px-4 py-3 transition-colors ${
+                selectedLeadIds.has(lead.id) ? "bg-brand/5" : "hover:bg-muted/30"
+              }`}
             >
               {/* Row 1: Main info */}
-              <div className="flex flex-col md:grid md:grid-cols-[1fr_1fr_auto] gap-2 md:gap-4">
+              <div className="flex flex-col md:grid md:grid-cols-[auto_1fr_1fr_auto] gap-2 md:gap-4">
+                {/* Checkbox column (admin only) */}
+                <div className="hidden md:flex items-center w-8">
+                  {user?.role === "admin" && (
+                    <Checkbox
+                      checked={selectedLeadIds.has(lead.id)}
+                      onCheckedChange={() => toggleSelectLead(lead.id)}
+                    />
+                  )}
+                </div>
+
                 {/* Left: Lead Info */}
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
+                    {/* Mobile checkbox for admin */}
+                    {user?.role === "admin" && (
+                      <Checkbox
+                        checked={selectedLeadIds.has(lead.id)}
+                        onCheckedChange={() => toggleSelectLead(lead.id)}
+                        className="md:hidden"
+                      />
+                    )}
                     <div className={`h-2 w-2 rounded-full shrink-0 ${dotColors[lead.pipelineStatus] || "bg-gray-400"}`} />
                     <span className="font-semibold text-foreground text-sm truncate">
                       {lead.name}
@@ -657,8 +870,8 @@ export function LeadList() {
                     </div>
                   )}
 
-                  {/* Quick Assign - inline (admin only) */}
-                  {user?.role === "admin" && users.length > 0 && (
+                  {/* Quick Assign - inline (all roles can see assign) */}
+                  {getAssignableUsers(lead.currentOwnerId).length > 0 && (
                     <div className="flex items-center gap-1 shrink-0">
                       <Select
                         value={inlineAssign[lead.id] || ""}
@@ -671,13 +884,11 @@ export function LeadList() {
                           <SelectValue placeholder="Assign" />
                         </SelectTrigger>
                         <SelectContent>
-                          {users
-                            .filter((u) => u.isActive && u.id !== lead.currentOwnerId)
-                            .map((u) => (
-                              <SelectItem key={u.id} value={u.id}>
-                                {u.name}
-                              </SelectItem>
-                            ))}
+                          {getAssignableUsers(lead.currentOwnerId).map((u) => (
+                            <SelectItem key={u.id} value={u.id}>
+                              {u.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <Button
@@ -730,6 +941,8 @@ export function LeadList() {
                                 callType: "Feedback",
                                 callDate: new Date().toISOString().slice(0, 16),
                                 assignTo: "",
+                                followUpDate: "",
+                                dropLead: false,
                               });
                               setFeedbackOpen(true);
                             }}
@@ -767,7 +980,7 @@ export function LeadList() {
 
       {/* Quick Feedback Dialog */}
       <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Quick Feedback — {feedbackLead?.name}</DialogTitle>
           </DialogHeader>
@@ -829,6 +1042,33 @@ export function LeadList() {
               />
             </div>
 
+            {/* Follow-up Date Option */}
+            <div className="space-y-1">
+              <Label>Schedule Follow-up Date (Optional)</Label>
+              <Input
+                type="datetime-local"
+                value={feedbackForm.followUpDate}
+                onChange={(e) =>
+                  setFeedbackForm({ ...feedbackForm, followUpDate: e.target.value })
+                }
+                placeholder="Select follow-up date & time"
+              />
+            </div>
+
+            {/* Drop Lead Option */}
+            <div className="flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800 p-3">
+              <Checkbox
+                id="dropLead"
+                checked={feedbackForm.dropLead}
+                onCheckedChange={(checked) =>
+                  setFeedbackForm({ ...feedbackForm, dropLead: !!checked })
+                }
+              />
+              <label htmlFor="dropLead" className="text-sm text-red-600 dark:text-red-400 cursor-pointer">
+                Drop this lead (mark as Lost)
+              </label>
+            </div>
+
             {users.length > 0 && (
               <div className="space-y-1">
                 <Label>Quick Assign To (Optional)</Label>
@@ -882,13 +1122,11 @@ export function LeadList() {
                   <SelectValue placeholder="Select user" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users
-                    .filter((u) => u.isActive)
-                    .map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.name} ({u.role})
-                      </SelectItem>
-                    ))}
+                  {getAssignableUsers(assignLead?.currentOwnerId).map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name} ({u.role})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -907,6 +1145,44 @@ export function LeadList() {
               disabled={!assignTo}
             >
               Assign Lead
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Assign Dialog */}
+      <Dialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Assign — {selectedLeadIds.size} Leads</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm text-muted-foreground">
+              You are about to assign {selectedLeadIds.size} leads to a single person.
+            </div>
+            <div className="space-y-1">
+              <Label>Assign To *</Label>
+              <Select value={bulkAssignTo} onValueChange={setBulkAssignTo}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select user" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users
+                    .filter((u) => u.isActive && u.role !== "admin")
+                    .map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name} ({u.role})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              onClick={handleBulkAssign}
+              className="w-full bg-brand hover:bg-brand-dark"
+              disabled={!bulkAssignTo}
+            >
+              Assign {selectedLeadIds.size} Leads
             </Button>
           </div>
         </DialogContent>

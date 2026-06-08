@@ -13,6 +13,8 @@ import {
   ArrowUpRight,
   Eye,
   MapPin,
+  Clock,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,7 +85,7 @@ export function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card className="border-l-4 border-l-brand">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -111,6 +113,22 @@ export function AdminDashboard() {
               </div>
               <div className="rounded-lg bg-amber-50 dark:bg-amber-950 p-3">
                 <CalendarCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-red-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Pending Follow-ups</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {data.pendingFollowUps as number}
+                </p>
+              </div>
+              <div className="rounded-lg bg-red-50 dark:bg-red-950 p-3">
+                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
               </div>
             </div>
           </CardContent>
@@ -327,7 +345,9 @@ export function TelecallingDashboard() {
   if (!data) return <div>Failed to load dashboard</div>;
 
   const statusCounts = (data.statusCounts || {}) as Record<string, number>;
-  const todayFollowUps = (data.todayFollowUps || []) as Array<{
+  const todayFollowUps = (data.todayFollowUps || 0) as number;
+  const pendingFollowUps = (data.pendingFollowUps || 0) as number;
+  const pendingFollowUpsList = (data.pendingFollowUpsList || []) as Array<{
     id: string;
     scheduledAt: string;
     notes: string;
@@ -343,7 +363,7 @@ export function TelecallingDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card className="border-l-4 border-l-brand">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -382,11 +402,27 @@ export function TelecallingDashboard() {
               <div>
                 <p className="text-sm text-muted-foreground">Today Follow-ups</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {todayFollowUps.length}
+                  {todayFollowUps}
                 </p>
               </div>
               <div className="rounded-lg bg-amber-50 dark:bg-amber-950 p-3">
                 <CalendarCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-red-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Pending Follow-ups</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {pendingFollowUps}
+                </p>
+              </div>
+              <div className="rounded-lg bg-red-50 dark:bg-red-950 p-3">
+                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
               </div>
             </div>
           </CardContent>
@@ -441,10 +477,13 @@ export function TelecallingDashboard() {
           </CardContent>
         </Card>
 
-        {/* Today's Follow-ups */}
+        {/* Pending Follow-ups */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base">Today&apos;s Follow-ups</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-500" />
+              Pending Follow-ups ({pendingFollowUps})
+            </CardTitle>
             <Button
               variant="ghost"
               size="sm"
@@ -455,19 +494,25 @@ export function TelecallingDashboard() {
             </Button>
           </CardHeader>
           <CardContent>
-            {todayFollowUps.length === 0 ? (
+            {pendingFollowUpsList.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No follow-ups scheduled for today
+                No pending follow-ups
               </p>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {todayFollowUps.map((fu) => (
+                {pendingFollowUpsList.map((fu) => (
                   <div
                     key={fu.id}
                     className="rounded-lg border border-border p-3"
                   >
-                    <div className="font-medium text-foreground">
-                      {fu.lead.name}
+                    <div className="flex items-center justify-between">
+                      <div className="font-medium text-foreground">
+                        {fu.lead.name}
+                      </div>
+                      <Badge variant="outline" className="text-[10px] text-red-600 dark:text-red-400">
+                        <Clock className="mr-1 h-3 w-3" />
+                        {new Date(fu.scheduledAt).toLocaleDateString()}
+                      </Badge>
                     </div>
                     <div className="text-sm text-muted-foreground">{fu.lead.phone}</div>
                     <div className="mt-1 text-xs text-muted-foreground">
@@ -555,7 +600,9 @@ export function SalesDashboard() {
     currentOwner: { name: string };
     primaryOwner: { name: string };
   }>;
-  const todayFollowUps = (data.todayFollowUps || []) as Array<{
+  const todayFollowUps = (data.todayFollowUps || 0) as number;
+  const pendingFollowUps = (data.pendingFollowUps || 0) as number;
+  const pendingFollowUpsList = (data.pendingFollowUpsList || []) as Array<{
     id: string;
     scheduledAt: string;
     notes: string;
@@ -564,7 +611,7 @@ export function SalesDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card className="border-l-4 border-l-brand">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -592,6 +639,22 @@ export function SalesDashboard() {
               </div>
               <div className="rounded-lg bg-amber-50 dark:bg-amber-950 p-3">
                 <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-red-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Pending Follow-ups</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {pendingFollowUps}
+                </p>
+              </div>
+              <div className="rounded-lg bg-red-50 dark:bg-red-950 p-3">
+                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
               </div>
             </div>
           </CardContent>
@@ -663,22 +726,31 @@ export function SalesDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base">Today&apos;s Follow-ups</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-500" />
+              Pending Follow-ups ({pendingFollowUps})
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {todayFollowUps.length === 0 ? (
+            {pendingFollowUpsList.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No follow-ups for today
+                No pending follow-ups
               </p>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {todayFollowUps.map((fu) => (
+                {pendingFollowUpsList.map((fu) => (
                   <div
                     key={fu.id}
                     className="rounded-lg border border-border p-3"
                   >
-                    <div className="font-medium text-foreground">
-                      {fu.lead.name}
+                    <div className="flex items-center justify-between">
+                      <div className="font-medium text-foreground">
+                        {fu.lead.name}
+                      </div>
+                      <Badge variant="outline" className="text-[10px] text-red-600 dark:text-red-400">
+                        <Clock className="mr-1 h-3 w-3" />
+                        {new Date(fu.scheduledAt).toLocaleDateString()}
+                      </Badge>
                     </div>
                     <div className="text-sm text-muted-foreground">{fu.lead.phone}</div>
                     <div className="mt-1 text-xs text-muted-foreground">{fu.notes}</div>
