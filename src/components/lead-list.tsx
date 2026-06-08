@@ -44,6 +44,7 @@ import {
   UsersRound,
   Sparkles,
   CalendarClock,
+  Pencil,
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -920,17 +921,17 @@ export function LeadList() {
                     </Button>
                   )}
 
-                  {/* View button */}
+                  {/* Update button */}
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="h-7 w-7 p-0 shrink-0"
+                    className="h-7 text-xs px-2 gap-1 shrink-0 text-brand hover:text-brand-dark hover:bg-brand/10 border-brand/30"
                     onClick={() => {
                       setSelectedLeadId(lead.id);
                       setPage("lead-detail");
                     }}
                   >
-                    <Eye className="h-3.5 w-3.5" />
+                    <Pencil className="h-3 w-3" /> Update
                   </Button>
 
                   <DropdownMenu>
