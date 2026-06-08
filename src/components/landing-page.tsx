@@ -1,0 +1,264 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { useAppStore } from "@/lib/store";
+import {
+  Building2,
+  Users,
+  TrendingUp,
+  Phone,
+  BarChart3,
+  Shield,
+  ArrowRight,
+  CheckCircle2,
+  MapPin,
+  Home,
+  Target,
+} from "lucide-react";
+
+export function LandingPage() {
+  const { setPage } = useAppStore();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+      {/* Navigation */}
+      <nav className="flex items-center justify-between px-6 py-4 lg:px-12">
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 text-white">
+            <Building2 className="h-5 w-5" />
+          </div>
+          <span className="text-xl font-bold text-gray-900">PropCRM</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            onClick={() => setPage("login")}
+            className="text-gray-600 hover:text-gray-900"
+          >
+            Sign In
+          </Button>
+          <Button
+            onClick={() => setPage("login")}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            Get Started
+          </Button>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="px-6 py-16 lg:px-12 lg:py-24">
+        <div className="mx-auto max-w-6xl text-center">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-medium text-emerald-700">
+            <Target className="h-4 w-4" />
+            Real Estate CRM Built for Growth
+          </div>
+          <h1 className="mb-6 text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl">
+            Close More Deals with
+            <span className="text-emerald-600"> Smart Lead Management</span>
+          </h1>
+          <p className="mx-auto mb-8 max-w-2xl text-lg text-gray-600">
+            From first call to closed deal — manage your entire real estate sales
+            pipeline with intelligent tracking, team collaboration, and powerful
+            analytics.
+          </p>
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <Button
+              size="lg"
+              onClick={() => setPage("login")}
+              className="bg-emerald-600 px-8 text-base hover:bg-emerald-700"
+            >
+              Start Free Trial
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="px-8 text-base"
+              onClick={() => {
+                const el = document.getElementById("features");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              See Features
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Bar */}
+      <section className="border-y border-gray-200 bg-white/80 px-6 py-8 lg:px-12">
+        <div className="mx-auto grid max-w-5xl grid-cols-2 gap-8 lg:grid-cols-4">
+          {[
+            { value: "500+", label: "Active Teams" },
+            { value: "50K+", label: "Leads Managed" },
+            { value: "35%", label: "Higher Conversion" },
+            { value: "99.9%", label: "Uptime" },
+          ].map((stat) => (
+            <div key={stat.label} className="text-center">
+              <div className="text-2xl font-bold text-emerald-600 lg:text-3xl">
+                {stat.value}
+              </div>
+              <div className="text-sm text-gray-500">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="px-6 py-16 lg:px-12 lg:py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 text-center">
+            <h2 className="mb-3 text-3xl font-bold text-gray-900">
+              Everything You Need to Close Deals
+            </h2>
+            <p className="text-gray-600">
+              Purpose-built features for real estate sales teams
+            </p>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                icon: Users,
+                title: "Lead Management",
+                desc: "Track every lead from first contact to close with intelligent pipeline stages and role-based access.",
+                color: "emerald",
+              },
+              {
+                icon: Phone,
+                title: "Quick Feedback",
+                desc: "Log calls and feedback instantly. Quick assign leads while logging — no context switching.",
+                color: "teal",
+              },
+              {
+                icon: MapPin,
+                title: "Site Visit Tracking",
+                desc: "Schedule and track site visits with status updates and feedback collection.",
+                color: "amber",
+              },
+              {
+                icon: Home,
+                title: "Property Management",
+                desc: "Manage your entire property inventory with status tracking and project associations.",
+                color: "violet",
+              },
+              {
+                icon: BarChart3,
+                title: "Reports & Analytics",
+                desc: "Daily and monthly reports with export capabilities. Track team performance and conversion rates.",
+                color: "rose",
+              },
+              {
+                icon: Shield,
+                title: "Role-Based Access",
+                desc: "Admin, Telecalling, and Sales roles with granular permissions to protect your data.",
+                color: "sky",
+              },
+            ].map((feature) => (
+              <Card
+                key={feature.title}
+                className="border-gray-200 bg-white/80 transition-all hover:shadow-lg hover:-translate-y-1"
+              >
+                <CardContent className="p-6">
+                  <div
+                    className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-${feature.color}-100`}
+                  >
+                    <feature.icon
+                      className={`h-6 w-6 text-${feature.color}-600`}
+                    />
+                  </div>
+                  <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                    {feature.title}
+                  </h3>
+                  <p className="text-sm text-gray-600">{feature.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="bg-white px-6 py-16 lg:px-12 lg:py-24">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-12 text-center">
+            <h2 className="mb-3 text-3xl font-bold text-gray-900">
+              How It Works
+            </h2>
+            <p className="text-gray-600">Get started in minutes</p>
+          </div>
+          <div className="space-y-8">
+            {[
+              {
+                step: "1",
+                title: "Capture Leads",
+                desc: "Add leads manually, import via CSV, or capture from multiple sources. Auto-assign to team members.",
+              },
+              {
+                step: "2",
+                title: "Nurture & Track",
+                desc: "Log calls, schedule follow-ups, and track site visits. Every interaction is recorded in the timeline.",
+              },
+              {
+                step: "3",
+                title: "Close Deals",
+                desc: "Move leads through your pipeline. Get insights on conversion rates and team performance.",
+              },
+            ].map((item) => (
+              <div key={item.step} className="flex gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white">
+                  {item.step}
+                </div>
+                <div>
+                  <h3 className="mb-1 text-lg font-semibold text-gray-900">
+                    {item.title}
+                  </h3>
+                  <p className="text-gray-600">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="bg-emerald-600 px-6 py-16 lg:px-12 lg:py-24">
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="mb-4 text-3xl font-bold text-white">
+            Ready to Transform Your Sales Process?
+          </h2>
+          <p className="mb-8 text-emerald-100">
+            Join hundreds of real estate teams already using PropCRM to close
+            more deals.
+          </p>
+          <Button
+            size="lg"
+            variant="secondary"
+            onClick={() => setPage("login")}
+            className="bg-white text-emerald-700 hover:bg-gray-100 px-8"
+          >
+            Get Started Now
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-200 bg-gray-50 px-6 py-8 lg:px-12">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-600 text-white">
+              <Building2 className="h-4 w-4" />
+            </div>
+            <span className="font-semibold text-gray-900">PropCRM</span>
+          </div>
+          <div className="flex items-center gap-6 text-sm text-gray-500">
+            <span>Real Estate CRM</span>
+            <span>Built with Next.js</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

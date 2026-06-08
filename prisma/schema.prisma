@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  password      String
+  role          String   @default("telecalling")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  primaryLeads  Lead[]   @relation("PrimaryOwner")
+  currentLeads  Lead[]   @relation("CurrentOwner")
+  callLogs      CallLog[]
+  followUps     FollowUp[]
+  siteVisits    SiteVisit[]
+  assignedFrom  LeadAssignment[] @relation("AssignedFrom")
+  assignedTo    LeadAssignment[] @relation("AssignedTo")
+}
+
+model Lead {
+  id              String   @id @default(cuid())
+  name            String
+  phone           String
+  email           String?
+  source          String   @default("Manual")
+  budget          String?
+  notes           String?
+  pipelineStatus  String   @default("New")
+  lostReason      String?
+
+  primaryOwnerId  String
+  currentOwnerId  String
+  primaryOwner    User     @relation("PrimaryOwner", fields: [primaryOwnerId], references: [id])
+  currentOwner    User     @relation("CurrentOwner", fields: [currentOwnerId], references: [id])
+
+  projectId       String?
+  project         Project? @relation(fields: [projectId], references: [id])
+
+  callLogs        CallLog[]
+  followUps       FollowUp[]
+  siteVisits      SiteVisit[]
+  assignments     LeadAssignment[]
+  timeline        TimelineEvent[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CallLog {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  notes       String
+  callDate    DateTime @default(now())
+  callType    String   @default("Feedback")
+  createdAt   DateTime @default(now())
+}
+
+model FollowUp {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  scheduledAt DateTime
+  notes       String
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model SiteVisit {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  scheduledAt DateTime
+  notes       String
+  status      String   @default("Scheduled")
+  feedback    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model LeadAssignment {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  fromUserId  String
+  fromUser    User     @relation("AssignedFrom", fields: [fromUserId], references: [id])
+  toUserId    String
+  toUser      User     @relation("AssignedTo", fields: [toUserId], references: [id])
+  reason      String?
+  createdAt   DateTime @default(now())
+}
+
+model TimelineEvent {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId      String?
+  eventType   String
+  description String
+  createdAt   DateTime @default(now())
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  location    String?
+  description String?
+  leads       Lead[]
+  properties  Property[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Property {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   @default("Apartment")
+  location    String?
+  price       Float?
+  size        String?
+  bedrooms    Int?
+  bathrooms   Int?
+  status      String   @default("Available")
+  description String?
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
