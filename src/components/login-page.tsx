@@ -34,7 +34,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-light via-white to-steel-light px-4">
       <div className="w-full max-w-md">
         {/* Back button */}
         <button
@@ -47,11 +47,11 @@ export function LoginPage() {
 
         <Card className="border-gray-200 shadow-lg">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600 text-white">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand text-white">
               <Building2 className="h-6 w-6" />
             </div>
             <CardTitle className="text-2xl font-bold text-gray-900">
-              Welcome to CRM Pro
+              Welcome to Leads Dekho
             </CardTitle>
             <p className="text-sm text-gray-500">
               Sign in to your account to continue
@@ -105,7 +105,7 @@ export function LoginPage() {
 
               <Button
                 type="submit"
-                className="h-11 w-full bg-emerald-600 text-base hover:bg-emerald-700"
+                className="h-11 w-full bg-brand text-base hover:bg-brand-dark"
                 disabled={loading}
               >
                 {loading ? "Signing in..." : "Sign In"}

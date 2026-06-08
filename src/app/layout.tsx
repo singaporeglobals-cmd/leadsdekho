@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CRM Pro - Real Estate CRM",
+  title: "Leads Dekho - Real Estate CRM",
   description: "Professional CRM for real estate teams. Manage leads, track site visits, and close more deals.",
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",

@@ -41,6 +41,13 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --color-brand: #dfb338;
+  --color-brand-dark: #c49a20;
+  --color-brand-light: #fef9ec;
+  --color-brand-muted: #f5e6b8;
+  --color-steel: #828ca2;
+  --color-steel-dark: #636d82;
+  --color-steel-light: #c8cdd6;
 }
 
 :root {

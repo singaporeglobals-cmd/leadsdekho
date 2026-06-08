@@ -166,8 +166,11 @@ export function LeadDetail() {
 
   useEffect(() => {
     let cancelled = false;
+    if (!selectedLeadId) {
+      setLoading(false);
+      return;
+    }
     (async () => {
-      if (!selectedLeadId) return;
       setLoading(true);
       const res = await fetch(`/api/leads/${selectedLeadId}`);
       if (!cancelled && res.ok) {
@@ -332,7 +335,7 @@ export function LeadDetail() {
         )}
         {editing && (
           <div className="flex gap-2">
-            <Button size="sm" onClick={handleSaveEdit} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button size="sm" onClick={handleSaveEdit} className="bg-brand hover:bg-brand-dark">
               <Save className="mr-1 h-3 w-3" /> Save
             </Button>
             <Button
@@ -367,7 +370,7 @@ export function LeadDetail() {
                 disabled={!canEdit}
                 className={`flex items-center gap-1 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
                   lead.pipelineStatus === stage
-                    ? `${statusColors[stage]} ring-2 ring-offset-1 ring-emerald-500`
+                    ? `${statusColors[stage]} ring-2 ring-offset-1 ring-brand`
                     : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                 } ${!canEdit ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
               >
@@ -719,7 +722,7 @@ export function LeadDetail() {
               <div>
                 <div className="text-xs text-gray-500">Current Owner</div>
                 <div className="flex items-center gap-2 mt-1">
-                  <User className="h-4 w-4 text-emerald-600" />
+                  <User className="h-4 w-4 text-brand" />
                   <span className="text-sm font-medium">
                     {lead.currentOwner.name}
                   </span>
@@ -875,7 +878,7 @@ function CallLogForm({
       </div>
       <Button
         onClick={() => onSubmit(notes, callType)}
-        className="w-full bg-emerald-600 hover:bg-emerald-700"
+        className="w-full bg-brand hover:bg-brand-dark"
         disabled={!notes}
       >
         Log Call
@@ -914,7 +917,7 @@ function FollowUpForm({
       </div>
       <Button
         onClick={() => onSubmit(scheduledAt, notes)}
-        className="w-full bg-emerald-600 hover:bg-emerald-700"
+        className="w-full bg-brand hover:bg-brand-dark"
         disabled={!notes || !scheduledAt}
       >
         Schedule Follow-up
@@ -954,7 +957,7 @@ function SiteVisitForm({
       </div>
       <Button
         onClick={() => onSubmit(scheduledAt, notes)}
-        className="w-full bg-emerald-600 hover:bg-emerald-700"
+        className="w-full bg-brand hover:bg-brand-dark"
         disabled={!scheduledAt}
       >
         Schedule Visit

@@ -296,7 +296,7 @@ export function PropertyManagement() {
         </div>
         <Button
           size="sm"
-          className="bg-emerald-600 hover:bg-emerald-700"
+          className="bg-brand hover:bg-brand-dark"
           onClick={openCreateDialog}
         >
           <Plus className="mr-1 h-3 w-3" /> Add Property
@@ -325,7 +325,7 @@ export function PropertyManagement() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {properties.map((property) => (
             <Card key={property.id} className="overflow-hidden">
-              <div className="h-32 bg-gradient-to-br from-emerald-100 to-teal-50 flex items-center justify-center">
+              <div className="h-32 bg-gradient-to-br from-brand-muted to-steel-light flex items-center justify-center">
                 <span className="text-4xl">
                   {typeIcons[property.type] || "🏠"}
                 </span>
@@ -541,7 +541,7 @@ export function PropertyManagement() {
             </div>
             <Button
               onClick={handleSave}
-              className="w-full bg-emerald-600 hover:bg-emerald-700"
+              className="w-full bg-brand hover:bg-brand-dark"
               disabled={!form.name}
             >
               {editingProperty ? "Update Property" : "Add Property"}

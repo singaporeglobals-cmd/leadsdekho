@@ -29,7 +29,7 @@ import {
 import { Download, Calendar, TrendingUp } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 
-const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444", "#6366f1", "#ec4899", "#14b8a6"];
+const COLORS = ["#dfb338", "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444", "#6366f1", "#ec4899", "#14b8a6"];
 
 const statusColors: Record<string, string> = {
   New: "#64748b",
@@ -297,7 +297,7 @@ export function ReportsPage() {
                       <XAxis dataKey="name" fontSize={12} />
                       <YAxis allowDecimals={false} />
                       <Tooltip />
-                      <Bar dataKey="value" fill="#10b981" />
+                      <Bar dataKey="value" fill="#dfb338" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

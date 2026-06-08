@@ -52,6 +52,7 @@ export function SiteVisitModule() {
   const [visits, setVisits] = useState<SiteVisitItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [refresh, setRefresh] = useState(0);
 
   // Update visit dialog
   const [updateDialog, setUpdateDialog] = useState<SiteVisitItem | null>(null);
@@ -95,7 +96,7 @@ export function SiteVisitModule() {
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [statusFilter]);
+  }, [statusFilter, refresh]);
 
   const handleUpdateVisit = async () => {
     if (!updateDialog) return;
@@ -110,7 +111,7 @@ export function SiteVisitModule() {
     });
     if (res.ok) {
       setUpdateDialog(null);
-      fetchVisits();
+      setRefresh(r => r + 1);
     }
   };
 
@@ -329,7 +330,7 @@ export function SiteVisitModule() {
               </div>
               <Button
                 onClick={handleUpdateVisit}
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
+                className="w-full bg-brand hover:bg-brand-dark"
               >
                 Update Visit
               </Button>

@@ -68,7 +68,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const roleColor = (role: string) => {
     switch (role) {
       case "admin":
-        return "bg-emerald-900 text-emerald-300";
+        return "bg-steel-dark text-steel-light";
       case "telecalling":
         return "bg-amber-900 text-amber-300";
       case "sales":
@@ -96,10 +96,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       >
         {/* Logo */}
         <div className="flex h-16 items-center gap-2 border-b border-gray-700 px-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white">
             <Building2 className="h-4 w-4" />
           </div>
-          <span className="text-lg font-bold text-white">CRM Pro</span>
+          <span className="text-lg font-bold text-white">Leads Dekho</span>
           <button
             className="ml-auto lg:hidden"
             onClick={() => setSidebarOpen(false)}
@@ -122,7 +122,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   }}
                   className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                     isActive
-                      ? "bg-emerald-600 text-white"
+                      ? "bg-brand text-white"
                       : "text-gray-300 hover:bg-gray-800 hover:text-white"
                   }`}
                 >
@@ -140,7 +140,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="p-4">
           <div className="flex items-center gap-3">
             <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-emerald-600 text-white text-xs font-semibold">
+              <AvatarFallback className="bg-brand text-white text-xs font-semibold">
                 {user ? getInitials(user.name) : "?"}
               </AvatarFallback>
             </Avatar>

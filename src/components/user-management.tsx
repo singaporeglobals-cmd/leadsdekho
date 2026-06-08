@@ -46,7 +46,7 @@ interface UserItem {
 }
 
 const roleColors: Record<string, string> = {
-  admin: "bg-emerald-100 text-emerald-700",
+  admin: "bg-brand-muted text-brand-dark",
   telecalling: "bg-amber-100 text-amber-700",
   sales: "bg-sky-100 text-sky-700",
 };
@@ -170,7 +170,7 @@ export function UserManagement() {
         </div>
         <Button
           size="sm"
-          className="bg-emerald-600 hover:bg-emerald-700"
+          className="bg-brand hover:bg-brand-dark"
           onClick={openCreate}
         >
           <Plus className="mr-1 h-3 w-3" /> Add User
@@ -330,7 +330,7 @@ export function UserManagement() {
             )}
             <Button
               onClick={handleSave}
-              className="w-full bg-emerald-600 hover:bg-emerald-700"
+              className="w-full bg-brand hover:bg-brand-dark"
               disabled={!form.name || !form.email || (!editingUser && !form.password)}
             >
               {editingUser ? "Update User" : "Create User"}

@@ -84,7 +84,7 @@ export function AdminDashboard() {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card className="border-l-4 border-l-brand">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -93,8 +93,8 @@ export function AdminDashboard() {
                   {data.totalLeads as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-emerald-50 p-3">
-                <Users className="h-5 w-5 text-emerald-600" />
+              <div className="rounded-lg bg-brand-light p-3">
+                <Users className="h-5 w-5 text-brand" />
               </div>
             </div>
           </CardContent>
@@ -132,7 +132,7 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-600">
+        <Card className="border-l-4 border-l-brand">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -141,8 +141,8 @@ export function AdminDashboard() {
                   {statusCounts["Won"] || 0}
                 </p>
               </div>
-              <div className="rounded-lg bg-emerald-50 p-3">
-                <TrendingUp className="h-5 w-5 text-emerald-600" />
+              <div className="rounded-lg bg-brand-light p-3">
+                <TrendingUp className="h-5 w-5 text-brand" />
               </div>
             </div>
           </CardContent>
@@ -244,7 +244,7 @@ export function AdminDashboard() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-emerald-600"
+            className="text-brand"
             onClick={() => setPage("leads")}
           >
             View All <ArrowUpRight className="ml-1 h-3 w-3" />
@@ -344,7 +344,7 @@ export function TelecallingDashboard() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card className="border-l-4 border-l-brand">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -353,8 +353,8 @@ export function TelecallingDashboard() {
                   {data.myLeadsCount as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-emerald-50 p-3">
-                <Users className="h-5 w-5 text-emerald-600" />
+              <div className="rounded-lg bg-brand-light p-3">
+                <Users className="h-5 w-5 text-brand" />
               </div>
             </div>
           </CardContent>
@@ -448,7 +448,7 @@ export function TelecallingDashboard() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-emerald-600"
+              className="text-brand"
               onClick={() => setPage("leads")}
             >
               View Leads
@@ -565,7 +565,7 @@ export function SalesDashboard() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card className="border-l-4 border-l-brand">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -574,8 +574,8 @@ export function SalesDashboard() {
                   {data.myLeadsCount as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-emerald-50 p-3">
-                <Users className="h-5 w-5 text-emerald-600" />
+              <div className="rounded-lg bg-brand-light p-3">
+                <Users className="h-5 w-5 text-brand" />
               </div>
             </div>
           </CardContent>
@@ -613,7 +613,7 @@ export function SalesDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-600">
+        <Card className="border-l-4 border-l-brand">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -622,8 +622,8 @@ export function SalesDashboard() {
                   {data.wonDeals as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-emerald-50 p-3">
-                <TrendingUp className="h-5 w-5 text-emerald-600" />
+              <div className="rounded-lg bg-brand-light p-3">
+                <TrendingUp className="h-5 w-5 text-brand" />
               </div>
             </div>
           </CardContent>
@@ -697,7 +697,7 @@ export function SalesDashboard() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-emerald-600"
+            className="text-brand"
             onClick={() => setPage("leads")}
           >
             View All <ArrowUpRight className="ml-1 h-3 w-3" />

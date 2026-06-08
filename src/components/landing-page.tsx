@@ -21,14 +21,14 @@ export function LandingPage() {
   const { setPage } = useAppStore();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+    <div className="min-h-screen bg-gradient-to-br from-brand-light via-white to-steel-light">
       {/* Navigation */}
       <nav className="flex items-center justify-between px-6 py-4 lg:px-12">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 text-white">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-white">
             <Building2 className="h-5 w-5" />
           </div>
-          <span className="text-xl font-bold text-gray-900">CRM Pro</span>
+          <span className="text-xl font-bold text-gray-900">Leads Dekho</span>
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -40,7 +40,7 @@ export function LandingPage() {
           </Button>
           <Button
             onClick={() => setPage("login")}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-brand hover:bg-brand-dark text-white"
           >
             Get Started
           </Button>
@@ -50,13 +50,13 @@ export function LandingPage() {
       {/* Hero Section */}
       <section className="px-6 py-16 lg:px-12 lg:py-24">
         <div className="mx-auto max-w-6xl text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-medium text-emerald-700">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-muted px-4 py-1.5 text-sm font-medium text-brand-dark">
             <Target className="h-4 w-4" />
             Real Estate CRM Built for Growth
           </div>
           <h1 className="mb-6 text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl">
             Close More Deals with
-            <span className="text-emerald-600"> Smart Lead Management</span>
+            <span className="text-brand"> Smart Lead Management</span>
           </h1>
           <p className="mx-auto mb-8 max-w-2xl text-lg text-gray-600">
             From first call to closed deal — manage your entire real estate sales
@@ -67,7 +67,7 @@ export function LandingPage() {
             <Button
               size="lg"
               onClick={() => setPage("login")}
-              className="bg-emerald-600 px-8 text-base hover:bg-emerald-700"
+              className="bg-brand px-8 text-base hover:bg-brand-dark"
             >
               Start Free Trial
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -97,7 +97,7 @@ export function LandingPage() {
             { value: "99.9%", label: "Uptime" },
           ].map((stat) => (
             <div key={stat.label} className="text-center">
-              <div className="text-2xl font-bold text-emerald-600 lg:text-3xl">
+              <div className="text-2xl font-bold text-brand lg:text-3xl">
                 {stat.value}
               </div>
               <div className="text-sm text-gray-500">{stat.label}</div>
@@ -207,7 +207,7 @@ export function LandingPage() {
               },
             ].map((item) => (
               <div key={item.step} className="flex gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
                   {item.step}
                 </div>
                 <div>
@@ -223,20 +223,20 @@ export function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-emerald-600 px-6 py-16 lg:px-12 lg:py-24">
+      <section className="bg-brand px-6 py-16 lg:px-12 lg:py-24">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="mb-4 text-3xl font-bold text-white">
             Ready to Transform Your Sales Process?
           </h2>
-          <p className="mb-8 text-emerald-100">
-            Join hundreds of real estate teams already using CRM Pro to close
+          <p className="mb-8 text-white/80">
+            Join hundreds of real estate teams already using Leads Dekho to close
             more deals.
           </p>
           <Button
             size="lg"
             variant="secondary"
             onClick={() => setPage("login")}
-            className="bg-white text-emerald-700 hover:bg-gray-100 px-8"
+            className="bg-white text-brand-dark hover:bg-gray-100 px-8"
           >
             Get Started Now
             <ArrowRight className="ml-2 h-4 w-4" />
@@ -248,10 +248,10 @@ export function LandingPage() {
       <footer className="border-t border-gray-200 bg-gray-50 px-6 py-8 lg:px-12">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-600 text-white">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-brand text-white">
               <Building2 className="h-4 w-4" />
             </div>
-            <span className="font-semibold text-gray-900">CRM Pro</span>
+            <span className="font-semibold text-gray-900">Leads Dekho</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-gray-500">
             <span>Real Estate CRM</span>

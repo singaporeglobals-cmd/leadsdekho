@@ -29,7 +29,7 @@ export default function Home() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="mb-3 h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent mx-auto"></div>
+          <div className="mb-3 h-8 w-8 animate-spin rounded-full border-4 border-brand border-t-transparent mx-auto"></div>
           <p className="text-sm text-gray-500">Loading...</p>
         </div>
       </div>

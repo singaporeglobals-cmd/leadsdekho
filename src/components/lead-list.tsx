@@ -350,7 +350,7 @@ export function LeadList() {
           {/* Create Lead Dialog */}
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+              <Button size="sm" className="bg-brand hover:bg-brand-dark">
                 <Plus className="mr-1 h-3 w-3" />
                 Add Lead
               </Button>
@@ -483,7 +483,7 @@ export function LeadList() {
                 </div>
                 <Button
                   onClick={handleCreateLead}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+                  className="w-full bg-brand hover:bg-brand-dark"
                   disabled={!createForm.name || !createForm.phone}
                 >
                   Create Lead
@@ -760,7 +760,7 @@ export function LeadList() {
 
             <Button
               onClick={handleFeedback}
-              className="w-full bg-emerald-600 hover:bg-emerald-700"
+              className="w-full bg-brand hover:bg-brand-dark"
               disabled={!feedbackForm.notes}
             >
               Submit Feedback
@@ -807,7 +807,7 @@ export function LeadList() {
             </div>
             <Button
               onClick={handleAssign}
-              className="w-full bg-emerald-600 hover:bg-emerald-700"
+              className="w-full bg-brand hover:bg-brand-dark"
               disabled={!assignTo}
             >
               Assign Lead
