@@ -94,7 +94,9 @@ function LeadRow({ lead }: { lead: Record<string, unknown> }) {
   const { setSelectedLeadId, setPage } = useAppStore();
   const handleUpdate = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setSelectedLeadId(lead.id as string);
+    e.preventDefault();
+    const leadId = lead.id as string;
+    setSelectedLeadId(leadId);
     setPage("lead-detail");
   };
   return (
@@ -106,7 +108,7 @@ function LeadRow({ lead }: { lead: Record<string, unknown> }) {
       <TableCell><StatusBadge status={lead.pipelineStatus as string} /></TableCell>
       <TableCell>{(lead.currentOwner as Record<string, string>)?.name || "-"}</TableCell>
       <TableCell className="text-right">
-        <Button size="sm" variant="ghost" className="h-7 gap-1 text-brand hover:text-brand-dark" onClick={handleUpdate}>
+        <Button size="sm" variant="ghost" className="h-7 gap-1 text-brand hover:text-brand-dark" onClick={handleUpdate} onMouseDown={(e) => e.stopPropagation()}>
           <Pencil className="h-3.5 w-3.5" /> Update
         </Button>
       </TableCell>
@@ -119,7 +121,9 @@ function LeadRowSimple({ lead, showSource, showCreated }: { lead: Record<string,
   const { setSelectedLeadId, setPage } = useAppStore();
   const handleUpdate = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setSelectedLeadId(lead.id as string);
+    e.preventDefault();
+    const leadId = lead.id as string;
+    setSelectedLeadId(leadId);
     setPage("lead-detail");
   };
   return (
@@ -132,7 +136,7 @@ function LeadRowSimple({ lead, showSource, showCreated }: { lead: Record<string,
       <TableCell>{(lead.currentOwner as Record<string, string>)?.name || "-"}</TableCell>
       {showCreated && <TableCell className="text-xs text-muted-foreground">{formatDate(((lead.createdAt as string) || "").split("T")[0])}</TableCell>}
       <TableCell className="text-right">
-        <Button size="sm" variant="ghost" className="h-7 gap-1 text-brand hover:text-brand-dark" onClick={handleUpdate}>
+        <Button size="sm" variant="ghost" className="h-7 gap-1 text-brand hover:text-brand-dark" onClick={handleUpdate} onMouseDown={(e) => e.stopPropagation()}>
           <Pencil className="h-3.5 w-3.5" /> Update
         </Button>
       </TableCell>
@@ -299,7 +303,7 @@ function DateWiseReport() {
                           </TableRow>
                           {isExpanded && (
                             <TableRow>
-                              <TableCell colSpan={7} className="bg-muted/30 p-0">
+                              <TableCell colSpan={7} className="bg-muted/30 p-0" onClick={(e) => e.stopPropagation()}>
                                 <div className="p-3">
                                   <Table>
                                     <TableHeader>
@@ -502,7 +506,7 @@ function SourceWiseReport() {
                           </TableRow>
                           {isExpanded && (
                             <TableRow>
-                              <TableCell colSpan={9} className="bg-muted/30 p-0">
+                              <TableCell colSpan={9} className="bg-muted/30 p-0" onClick={(e) => e.stopPropagation()}>
                                 <div className="p-3">
                                   <Table>
                                     <TableHeader>
@@ -733,7 +737,7 @@ function ProjectWiseReport() {
                           </TableRow>
                           {isExpanded && (
                             <TableRow>
-                              <TableCell colSpan={9} className="bg-muted/30 p-0">
+                              <TableCell colSpan={9} className="bg-muted/30 p-0" onClick={(e) => e.stopPropagation()}>
                                 <div className="p-3">
                                   <Table>
                                     <TableHeader>

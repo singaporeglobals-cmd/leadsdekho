@@ -926,7 +926,9 @@ export function LeadList() {
                     variant="outline"
                     size="sm"
                     className="h-7 text-xs px-2 gap-1 shrink-0 text-brand hover:text-brand-dark hover:bg-brand/10 border-brand/30"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
                       setSelectedLeadId(lead.id);
                       setPage("lead-detail");
                     }}
