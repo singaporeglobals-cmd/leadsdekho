@@ -37,6 +37,7 @@ model Lead {
   budget          String?
   notes           String?
   pipelineStatus  String   @default("New")
+  leadStatus     String?  @default("New")
   lostReason      String?
 
   primaryOwnerId  String
@@ -56,6 +57,13 @@ model Lead {
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([pipelineStatus])
+  @@index([source])
+  @@index([currentOwnerId])
+  @@index([projectId])
+  @@index([createdAt])
+  @@index([leadStatus])
 }
 
 model CallLog {

@@ -66,7 +66,6 @@ const SOURCES = [
   "Social Media",
   "Walk-in",
   "Call",
-  "CSV Import",
   "Housing.com",
   "99acres",
   "MagicBricks",
@@ -103,6 +102,7 @@ interface Lead {
   budget: string | null;
   notes: string | null;
   pipelineStatus: string;
+  leadStatus: string | null;
   lostReason: string | null;
   primaryOwnerId: string;
   currentOwnerId: string;
@@ -153,6 +153,8 @@ export function LeadList() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [refresh, setRefresh] = useState(0);
 
   // Create lead dialog
@@ -179,6 +181,7 @@ export function LeadList() {
     assignTo: "",
     followUpDate: "",
     dropLead: false,
+    leadStatus: "",
   });
 
   // Assign dialog (for dropdown menu + direct button)
@@ -214,6 +217,8 @@ export function LeadList() {
       if (search) params.set("search", search);
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (sourceFilter !== "all") params.set("source", sourceFilter);
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo) params.set("dateTo", dateTo);
 
       const res = await fetch(`/api/leads?${params.toString()}`);
       if (!cancelled && res.ok) {
@@ -224,7 +229,7 @@ export function LeadList() {
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [search, statusFilter, sourceFilter, refresh]);
+  }, [search, statusFilter, sourceFilter, dateFrom, dateTo, refresh]);
 
   // Fetch users, projects, and properties for ALL roles
   useEffect(() => {
@@ -328,6 +333,15 @@ export function LeadList() {
         });
       }
 
+      // If lead status selected, update it
+      if (feedbackForm.leadStatus) {
+        await fetch(`/api/leads/${feedbackLead.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ leadStatus: feedbackForm.leadStatus }),
+        });
+      }
+
       // If drop lead selected
       if (feedbackForm.dropLead) {
         await fetch(`/api/leads/${feedbackLead.id}`, {
@@ -349,6 +363,7 @@ export function LeadList() {
         assignTo: "",
         followUpDate: "",
         dropLead: false,
+        leadStatus: "",
       });
       doRefresh();
     }
@@ -489,6 +504,7 @@ export function LeadList() {
       assignTo: "",
       followUpDate: "",
       dropLead: false,
+      leadStatus: "",
     });
     setFeedbackOpen(true);
   };
@@ -542,6 +558,8 @@ export function LeadList() {
               ))}
             </SelectContent>
           </Select>
+          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[130px]" placeholder="From" />
+          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[130px]" placeholder="To" />
           {/* Fresh Leads quick filter for telecaller/sales */}
           {(user?.role === "telecalling" || user?.role === "sales") && (
             <Button
@@ -835,6 +853,11 @@ export function LeadList() {
                     >
                       {lead.pipelineStatus}
                     </Badge>
+                    {lead.leadStatus && lead.leadStatus !== "New" && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-brand/30 text-brand">
+                        {lead.leadStatus}
+                      </Badge>
+                    )}
                     {canViewOnly(lead) && (
                       <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
                     )}
@@ -900,6 +923,7 @@ export function LeadList() {
                           assignTo: "",
                           followUpDate: "",
                           dropLead: false,
+                          leadStatus: "",
                         });
                         setFeedbackOpen(true);
                       }}
@@ -967,6 +991,7 @@ export function LeadList() {
                                 assignTo: "",
                                 followUpDate: "",
                                 dropLead: false,
+                                leadStatus: "",
                               });
                               setFeedbackOpen(true);
                             }}
@@ -1047,6 +1072,26 @@ export function LeadList() {
                   <SelectItem value="Cold Call">Cold Call</SelectItem>
                   <SelectItem value="Follow-up">Follow-up</SelectItem>
                   <SelectItem value="Site Visit Call">Site Visit Call</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Lead Status</Label>
+              <Select
+                value={feedbackForm.leadStatus}
+                onValueChange={(v) => setFeedbackForm({ ...feedbackForm, leadStatus: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select lead status..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Not Connected">Not Connected</SelectItem>
+                  <SelectItem value="Site Visit Done">Site Visit Done</SelectItem>
+                  <SelectItem value="Prospect">Prospect</SelectItem>
+                  <SelectItem value="Not Interested">Not Interested</SelectItem>
+                  <SelectItem value="Site Visit Promised">Site Visit Promised</SelectItem>
+                  <SelectItem value="Booked">Booked</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -41,7 +41,7 @@ const statusColors: Record<string, string> = {
 
 const SOURCES = [
   "Manual", "Website", "Referral", "Social Media", "Walk-in",
-  "Call", "CSV Import", "Housing.com", "99acres", "MagicBricks",
+  "Call", "Housing.com", "99acres", "MagicBricks",
 ];
 
 // Quick date range presets
@@ -202,7 +202,7 @@ async function handleExport(type: string, from?: string, to?: string) {
 }
 
 // ─── DATE-WISE REPORT ───
-function DateWiseReport({ fromDate, toDate, projectId, sourceId }: { fromDate: string; toDate: string; projectId: string; sourceId: string }) {
+function DateWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }: { fromDate: string; toDate: string; projectId: string; sourceId: string; leadStatusId: string }) {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -213,11 +213,12 @@ function DateWiseReport({ fromDate, toDate, projectId, sourceId }: { fromDate: s
       const params = new URLSearchParams({ from: fromDate, to: toDate });
       if (projectId) params.set("project", projectId);
       if (sourceId) params.set("source", sourceId);
+      if (leadStatusId) params.set("leadStatus", leadStatusId);
       const res = await fetch(`/api/reports/date-wise?${params}`);
       if (res.ok) setData(await res.json());
     } catch (e) { console.error(e); }
     setLoading(false);
-  }, [fromDate, toDate, projectId, sourceId]);
+  }, [fromDate, toDate, projectId, sourceId, leadStatusId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -363,7 +364,7 @@ function DateWiseReport({ fromDate, toDate, projectId, sourceId }: { fromDate: s
 }
 
 // ─── SOURCE-WISE REPORT ───
-function SourceWiseReport({ fromDate, toDate, projectId, sourceId }: { fromDate: string; toDate: string; projectId: string; sourceId: string }) {
+function SourceWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }: { fromDate: string; toDate: string; projectId: string; sourceId: string; leadStatusId: string }) {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedSource, setExpandedSource] = useState<string | null>(null);
@@ -374,11 +375,12 @@ function SourceWiseReport({ fromDate, toDate, projectId, sourceId }: { fromDate:
       const params = new URLSearchParams({ from: fromDate, to: toDate });
       if (projectId) params.set("project", projectId);
       if (sourceId) params.set("source", sourceId);
+      if (leadStatusId) params.set("leadStatus", leadStatusId);
       const res = await fetch(`/api/reports/source-wise?${params}`);
       if (res.ok) setData(await res.json());
     } catch (e) { console.error(e); }
     setLoading(false);
-  }, [fromDate, toDate, projectId, sourceId]);
+  }, [fromDate, toDate, projectId, sourceId, leadStatusId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -549,7 +551,7 @@ function SourceWiseReport({ fromDate, toDate, projectId, sourceId }: { fromDate:
 }
 
 // ─── PROJECT-WISE REPORT ───
-function ProjectWiseReport({ fromDate, toDate, projectId, sourceId }: { fromDate: string; toDate: string; projectId: string; sourceId: string }) {
+function ProjectWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }: { fromDate: string; toDate: string; projectId: string; sourceId: string; leadStatusId: string }) {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
@@ -560,11 +562,12 @@ function ProjectWiseReport({ fromDate, toDate, projectId, sourceId }: { fromDate
       const params = new URLSearchParams({ from: fromDate, to: toDate });
       if (projectId) params.set("project", projectId);
       if (sourceId) params.set("source", sourceId);
+      if (leadStatusId) params.set("leadStatus", leadStatusId);
       const res = await fetch(`/api/reports/project-wise?${params}`);
       if (res.ok) setData(await res.json());
     } catch (e) { console.error(e); }
     setLoading(false);
-  }, [fromDate, toDate, projectId, sourceId]);
+  }, [fromDate, toDate, projectId, sourceId, leadStatusId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -776,6 +779,7 @@ export function ReportsPage() {
   const [toDate, setToDate] = useState(lastDay);
   const [projectId, setProjectId] = useState("all");
   const [sourceId, setSourceId] = useState("all");
+  const [leadStatusId, setLeadStatusId] = useState("all");
 
   // Fetch projects for the dropdown
   useEffect(() => {
@@ -798,9 +802,10 @@ export function ReportsPage() {
     setToDate(lastDay);
     setProjectId("all");
     setSourceId("all");
+    setLeadStatusId("all");
   };
 
-  const hasActiveFilters = projectId !== "all" || sourceId !== "all" || fromDate !== firstDay || toDate !== lastDay;
+  const hasActiveFilters = projectId !== "all" || sourceId !== "all" || leadStatusId !== "all" || fromDate !== firstDay || toDate !== lastDay;
 
   return (
     <div className="space-y-4">
@@ -890,6 +895,26 @@ export function ReportsPage() {
                 </Select>
               </div>
 
+              {/* Lead Status Filter */}
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground">Lead Status</Label>
+                <Select value={leadStatusId} onValueChange={setLeadStatusId}>
+                  <SelectTrigger className="w-44 h-9">
+                    <Filter className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="Not Connected">Not Connected</SelectItem>
+                    <SelectItem value="Site Visit Done">Site Visit Done</SelectItem>
+                    <SelectItem value="Prospect">Prospect</SelectItem>
+                    <SelectItem value="Not Interested">Not Interested</SelectItem>
+                    <SelectItem value="Site Visit Promised">Site Visit Promised</SelectItem>
+                    <SelectItem value="Booked">Booked</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Reset Button */}
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" className="h-9 text-muted-foreground hover:text-foreground" onClick={resetFilters}>
@@ -937,15 +962,15 @@ export function ReportsPage() {
         </TabsList>
 
         <TabsContent value="date-wise" className="mt-4">
-          <DateWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} />
+          <DateWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} leadStatusId={leadStatusId === "all" ? "" : leadStatusId} />
         </TabsContent>
 
         <TabsContent value="source-wise" className="mt-4">
-          <SourceWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} />
+          <SourceWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} leadStatusId={leadStatusId === "all" ? "" : leadStatusId} />
         </TabsContent>
 
         <TabsContent value="project-wise" className="mt-4">
-          <ProjectWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} />
+          <ProjectWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} leadStatusId={leadStatusId === "all" ? "" : leadStatusId} />
         </TabsContent>
       </Tabs>
     </div>

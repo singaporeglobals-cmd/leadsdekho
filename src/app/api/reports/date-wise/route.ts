@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const to = searchParams.get("to");
   const projectFilter = searchParams.get("project");
   const sourceFilter = searchParams.get("source");
+  const leadStatusFilter = searchParams.get("leadStatus");
 
   // Default: current month
   const now = new Date();
@@ -33,6 +34,11 @@ export async function GET(req: NextRequest) {
   // Source filter
   if (sourceFilter) {
     where.source = sourceFilter;
+  }
+
+  // Lead status filter
+  if (leadStatusFilter) {
+    where.leadStatus = leadStatusFilter;
   }
 
   // Role-based filtering

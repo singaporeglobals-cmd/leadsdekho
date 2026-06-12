@@ -14,6 +14,8 @@ export async function GET(req: NextRequest) {
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "50");
   const ownerFilter = searchParams.get("owner");
+  const dateFrom = searchParams.get("dateFrom");
+  const dateTo = searchParams.get("dateTo");
 
   const where: Record<string, unknown> = {};
 
@@ -32,6 +34,15 @@ export async function GET(req: NextRequest) {
   if (status) where.pipelineStatus = status;
   if (source) where.source = source;
   if (ownerFilter) where.currentOwnerId = ownerFilter;
+  if (dateFrom || dateTo) {
+    where.createdAt = {};
+    if (dateFrom) (where.createdAt as Record<string, unknown>).gte = new Date(dateFrom);
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      (where.createdAt as Record<string, unknown>).lte = toDate;
+    }
+  }
   if (search) {
     where.OR = user.role === "sales"
       ? [

@@ -274,7 +274,7 @@ export function LeadDetail() {
         await fetch(`/api/leads/${lead.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pipelineStatus: leadStatus }),
+          body: JSON.stringify({ leadStatus }),
         });
       }
       // If follow-up date set, schedule it
@@ -535,7 +535,9 @@ export function LeadDetail() {
                           "Social Media",
                           "Walk-in",
                           "Call",
-                          "CSV Import",
+                          "Housing.com",
+                          "99acres",
+                          "MagicBricks",
                         ].map((s) => (
                           <SelectItem key={s} value={s}>
                             {s}
@@ -564,6 +566,14 @@ export function LeadDetail() {
                   <div>
                     <div className="text-xs text-muted-foreground">Source</div>
                     <div className="text-sm text-foreground">{lead.source}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Lead Status</div>
+                    <div className="text-sm text-foreground">
+                      {(lead as Record<string, unknown>).leadStatus && (lead as Record<string, unknown>).leadStatus !== "New"
+                        ? (lead as Record<string, unknown>).leadStatus as string
+                        : "—"}
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground">Budget</div>

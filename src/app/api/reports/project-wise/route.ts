@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const to = searchParams.get("to");
   const projectFilter = searchParams.get("project");
   const sourceFilter = searchParams.get("source");
+  const leadStatusFilter = searchParams.get("leadStatus");
 
   const now = new Date();
   const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -32,6 +33,11 @@ export async function GET(req: NextRequest) {
   // Source filter
   if (sourceFilter) {
     where.source = sourceFilter;
+  }
+
+  // Lead status filter
+  if (leadStatusFilter) {
+    where.leadStatus = leadStatusFilter;
   }
 
   if (user.role === "sales" || user.role === "telecalling") {

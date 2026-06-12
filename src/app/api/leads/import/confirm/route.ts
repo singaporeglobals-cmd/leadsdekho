@@ -65,9 +65,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Handle date field
-    let source = row.source || "CSV Import";
+    let source = row.source || "Manual";
     if (row.date) {
-      source = row.source || "CSV Import";
+      source = row.source || "Manual";
     }
 
     // Format the import date in notes if present

@@ -35,6 +35,11 @@ import {
   XCircle,
 } from "lucide-react";
 
+const SOURCES = [
+  "Manual", "Website", "Referral", "Social Media", "Walk-in",
+  "Call", "Housing.com", "99acres", "MagicBricks",
+];
+
 interface ParsedRow {
   name: string;
   phone: string;
@@ -70,6 +75,8 @@ export function LeadImport() {
   const [imported, setImported] = useState(0);
   const [skippedCount, setSkippedCount] = useState(0);
   const [users, setUsers] = useState<Array<{ id: string; name: string; role: string; isActive: boolean }>>([]);
+  const [bulkProject, setBulkProject] = useState("");
+  const [bulkSource, setBulkSource] = useState("");
   const [error, setError] = useState("");
   const [duplicateCount, setDuplicateCount] = useState(0);
   const [skipDuplicates, setSkipDuplicates] = useState(true);
@@ -156,6 +163,26 @@ export function LeadImport() {
   // Remove a row
   const removeRow = (index: number) => {
     setParsedRows((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const applyBulkProject = () => {
+    if (!bulkProject) return;
+    const projName = projects.find(p => p.id === bulkProject)?.name || "";
+    setParsedRows(prev => prev.map(row => ({ ...row, projectName: projName })));
+    setProjectNames(prev => {
+      const newNames = new Set(prev);
+      if (projName) newNames.add(projName);
+      return Array.from(newNames);
+    });
+    // Auto-map the project
+    setPropertyMapping(prev => ({ ...prev, [projName]: bulkProject }));
+    setBulkProject("");
+  };
+
+  const applyBulkSource = () => {
+    if (!bulkSource) return;
+    setParsedRows(prev => prev.map(row => ({ ...row, source: bulkSource })));
+    setBulkSource("");
   };
 
   const handleImport = async () => {
@@ -328,6 +355,34 @@ export function LeadImport() {
               <strong>Important:</strong> The PROJECT NAME column from your file is shown for reference only. You must manually enter the correct project name for each lead in the editable column below.
             </div>
 
+            {/* Bulk Apply Controls */}
+            <div className="flex flex-wrap gap-2 items-center p-3 bg-muted/50 rounded-lg">
+              <span className="text-sm font-medium">Bulk Apply:</span>
+              <Select value={bulkProject} onValueChange={setBulkProject}>
+                <SelectTrigger className="w-[180px] h-8">
+                  <SelectValue placeholder="Set Project for All" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" variant="outline" onClick={applyBulkProject} disabled={!bulkProject}>Apply Project</Button>
+
+              <Select value={bulkSource} onValueChange={setBulkSource}>
+                <SelectTrigger className="w-[150px] h-8">
+                  <SelectValue placeholder="Set Source for All" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SOURCES.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" variant="outline" onClick={applyBulkSource} disabled={!bulkSource}>Apply Source</Button>
+            </div>
+
             {/* Editable table */}
             <div className="max-h-[500px] overflow-auto rounded-lg border">
               <Table>
@@ -355,7 +410,7 @@ export function LeadImport() {
                       <TableCell className="text-xs">{row.date || "—"}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
-                          {row.source || "CSV Import"}
+                          {row.source || "\u2014"}
                         </Badge>
                       </TableCell>
                       <TableCell>

@@ -76,7 +76,7 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const { name, phone, email, source, budget, notes, pipelineStatus, lostReason, projectId } = body;
+  const { name, phone, email, source, budget, notes, pipelineStatus, lostReason, projectId, leadStatus } = body;
 
   const updateData: Record<string, unknown> = {};
   if (name !== undefined) updateData.name = name;
@@ -87,6 +87,7 @@ export async function PUT(
   if (notes !== undefined) updateData.notes = notes || null;
   if (projectId !== undefined) updateData.projectId = projectId || null;
   if (lostReason !== undefined) updateData.lostReason = lostReason || null;
+  if (leadStatus !== undefined) updateData.leadStatus = leadStatus;
 
   if (pipelineStatus !== undefined && pipelineStatus !== lead.pipelineStatus) {
     updateData.pipelineStatus = pipelineStatus;
