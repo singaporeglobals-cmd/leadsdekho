@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +46,8 @@ import {
   CalendarClock,
   Pencil,
   Copy,
+  Calendar,
+  RotateCcw,
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -59,6 +61,15 @@ const PIPELINE_STAGES = [
   "Lost",
 ];
 
+const LEAD_STATUSES = [
+  "Not Connected",
+  "Site Visit Done",
+  "Prospect",
+  "Not Interested",
+  "Site Visit Promised",
+  "Booked",
+];
+
 const SOURCES = [
   "Manual",
   "Website",
@@ -70,6 +81,31 @@ const SOURCES = [
   "99acres",
   "MagicBricks",
 ];
+
+const DATE_PRESETS = [
+  { label: "Today", days: 0 },
+  { label: "Last 7 Days", days: 7 },
+  { label: "Last 30 Days", days: 30 },
+  { label: "This Month", days: -1 },
+  { label: "Last Month", days: -2 },
+];
+
+function getDateRange(preset: number): { from: string; to: string } {
+  const now = new Date();
+  const to = now.toISOString().split("T")[0];
+  let from: string;
+  if (preset === -1) {
+    from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+  } else if (preset === -2) {
+    const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    from = firstDayLastMonth.toISOString().split("T")[0];
+    return { from, to: lastDayLastMonth.toISOString().split("T")[0] };
+  } else {
+    from = new Date(now.getTime() - preset * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  }
+  return { from, to };
+}
 
 const statusColors: Record<string, string> = {
   New: "bg-slate-500 text-white",
@@ -151,11 +187,30 @@ export function LeadList() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [leadStatusFilter, setLeadStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [refresh, setRefresh] = useState(0);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced search handler
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(value);
+    }, 300);
+  }, []);
+
+  // Handle date preset click
+  const handleDatePreset = (preset: number) => {
+    const { from, to } = getDateRange(preset);
+    setDateFrom(from);
+    setDateTo(to);
+  };
 
   // Create lead dialog
   const [createOpen, setCreateOpen] = useState(false);
@@ -214,8 +269,9 @@ export function LeadList() {
     (async () => {
       setLoading(true);
       const params = new URLSearchParams();
-      if (search) params.set("search", search);
+      if (debouncedSearch) params.set("search", debouncedSearch);
       if (statusFilter !== "all") params.set("status", statusFilter);
+      if (leadStatusFilter !== "all") params.set("leadStatus", leadStatusFilter);
       if (sourceFilter !== "all") params.set("source", sourceFilter);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo) params.set("dateTo", dateTo);
@@ -229,31 +285,28 @@ export function LeadList() {
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [search, statusFilter, sourceFilter, dateFrom, dateTo, refresh]);
+  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, dateFrom, dateTo, refresh]);
 
-  // Fetch users, projects, and properties for ALL roles
+  // Fetch users, projects, and properties for ALL roles - parallel for speed
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Fetch users for all roles (needed for assign dropdown)
-      const uRes = await fetch("/api/users");
+      const [uRes, pRes, propRes] = await Promise.all([
+        fetch("/api/users"),
+        fetch("/api/projects"),
+        fetch("/api/properties"),
+      ]);
       if (!cancelled && uRes.ok) {
         const userData = await uRes.json();
         if (user?.role === "admin") {
           setUsers(userData);
         } else {
-          // For telecaller/sales, show all active users including themselves
-          // They need to see other people to assign to
           setUsers(userData.filter((u: UserItem) => u.isActive));
         }
       }
-      // Fetch projects
-      const pRes = await fetch("/api/projects");
       if (!cancelled && pRes.ok) {
         setProjects(await pRes.json());
       }
-      // Fetch properties
-      const propRes = await fetch("/api/properties");
       if (!cancelled && propRes.ok) {
         const propData = await propRes.json();
         setProperties(propData.properties || []);
@@ -527,7 +580,7 @@ export function LeadList() {
             <Input
               placeholder="Search leads..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-9 h-9"
             />
           </div>
@@ -558,8 +611,46 @@ export function LeadList() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={leadStatusFilter} onValueChange={setLeadStatusFilter}>
+            <SelectTrigger className="w-[160px] h-9">
+              <Filter className="mr-1 h-3 w-3" />
+              <SelectValue placeholder="Lead Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Lead Status</SelectItem>
+              {LEAD_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {/* Date filter with presets */}
+          <div className="flex items-center gap-1">
+            {DATE_PRESETS.map((preset) => (
+              <Button
+                key={preset.label}
+                variant="outline"
+                size="sm"
+                className="h-9 text-xs px-2"
+                onClick={() => handleDatePreset(preset.days)}
+              >
+                <Calendar className="mr-1 h-3 w-3" />
+                {preset.label}
+              </Button>
+            ))}
+          </div>
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[130px]" placeholder="From" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[130px]" placeholder="To" />
+          {/* Clear all filters */}
+          {(statusFilter !== "all" || leadStatusFilter !== "all" || sourceFilter !== "all" || dateFrom || dateTo) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 text-muted-foreground hover:text-foreground"
+              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSourceFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); }}
+            >
+              <RotateCcw className="mr-1 h-3 w-3" /> Clear
+            </Button>
+          )}
           {/* Fresh Leads quick filter for telecaller/sales */}
           {(user?.role === "telecalling" || user?.role === "sales") && (
             <Button

@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
       normalizedRow.date = lowerRow["date"] || lowerRow["lead_date"] || "";
     }
     if (lowerRow["lead_source"] || lowerRow["source"]) {
-      normalizedRow.source = lowerRow["lead_source"] || lowerRow["source"] || "CSV Import";
+      normalizedRow.source = lowerRow["lead_source"] || lowerRow["source"] || "Manual";
     }
     if (lowerRow["lead_name"] || lowerRow["name"]) {
       normalizedRow.name = lowerRow["lead_name"] || lowerRow["name"] || "";

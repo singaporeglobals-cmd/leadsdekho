@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
+  const leadStatus = searchParams.get("leadStatus");
   const source = searchParams.get("source");
   const search = searchParams.get("search");
   const page = parseInt(searchParams.get("page") || "1");
@@ -32,6 +33,7 @@ export async function GET(req: NextRequest) {
   // Admin sees ALL leads
 
   if (status) where.pipelineStatus = status;
+  if (leadStatus) where.leadStatus = leadStatus;
   if (source) where.source = source;
   if (ownerFilter) where.currentOwnerId = ownerFilter;
   if (dateFrom || dateTo) {

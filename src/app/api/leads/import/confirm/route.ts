@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
-// POST /api/leads/import/confirm - Confirm CSV/XLS import with project mapping
+// POST /api/leads/import/confirm - Confirm CSV/XLS import with project mapping and per-row assignment
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -12,21 +12,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 
-  const { rows, assignTo, projectMapping, skipDuplicates } = await req.json();
+  const { rows, projectMapping, skipDuplicates } = await req.json();
 
   if (!rows || !Array.isArray(rows) || rows.length === 0) {
     return NextResponse.json({ error: "No rows to import" }, { status: 400 });
   }
 
-  // Determine primary/current owner
-  let ownerId: string;
-  if (assignTo) {
-    ownerId = assignTo;
-  } else {
-    ownerId = user.id;
-  }
-
-  // Build project name -> projectId map
+  // Build project name -> projectId map from DB
   const projectMap: Record<string, string> = {};
   const allProjects = await db.project.findMany();
   allProjects.forEach((p) => {
@@ -39,81 +31,93 @@ export async function POST(req: NextRequest) {
   const created = [];
   const skipped = [];
 
-  for (const row of rows) {
-    if (!row.name || !row.phone) continue;
+  // Use Prisma createMany for bulk insert where possible, but we need individual creates for timeline events
+  // Process in batches for performance
+  const BATCH_SIZE = 10;
 
-    // Skip duplicates if requested
-    if (skipDuplicates && row.isDuplicate) {
-      skipped.push(row);
-      continue;
-    }
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const batch = rows.slice(i, i + BATCH_SIZE);
 
-    // Find project by mapping or by name
-    let projectId: string | null = null;
-    if (row.projectName && projMapping[row.projectName]) {
-      const mappedProject = allProjects.find((p) => p.id === projMapping[row.projectName]);
-      if (mappedProject) {
-        projectId = mappedProject.id;
+    await Promise.all(batch.map(async (row: Record<string, unknown>) => {
+      if (!row.name || !row.phone) return;
+
+      // Skip duplicates if requested
+      if (skipDuplicates && row.isDuplicate) {
+        skipped.push(row);
+        return;
       }
-    } else if (row.projectName) {
-      const existingProject = allProjects.find(
-        (p) => p.name.toLowerCase() === row.projectName.toLowerCase()
-      );
-      if (existingProject) {
-        projectId = existingProject.id;
+
+      // Determine primary/current owner - per-row assignee takes priority
+      let ownerId: string;
+      if (row.assignToId) {
+        ownerId = row.assignToId as string;
+      } else {
+        ownerId = user.id;
       }
-    }
 
-    // Handle date field
-    let source = row.source || "Manual";
-    if (row.date) {
-      source = row.source || "Manual";
-    }
+      // Find project - per-row projectId takes priority, then mapping, then name match
+      let projectId: string | null = null;
+      if (row.projectId) {
+        // Per-row project selection (from dropdown)
+        const found = allProjects.find((p) => p.id === row.projectId);
+        if (found) projectId = found.id;
+      } else if (row.projectName && projMapping[row.projectName as string]) {
+        const mappedProject = allProjects.find((p) => p.id === projMapping[row.projectName as string]);
+        if (mappedProject) projectId = mappedProject.id;
+      } else if (row.projectName) {
+        const existingProject = allProjects.find(
+          (p) => p.name.toLowerCase() === (row.projectName as string).toLowerCase()
+        );
+        if (existingProject) projectId = existingProject.id;
+      }
 
-    // Format the import date in notes if present
-    let notes = row.notes || null;
-    if (row.date) {
-      notes = notes ? `${notes} | Import Date: ${row.date}` : `Import Date: ${row.date}`;
-    }
+      // Source
+      let source = (row.source as string) || "Manual";
 
-    const lead = await db.lead.create({
-      data: {
-        name: row.name,
-        phone: row.phone,
-        email: row.email || null,
-        source,
-        budget: row.budget || null,
-        notes,
-        primaryOwnerId: ownerId,
-        currentOwnerId: ownerId,
-        projectId,
-      },
-    });
+      // Format the import date in notes if present
+      let notes = (row.notes as string) || null;
+      if (row.date) {
+        notes = notes ? `${notes} | Import Date: ${row.date}` : `Import Date: ${row.date}`;
+      }
 
-    await db.timelineEvent.create({
-      data: {
-        leadId: lead.id,
-        userId: user.id,
-        eventType: "Created",
-        description: `Lead imported via CSV/XLS by ${user.name}`,
-      },
-    });
-
-
-
-    // If admin assigned to someone, create assignment record
-    if (assignTo && assignTo !== user.id) {
-      await db.leadAssignment.create({
+      const lead = await db.lead.create({
         data: {
-          leadId: lead.id,
-          fromUserId: user.id,
-          toUserId: assignTo,
-          reason: "Bulk import assignment",
+          name: row.name as string,
+          phone: row.phone as string,
+          email: (row.email as string) || null,
+          source,
+          budget: (row.budget as string) || null,
+          notes,
+          primaryOwnerId: ownerId,
+          currentOwnerId: ownerId,
+          projectId,
         },
       });
-    }
 
-    created.push(lead);
+      // Create timeline event (fire and forget for performance)
+      db.timelineEvent.create({
+        data: {
+          leadId: lead.id,
+          userId: user.id,
+          eventType: "Created",
+          description: `Lead imported via CSV/XLS by ${user.name}`,
+        },
+      }).catch(() => {});
+
+      // If assigned to someone else, create assignment record
+      if (row.assignToId && row.assignToId !== user.id) {
+        db.leadAssignment.create({
+          data: {
+            leadId: lead.id,
+            fromUserId: user.id,
+            toUserId: row.assignToId as string,
+            reason: "Bulk import assignment",
+          },
+        }).catch(() => {});
+      }
+
+      created.push(lead);
+    }));
   }
 
   return NextResponse.json({

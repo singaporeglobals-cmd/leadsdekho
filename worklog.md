@@ -1,70 +1,56 @@
-# Leads Dekho CRM - Worklog
+---
+Task ID: 1
+Agent: Main Agent
+Task: Implement all pending feature requests for Leads Dekho CRM
 
-## Changes Implemented on 2026-03-05
+Work Log:
+- Read entire codebase structure: Prisma schema, all components, all API routes
+- Analyzed 9 combined tasks (3 old + 6 new)
+- Found that several tasks were already implemented in previous session:
+  - Properties → Projects rename (already done)
+  - Lead status dropdown with 6 options (already done in feedback dialog + reports)
+  - Copy icon next to phone numbers (already done in dashboard + lead list)
+- Implemented remaining tasks:
 
-### 1. Removed "CSV Import" from SOURCES
-- **lead-list.tsx**: Already had "CSV Import" removed from SOURCES array
-- **lead-detail.tsx**: Removed "CSV Import" from source dropdown, added "Housing.com", "99acres", "MagicBricks"
-- **reports-page.tsx**: Removed "CSV Import" from SOURCES constant
-- **lead-import.tsx**: Changed source display from `"CSV Import"` to `"—"` for empty sources
+1. **Import Leads Bulk Select** (MAJOR):
+   - Redesigned lead-import.tsx Step 2 with row checkboxes
+   - Added "Select All" and "Select Non-Duplicates" buttons
+   - Changed "Project Name (editable)" from text input to dropdown from DB projects
+   - Added per-row source dropdown
+   - Added per-row assignee dropdown
+   - Changed "Bulk Apply" to "Apply to Selected" - works on selected rows only
+   - Added selection count display
 
-### 2. Added Custom Date Filter to Lead Section
-- Added `dateFrom` and `dateTo` state variables in lead-list.tsx
-- Added date params to the fetch leads useEffect (`if (dateFrom) params.set("dateFrom", dateFrom)`)
-- Added `dateFrom` and `dateTo` to dependency array
-- Added two date input fields in the filter bar UI next to source filter
+2. **Import Confirm API** - Updated to support per-row projectId and assignToId:
+   - Per-row projectId takes priority over projectMapping
+   - Per-row assignToId takes priority over global assignTo
+   - Added batch processing (BATCH_SIZE=10) with Promise.all for performance
+   - Fire-and-forget timeline events and assignment records
 
-### 3. Updated Leads API to Support Date Filtering
-- Added `dateFrom` and `dateTo` search params in `/api/leads/route.ts`
-- Added where conditions for date range filtering with `gte` and `lte` operators
-- `dateTo` is extended to end of day (23:59:59.999)
+3. **Removed "CSV Import" default source** from import/route.ts (changed to "Manual")
 
-### 4. Added `leadStatus` Field to Lead Model
-- Added `leadStatus String? @default("New")` after `pipelineStatus` in Prisma schema
-- Added database indexes: `@@index([pipelineStatus])`, `@@index([source])`, `@@index([currentOwnerId])`, `@@index([projectId])`, `@@index([createdAt])`, `@@index([leadStatus])`
-- Ran `prisma db push` and `prisma generate` successfully
+4. **Custom Date Filter in Lead Section**:
+   - Added DATE_PRESETS (Today, Last 7 Days, Last 30 Days, This Month, Last Month)
+   - Added getDateRange helper function
+   - Added preset buttons with Calendar icons
+   - Added "Clear" button to reset all filters
 
-### 5. Updated Feedback Dialog to Include Lead Status Dropdown
-- Added `leadStatus: ""` to feedbackForm state
-- Added Lead Status dropdown (Not Connected, Site Visit Done, Prospect, Not Interested, Site Visit Promised, Booked) after Call Type in feedback dialog
-- Updated `handleFeedback` to also update lead's `leadStatus` when selected
-- Updated all `setFeedbackForm` calls to include `leadStatus: ""`
+5. **Lead Status Filter in Lead Section**:
+   - Added LEAD_STATUSES array with 6 options
+   - Added leadStatusFilter state
+   - Added Lead Status dropdown in filter bar
+   - Added leadStatus parameter to API request
 
-### 6. Updated lead-detail.tsx CallLogForm
-- Changed `handleLogCall` to save `leadStatus` to the lead's `leadStatus` field (not `pipelineStatus`)
-- Was: `body: JSON.stringify({ pipelineStatus: leadStatus })`
-- Now: `body: JSON.stringify({ leadStatus })`
-- Added Lead Status display in the lead info section (non-editing view)
+6. **Added leadStatus filter to API** - /api/leads route now accepts leadStatus parameter
 
-### 7. Updated Leads API PUT Route for leadStatus
-- Added `leadStatus` to destructured body in `/api/leads/[id]/route.ts`
-- Added `if (leadStatus !== undefined) updateData.leadStatus = leadStatus`
+7. **Performance Optimizations**:
+   - Added debounced search (300ms) to prevent excessive API calls
+   - Changed users/projects/properties fetch from sequential to parallel (Promise.all)
+   - Added searchTimeoutRef and useCallback for memoization
 
-### 8. Show leadStatus Badge in Lead List and Lead Detail
-- Added `leadStatus: string | null` to Lead interface in lead-list.tsx
-- Added badge display after pipeline status badge: shows when leadStatus is set and not "New"
-- Added Lead Status row in lead-detail.tsx info section
+8. **Build and Deploy** - Successfully built and deployed to Vercel
 
-### 9. Added leadStatus Filter in Reports
-- Added `leadStatusId` state to ReportsPage component
-- Added Lead Status filter dropdown in the unified filter bar
-- Updated all three report components (DateWiseReport, SourceWiseReport, ProjectWiseReport) to accept and pass `leadStatusId` prop
-- Updated all three report API routes (date-wise, source-wise, project-wise) to accept and filter by `leadStatus` parameter
-- Updated `resetFilters` and `hasActiveFilters` to include leadStatusId
-
-### 10. Bulk Select for Project/Source in Lead Import
-- Added `SOURCES` constant in lead-import.tsx
-- Added `bulkProject` and `bulkSource` state variables
-- Added bulk apply controls UI in Step 2 (Review & Edit) with project selector and source selector
-- Added `applyBulkProject` and `applyBulkSource` functions
-
-### 11. Performance Optimization
-- Added database indexes to Lead model in Prisma schema
-- Dashboard API already uses `Promise.all` for parallel queries - no N+1 issues found
-
-### 12. Changed Default Source from "CSV Import" to "Manual"
-- Updated `/api/leads/import/confirm/route.ts` to use `"Manual"` as default source instead of `"CSV Import"`
-
-### 13. Deployed to Vercel
-- Production deployment successful: https://my-project-7bljfmosx-singaporeglobals-5246s-projects.vercel.app
-- Alias: https://my-project-tau-ten-86.vercel.app
+Stage Summary:
+- All 9 tasks implemented
+- App deployed to: https://my-project-tau-ten-86.vercel.app
+- Key changes: lead-import.tsx bulk select, lead-list.tsx date presets + leadStatus filter + debounced search, API leadStatus support, performance optimization

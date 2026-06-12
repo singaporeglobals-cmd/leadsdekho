@@ -33,6 +33,7 @@ import {
   Building2,
   AlertTriangle,
   XCircle,
+  Users,
 } from "lucide-react";
 
 const SOURCES = [
@@ -52,6 +53,8 @@ interface ParsedRow {
   isDuplicate?: boolean;
   duplicateOf?: string | null;
   duplicateId?: string | null;
+  projectId?: string;
+  assignToId?: string;
 }
 
 interface ProjectItem {
@@ -70,16 +73,19 @@ export function LeadImport() {
   const [parsing, setParsing] = useState(false);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [projectNames, setProjectNames] = useState<string[]>([]);
-  const [assignTo, setAssignTo] = useState("");
   const [importing, setImporting] = useState(false);
   const [imported, setImported] = useState(0);
   const [skippedCount, setSkippedCount] = useState(0);
   const [users, setUsers] = useState<Array<{ id: string; name: string; role: string; isActive: boolean }>>([]);
-  const [bulkProject, setBulkProject] = useState("");
-  const [bulkSource, setBulkSource] = useState("");
   const [error, setError] = useState("");
   const [duplicateCount, setDuplicateCount] = useState(0);
   const [skipDuplicates, setSkipDuplicates] = useState(true);
+
+  // Bulk selection state
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [bulkProject, setBulkProject] = useState("");
+  const [bulkSource, setBulkSource] = useState("");
+  const [bulkAssignTo, setBulkAssignTo] = useState("");
 
   // Project mapping: projectName -> projectId
   const [propertyMapping, setPropertyMapping] = useState<Record<string, string>>({});
@@ -126,10 +132,8 @@ export function LeadImport() {
 
       const data = await res.json();
       if (res.ok) {
-        setParsedRows(data.rows);
-        setProjectNames(data.projectNames || []);
-        setDuplicateCount(data.duplicateCount || 0);
-        // Auto-match project names to projects
+        const rows = data.rows as ParsedRow[];
+        // Auto-match project names to DB projects
         const autoMapping: Record<string, string> = {};
         for (const projectName of data.projectNames || []) {
           const matchedProject = projects.find(
@@ -137,9 +141,24 @@ export function LeadImport() {
           );
           if (matchedProject) {
             autoMapping[projectName] = matchedProject.id;
+            // Also set projectId on matching rows
+            rows.forEach((row) => {
+              if (row.projectName?.toLowerCase() === projectName.toLowerCase()) {
+                row.projectId = matchedProject.id;
+              }
+            });
           }
         }
+        setParsedRows(rows);
+        setProjectNames(data.projectNames || []);
+        setDuplicateCount(data.duplicateCount || 0);
         setPropertyMapping(autoMapping);
+        // Select all non-duplicate rows by default
+        const defaultSelected = new Set<number>();
+        rows.forEach((row, i) => {
+          if (!row.isDuplicate) defaultSelected.add(i);
+        });
+        setSelectedRows(defaultSelected);
         setStep(2);
       } else {
         setError(data.error || "Failed to parse file");
@@ -163,26 +182,84 @@ export function LeadImport() {
   // Remove a row
   const removeRow = (index: number) => {
     setParsedRows((prev) => prev.filter((_, i) => i !== index));
+    setSelectedRows((prev) => {
+      const next = new Set<number>();
+      prev.forEach((idx) => {
+        if (idx < index) next.add(idx);
+        else if (idx > index) next.add(idx - 1);
+      });
+      return next;
+    });
   };
 
+  // Toggle row selection
+  const toggleRowSelection = (index: number) => {
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  // Select/deselect all rows
+  const toggleSelectAll = () => {
+    if (selectedRows.size === parsedRows.length) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(parsedRows.map((_, i) => i)));
+    }
+  };
+
+  // Select only non-duplicate rows
+  const selectNonDuplicates = () => {
+    const nonDup = new Set<number>();
+    parsedRows.forEach((row, i) => {
+      if (!row.isDuplicate) nonDup.add(i);
+    });
+    setSelectedRows(nonDup);
+  };
+
+  // Apply bulk project to selected rows
   const applyBulkProject = () => {
-    if (!bulkProject) return;
-    const projName = projects.find(p => p.id === bulkProject)?.name || "";
-    setParsedRows(prev => prev.map(row => ({ ...row, projectName: projName })));
-    setProjectNames(prev => {
+    if (!bulkProject || selectedRows.size === 0) return;
+    const projName = projects.find((p) => p.id === bulkProject)?.name || "";
+    setParsedRows((prev) =>
+      prev.map((row, i) =>
+        selectedRows.has(i)
+          ? { ...row, projectName: projName, projectId: bulkProject }
+          : row
+      )
+    );
+    setProjectNames((prev) => {
       const newNames = new Set(prev);
       if (projName) newNames.add(projName);
       return Array.from(newNames);
     });
-    // Auto-map the project
-    setPropertyMapping(prev => ({ ...prev, [projName]: bulkProject }));
+    setPropertyMapping((prev) => ({ ...prev, [projName]: bulkProject }));
     setBulkProject("");
   };
 
+  // Apply bulk source to selected rows
   const applyBulkSource = () => {
-    if (!bulkSource) return;
-    setParsedRows(prev => prev.map(row => ({ ...row, source: bulkSource })));
+    if (!bulkSource || selectedRows.size === 0) return;
+    setParsedRows((prev) =>
+      prev.map((row, i) =>
+        selectedRows.has(i) ? { ...row, source: bulkSource } : row
+      )
+    );
     setBulkSource("");
+  };
+
+  // Apply bulk assignee to selected rows
+  const applyBulkAssignTo = () => {
+    if (!bulkAssignTo || selectedRows.size === 0) return;
+    setParsedRows((prev) =>
+      prev.map((row, i) =>
+        selectedRows.has(i) ? { ...row, assignToId: bulkAssignTo } : row
+      )
+    );
+    setBulkAssignTo("");
   };
 
   const handleImport = async () => {
@@ -195,7 +272,6 @@ export function LeadImport() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           rows: parsedRows,
-          assignTo: assignTo || undefined,
           projectMapping: propertyMapping,
           skipDuplicates,
         }),
@@ -222,11 +298,17 @@ export function LeadImport() {
     return proj ? proj.name : "Unknown";
   };
 
+  // Get user name
+  const getUserName = (userId: string) => {
+    const u = users.find((u) => u.id === userId);
+    return u ? u.name : "Unknown";
+  };
+
   // If not admin, don't render
   if (user?.role !== "admin") return null;
 
   return (
-    <div className="space-y-4 max-w-6xl mx-auto">
+    <div className="space-y-4 max-w-7xl mx-auto">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => setPage("leads")}>
           <ArrowLeft className="mr-1 h-4 w-4" /> Back to Leads
@@ -288,9 +370,6 @@ export function LeadImport() {
                 <p className="font-medium text-gray-500 dark:text-gray-300">File Format:</p>
                 <p>Column order: <strong>DATE (DD.MM.YY)</strong>, <strong>LEAD SOURCE</strong>, <strong>NAME</strong>, <strong>NUMBER</strong>, <strong>MAIL ID</strong>, <strong>PROJECT NAME</strong></p>
                 <p className="mt-1">Example: 15.01.24, Housing.com, Raj Kumar, 9876543210, raj@email.com, Sunshine Green City</p>
-                <p className="mt-2 text-amber-600 dark:text-amber-400 font-medium">
-                  PROJECT NAME from file will NOT be used directly. You must manually type project name for each lead before importing.
-                </p>
               </div>
               <Input
                 type="file"
@@ -351,36 +430,77 @@ export function LeadImport() {
               </div>
             )}
 
-            <div className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 p-3 rounded-md">
-              <strong>Important:</strong> The PROJECT NAME column from your file is shown for reference only. You must manually enter the correct project name for each lead in the editable column below.
-            </div>
+            {/* ─── BULK SELECT & APPLY CONTROLS ─── */}
+            <div className="space-y-3 p-3 bg-muted/50 rounded-lg border border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium">Selection:</span>
+                  <Button size="sm" variant="outline" onClick={toggleSelectAll} className="h-7 text-xs">
+                    {selectedRows.size === parsedRows.length ? "Deselect All" : "Select All"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={selectNonDuplicates} className="h-7 text-xs">
+                    Select Non-Duplicates
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedRows.size} of {parsedRows.length} selected
+                  </span>
+                </div>
+              </div>
 
-            {/* Bulk Apply Controls */}
-            <div className="flex flex-wrap gap-2 items-center p-3 bg-muted/50 rounded-lg">
-              <span className="text-sm font-medium">Bulk Apply:</span>
-              <Select value={bulkProject} onValueChange={setBulkProject}>
-                <SelectTrigger className="w-[180px] h-8">
-                  <SelectValue placeholder="Set Project for All" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button size="sm" variant="outline" onClick={applyBulkProject} disabled={!bulkProject}>Apply Project</Button>
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-sm font-medium text-brand">Bulk Apply to Selected:</span>
 
-              <Select value={bulkSource} onValueChange={setBulkSource}>
-                <SelectTrigger className="w-[150px] h-8">
-                  <SelectValue placeholder="Set Source for All" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SOURCES.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button size="sm" variant="outline" onClick={applyBulkSource} disabled={!bulkSource}>Apply Source</Button>
+                {/* Bulk Project */}
+                <Select value={bulkProject} onValueChange={setBulkProject}>
+                  <SelectTrigger className="w-[180px] h-8">
+                    <Building2 className="mr-1 h-3 w-3 shrink-0" />
+                    <SelectValue placeholder="Set Project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" variant="outline" onClick={applyBulkProject} disabled={!bulkProject || selectedRows.size === 0} className="h-8 text-xs">
+                  Apply Project
+                </Button>
+
+                {/* Bulk Source */}
+                <Select value={bulkSource} onValueChange={setBulkSource}>
+                  <SelectTrigger className="w-[150px] h-8">
+                    <SelectValue placeholder="Set Source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SOURCES.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" variant="outline" onClick={applyBulkSource} disabled={!bulkSource || selectedRows.size === 0} className="h-8 text-xs">
+                  Apply Source
+                </Button>
+
+                {/* Bulk Assign */}
+                <Select value={bulkAssignTo} onValueChange={setBulkAssignTo}>
+                  <SelectTrigger className="w-[160px] h-8">
+                    <Users className="mr-1 h-3 w-3 shrink-0" />
+                    <SelectValue placeholder="Set Assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users
+                      .filter((u) => u.isActive && u.role !== "admin")
+                      .map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.name} ({u.role})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" variant="outline" onClick={applyBulkAssignTo} disabled={!bulkAssignTo || selectedRows.size === 0} className="h-8 text-xs">
+                  Apply Assignee
+                </Button>
+              </div>
             </div>
 
             {/* Editable table */}
@@ -388,6 +508,12 @@ export function LeadImport() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8">
+                      <Checkbox
+                        checked={selectedRows.size === parsedRows.length && parsedRows.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
                     <TableHead className="w-8">#</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Source</TableHead>
@@ -395,7 +521,8 @@ export function LeadImport() {
                     <TableHead>Number</TableHead>
                     <TableHead>Mail ID</TableHead>
                     <TableHead>Project (from file)</TableHead>
-                    <TableHead>Project Name (editable)</TableHead>
+                    <TableHead>Project (select)</TableHead>
+                    <TableHead>Assign To</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
@@ -404,14 +531,30 @@ export function LeadImport() {
                   {parsedRows.map((row, i) => (
                     <TableRow
                       key={i}
-                      className={row.isDuplicate ? "bg-red-50 dark:bg-red-950/50" : ""}
+                      className={`${row.isDuplicate ? "bg-red-50 dark:bg-red-950/50" : ""} ${selectedRows.has(i) ? "bg-brand/5" : ""}`}
                     >
-                      <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
-                      <TableCell className="text-xs">{row.date || "—"}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {row.source || "\u2014"}
-                        </Badge>
+                        <Checkbox
+                          checked={selectedRows.has(i)}
+                          onCheckedChange={() => toggleRowSelection(i)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+                      <TableCell className="text-xs">{row.date || "\u2014"}</TableCell>
+                      <TableCell>
+                        <Select
+                          value={row.source || ""}
+                          onValueChange={(v) => updateRow(i, "source", v)}
+                        >
+                          <SelectTrigger className="h-7 text-xs w-[120px]">
+                            <SelectValue placeholder="Source" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SOURCES.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
                         <Input
@@ -436,29 +579,61 @@ export function LeadImport() {
                         />
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {row.projectName || "—"}
+                        {row.projectName || "\u2014"}
                       </TableCell>
                       <TableCell>
-                        <Input
-                          value={row.projectName || ""}
-                          onChange={(e) => {
-                            updateRow(i, "projectName", e.target.value);
-                            // Update projectNames set
+                        <Select
+                          value={row.projectId || ""}
+                          onValueChange={(v) => {
+                            updateRow(i, "projectId", v);
+                            const projName = projects.find((p) => p.id === v)?.name || "";
+                            updateRow(i, "projectName", projName);
                             setProjectNames((prev) => {
                               const newNames = new Set(prev);
-                              if (e.target.value) newNames.add(e.target.value);
+                              if (projName) newNames.add(projName);
                               return Array.from(newNames);
                             });
+                            setPropertyMapping((prev) => ({ ...prev, [projName]: v }));
                           }}
-                          className="h-7 text-xs"
-                          placeholder="Type project name"
-                        />
+                        >
+                          <SelectTrigger className="h-7 text-xs w-[140px]">
+                            <Building2 className="mr-1 h-3 w-3 shrink-0" />
+                            <SelectValue placeholder="Select..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {projects.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={row.assignToId || ""}
+                          onValueChange={(v) => updateRow(i, "assignToId", v)}
+                        >
+                          <SelectTrigger className="h-7 text-xs w-[120px]">
+                            <Users className="mr-1 h-3 w-3 shrink-0" />
+                            <SelectValue placeholder="Assign..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {users
+                              .filter((u) => u.isActive && u.role !== "admin")
+                              .map((u) => (
+                                <SelectItem key={u.id} value={u.id}>
+                                  {u.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
                         {row.isDuplicate ? (
                           <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 text-xs">
                             <XCircle className="mr-1 h-3 w-3" />
-                            {row.duplicateOf ? `Dup: ${row.duplicateOf}` : "Duplicate"}
+                            Dup
                           </Badge>
                         ) : (
                           <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 text-xs">
@@ -613,23 +788,34 @@ export function LeadImport() {
               )}
             </div>
 
-            {/* Assign To dropdown */}
-            <div className="space-y-1">
-              <Label>Assign All Leads To</Label>
-              <Select value={assignTo} onValueChange={setAssignTo}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Assign to yourself" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users
-                    .filter((u) => u.isActive && u.role !== "admin")
-                    .map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.name} ({u.role})
-                      </SelectItem>
+            {/* Assignment Summary */}
+            <div className="space-y-2">
+              <Label>Assignment Summary</Label>
+              {(() => {
+                const assigneeCounts: Record<string, number> = {};
+                const noAssigneeCount = parsedRows.filter((r) => !r.isDuplicate || !skipDuplicates).filter((r) => !r.assignToId).length;
+                parsedRows.forEach((r) => {
+                  if ((skipDuplicates && r.isDuplicate) || !r.assignToId) return;
+                  assigneeCounts[r.assignToId!] = (assigneeCounts[r.assignToId!] || 0) + 1;
+                });
+                return (
+                  <div className="space-y-1">
+                    {Object.entries(assigneeCounts).map(([userId, count]) => (
+                      <div key={userId} className="flex items-center gap-2 text-sm">
+                        <Users className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-foreground font-medium">{getUserName(userId)}</span>
+                        <span className="text-muted-foreground">— {count} leads</span>
+                      </div>
                     ))}
-                </SelectContent>
-              </Select>
+                    {noAssigneeCount > 0 && (
+                      <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+                        <Users className="h-3 w-3" />
+                        <span>Not assigned — {noAssigneeCount} leads (will be assigned to you)</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Project mapping summary */}
@@ -638,7 +824,7 @@ export function LeadImport() {
                 <Label>Project Mapping Summary</Label>
                 {projectNames.map((pn) => (
                   <div key={pn} className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">CSV: &quot;{pn}&quot;</span>
+                    <span className="text-muted-foreground">File: &quot;{pn}&quot;</span>
                     <ArrowRight className="h-3 w-3 text-muted-foreground" />
                     {propertyMapping[pn] ? (
                       <span className="text-foreground font-medium">
@@ -690,7 +876,7 @@ export function LeadImport() {
               </p>
             )}
             <p className="text-sm text-muted-foreground mt-1">
-              Projects have been linked to leads based on your mapping.
+              Projects and assignees have been linked to leads based on your settings.
             </p>
             <Button
               variant="outline"
