@@ -141,7 +141,7 @@ export function AdminDashboard() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Projects</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {data.totalProperties as number}
+                  {data.totalProjects as number}
                 </p>
               </div>
               <div className="rounded-lg bg-cyan-50 dark:bg-cyan-950 p-3">

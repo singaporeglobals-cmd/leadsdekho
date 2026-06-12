@@ -45,6 +45,7 @@ import {
   Sparkles,
   CalendarClock,
   Pencil,
+  Copy,
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -839,7 +840,7 @@ export function LeadList() {
                     )}
                   </div>
                   <div className="mt-0.5 text-xs text-muted-foreground">
-                    {lead.phone}
+                    <span className="flex items-center gap-1 inline-flex">{lead.phone}<button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(lead.phone); }} className="inline-flex text-muted-foreground hover:text-brand transition-colors"><Copy className="h-3 w-3" /></button></span>
                     {lead.email && ` · ${lead.email}`}
                   </div>
                 </div>

@@ -30,7 +30,7 @@ import {
   ArrowLeft,
   ArrowRight,
   MapPin,
-  Home,
+  Building2,
   AlertTriangle,
   XCircle,
 } from "lucide-react";
@@ -49,16 +49,13 @@ interface ParsedRow {
   duplicateId?: string | null;
 }
 
-interface PropertyItem {
+interface ProjectItem {
   id: string;
   name: string;
-  type: string;
-  status: string;
-  price: number | null;
-  project: { id: string; name: string } | null;
+  location?: string | null;
 }
 
-// Step 1: Upload, Step 2: Edit & Review, Step 3: Map Properties, Step 4: Confirm, Step 5: Done
+// Step 1: Upload, Step 2: Edit & Review, Step 3: Map Projects, Step 4: Confirm, Step 5: Done
 type ImportStep = 1 | 2 | 3 | 4 | 5;
 
 export function LeadImport() {
@@ -77,11 +74,11 @@ export function LeadImport() {
   const [duplicateCount, setDuplicateCount] = useState(0);
   const [skipDuplicates, setSkipDuplicates] = useState(true);
 
-  // Property mapping: projectName -> propertyId
+  // Project mapping: projectName -> projectId
   const [propertyMapping, setPropertyMapping] = useState<Record<string, string>>({});
-  const [properties, setProperties] = useState<PropertyItem[]>([]);
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
 
-  // Fetch users and properties for admin
+  // Fetch users and projects for admin
   useEffect(() => {
     if (user?.role === "admin") {
       fetch("/api/users")
@@ -89,9 +86,9 @@ export function LeadImport() {
         .then((data) => setUsers(data))
         .catch(() => {});
 
-      fetch("/api/properties")
+      fetch("/api/projects")
         .then((r) => r.json())
-        .then((data) => setProperties(data.properties || []))
+        .then((data) => setProjects(data))
         .catch(() => {});
     }
   }, [user?.role]);
@@ -125,16 +122,14 @@ export function LeadImport() {
         setParsedRows(data.rows);
         setProjectNames(data.projectNames || []);
         setDuplicateCount(data.duplicateCount || 0);
-        // Auto-match project names to properties
+        // Auto-match project names to projects
         const autoMapping: Record<string, string> = {};
         for (const projectName of data.projectNames || []) {
-          const matchedProperty = properties.find(
-            (p) =>
-              p.name.toLowerCase().includes(projectName.toLowerCase()) ||
-              (p.project && p.project.name.toLowerCase() === projectName.toLowerCase())
+          const matchedProject = projects.find(
+            (p) => p.name.toLowerCase() === projectName.toLowerCase()
           );
-          if (matchedProperty) {
-            autoMapping[projectName] = matchedProperty.id;
+          if (matchedProject) {
+            autoMapping[projectName] = matchedProject.id;
           }
         }
         setPropertyMapping(autoMapping);
@@ -174,7 +169,7 @@ export function LeadImport() {
         body: JSON.stringify({
           rows: parsedRows,
           assignTo: assignTo || undefined,
-          propertyMapping,
+          projectMapping: propertyMapping,
           skipDuplicates,
         }),
       });
@@ -194,10 +189,10 @@ export function LeadImport() {
     }
   };
 
-  // Get the property name for display
-  const getPropertyName = (propertyId: string) => {
-    const prop = properties.find((p) => p.id === propertyId);
-    return prop ? prop.name : "Unknown";
+  // Get the project name for display
+  const getProjectName = (projectId: string) => {
+    const proj = projects.find((p) => p.id === projectId);
+    return proj ? proj.name : "Unknown";
   };
 
   // If not admin, don't render
@@ -216,7 +211,7 @@ export function LeadImport() {
         {[
           { num: 1, label: "Upload File" },
           { num: 2, label: "Review & Edit" },
-          { num: 3, label: "Map Properties" },
+          { num: 3, label: "Map Projects" },
           { num: 4, label: "Confirm" },
           { num: 5, label: "Done" },
         ].map((s, i) => (
@@ -440,33 +435,33 @@ export function LeadImport() {
                 onClick={() => setStep(3)}
                 className="bg-brand hover:bg-brand-dark"
               >
-                Next: Map Properties <ArrowRight className="ml-1 h-4 w-4" />
+                Next: Map Projects <ArrowRight className="ml-1 h-4 w-4" />
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Step 3: Map Properties */}
+      {/* Step 3: Map Projects */}
       {step === 3 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <MapPin className="h-5 w-5" />
-              Map Project Names to Properties
+              Map Project Names to Projects
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-md bg-amber-50 dark:bg-amber-950 p-3 text-sm text-amber-700 dark:text-amber-300">
-              Match the project names from your leads to your listed properties. This will automatically link the correct property to each lead.
+              Match the project names from your leads to your listed projects. This will automatically link the correct project to each lead.
             </div>
 
-            {/* Property Mapping Section */}
+            {/* Project Mapping Section */}
             {projectNames.length > 0 ? (
               <div className="space-y-3">
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
-                  Map Project Names to Properties
+                  Map Project Names to Projects
                 </h3>
                 {projectNames.map((projectName) => (
                   <div
@@ -490,13 +485,13 @@ export function LeadImport() {
                         }
                       >
                         <SelectTrigger className="w-[250px]">
-                          <Home className="mr-1 h-3 w-3 shrink-0" />
-                          <SelectValue placeholder="Select your property..." />
+                          <Building2 className="mr-1 h-3 w-3 shrink-0" />
+                          <SelectValue placeholder="Select project..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {properties.map((p) => (
+                          {projects.map((p) => (
                             <SelectItem key={p.id} value={p.id}>
-                              {p.name} {p.project ? `(${p.project.name})` : ""} {p.price ? `- ₹${p.price.toLocaleString()}` : ""}
+                              {p.name} {p.location ? `- ${p.location}` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -549,7 +544,7 @@ export function LeadImport() {
                 <div className="text-2xl font-bold text-foreground">
                   {Object.keys(propertyMapping).length}
                 </div>
-                <div className="text-sm text-muted-foreground">Properties mapped</div>
+                <div className="text-sm text-muted-foreground">Projects mapped</div>
               </div>
               {duplicateCount > 0 && (
                 <div className="rounded-lg border border-red-200 dark:border-red-800 p-4">
@@ -582,17 +577,17 @@ export function LeadImport() {
               </Select>
             </div>
 
-            {/* Property mapping summary */}
+            {/* Project mapping summary */}
             {projectNames.length > 0 && (
               <div className="space-y-2">
-                <Label>Property Mapping Summary</Label>
+                <Label>Project Mapping Summary</Label>
                 {projectNames.map((pn) => (
                   <div key={pn} className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">CSV: &quot;{pn}&quot;</span>
                     <ArrowRight className="h-3 w-3 text-muted-foreground" />
                     {propertyMapping[pn] ? (
                       <span className="text-foreground font-medium">
-                        {getPropertyName(propertyMapping[pn])}
+                        {getProjectName(propertyMapping[pn])}
                       </span>
                     ) : (
                       <span className="text-amber-600 dark:text-amber-400">Not mapped</span>
@@ -640,7 +635,7 @@ export function LeadImport() {
               </p>
             )}
             <p className="text-sm text-muted-foreground mt-1">
-              Properties have been linked to leads based on your mapping.
+              Projects have been linked to leads based on your mapping.
             </p>
             <Button
               variant="outline"

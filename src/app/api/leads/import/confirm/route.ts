@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
-// POST /api/leads/import/confirm - Confirm CSV/XLS import with property mapping
+// POST /api/leads/import/confirm - Confirm CSV/XLS import with project mapping
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 
-  const { rows, assignTo, propertyMapping, skipDuplicates } = await req.json();
+  const { rows, assignTo, projectMapping, skipDuplicates } = await req.json();
 
   if (!rows || !Array.isArray(rows) || rows.length === 0) {
     return NextResponse.json({ error: "No rows to import" }, { status: 400 });
@@ -33,8 +33,8 @@ export async function POST(req: NextRequest) {
     projectMap[p.name.toLowerCase()] = p.id;
   });
 
-  // Build property mapping: projectName -> propertyId
-  const propMapping: Record<string, string> = propertyMapping || {};
+  // Build project mapping: projectName -> projectId
+  const projMapping: Record<string, string> = projectMapping || {};
 
   const created = [];
   const skipped = [];
@@ -48,9 +48,14 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // Find or create project by name
+    // Find project by mapping or by name
     let projectId: string | null = null;
-    if (row.projectName) {
+    if (row.projectName && projMapping[row.projectName]) {
+      const mappedProject = allProjects.find((p) => p.id === projMapping[row.projectName]);
+      if (mappedProject) {
+        projectId = mappedProject.id;
+      }
+    } else if (row.projectName) {
       const existingProject = allProjects.find(
         (p) => p.name.toLowerCase() === row.projectName.toLowerCase()
       );
@@ -94,22 +99,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // If property mapping exists for this project name, link the property
-    if (row.projectName && propMapping[row.projectName]) {
-      const propertyId = propMapping[row.projectName];
-      // Check if the property exists
-      const property = await db.property.findUnique({ where: { id: propertyId } });
-      if (property) {
-        await db.leadProperty.create({
-          data: {
-            leadId: lead.id,
-            propertyId,
-          },
-        }).catch(() => {
-          // Ignore if already linked
-        });
-      }
-    }
+
 
     // If admin assigned to someone, create assignment record
     if (assignTo && assignTo !== user.id) {

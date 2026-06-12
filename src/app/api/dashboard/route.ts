@@ -25,7 +25,7 @@ async function getAdminDashboard() {
     teamMembers,
     todayFollowUps,
     pendingFollowUps,
-    totalProperties,
+    totalProjects,
   ] = await Promise.all([
     db.lead.count(),
     db.lead.groupBy({ by: ["pipelineStatus"], _count: true }),
@@ -68,7 +68,7 @@ async function getAdminDashboard() {
         completed: false,
       },
     }),
-    db.property.count(),
+    db.project.count(),
   ]);
 
   const statusCounts: Record<string, number> = {};
@@ -90,7 +90,7 @@ async function getAdminDashboard() {
     teamMembers,
     todayFollowUps,
     pendingFollowUps,
-    totalProperties,
+    totalProjects,
   });
 }
 

@@ -38,7 +38,7 @@ import {
   Plus,
   CheckCircle2,
   XCircle,
-  Home,
+  Building2,
   Trash2,
 } from "lucide-react";
 
@@ -150,16 +150,14 @@ export function LeadDetail() {
   const [lostReasonOpen, setLostReasonOpen] = useState(false);
   const [lostReason, setLostReason] = useState("");
 
-  // Properties
-  const [addPropertyOpen, setAddPropertyOpen] = useState(false);
-  const [availableProperties, setAvailableProperties] = useState<Array<{
+  // Projects
+  const [addProjectOpen, setAddProjectOpen] = useState(false);
+  const [availableProjects, setAvailableProjects] = useState<Array<{
     id: string;
     name: string;
-    type: string;
-    status: string;
-    price: number | null;
+    location?: string | null;
   }>>([]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState("");
 
   const [users, setUsers] = useState<Array<{ id: string; name: string; role: string }>>([]);
 
@@ -340,38 +338,38 @@ export function LeadDetail() {
     }
   };
 
-  // Property management
-  const handleAddProperty = async () => {
-    if (!lead || !selectedPropertyId) return;
-    const res = await fetch(`/api/leads/${lead.id}/properties`, {
-      method: "POST",
+  // Project management
+  const handleAddProject = async () => {
+    if (!lead || !selectedProjectId) return;
+    const res = await fetch(`/api/leads/${lead.id}`, {
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ propertyId: selectedPropertyId }),
+      body: JSON.stringify({ projectId: selectedProjectId }),
     });
     if (res.ok) {
-      setAddPropertyOpen(false);
-      setSelectedPropertyId("");
+      setAddProjectOpen(false);
+      setSelectedProjectId("");
       fetchLead();
     }
   };
 
-  const handleRemoveProperty = async (propertyId: string) => {
+  const handleRemoveProject = async () => {
     if (!lead) return;
-    const res = await fetch(`/api/leads/${lead.id}/properties`, {
-      method: "DELETE",
+    const res = await fetch(`/api/leads/${lead.id}`, {
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ propertyId }),
+      body: JSON.stringify({ projectId: null }),
     });
     if (res.ok) {
       fetchLead();
     }
   };
 
-  const fetchAvailableProperties = async () => {
-    const res = await fetch("/api/properties");
+  const fetchAvailableProjects = async () => {
+    const res = await fetch("/api/projects");
     if (res.ok) {
       const data = await res.json();
-      setAvailableProperties(data.properties || []);
+      setAvailableProjects(data);
     }
   };
 
@@ -586,78 +584,49 @@ export function LeadDetail() {
             </CardContent>
           </Card>
 
-          {/* Linked Properties */}
+          {/* Project */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Home className="h-4 w-4" />
-                Properties ({lead.leadProperties?.length || 0})
+                <Building2 className="h-4 w-4" />
+                Project
               </CardTitle>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  fetchAvailableProperties();
-                  setAddPropertyOpen(true);
+                  fetchAvailableProjects();
+                  setAddProjectOpen(true);
                 }}
               >
-                <Plus className="mr-1 h-3 w-3" /> Add Property
+                <Plus className="mr-1 h-3 w-3" /> {lead.project ? "Change Project" : "Set Project"}
               </Button>
             </CardHeader>
             <CardContent>
-              {!lead.leadProperties || lead.leadProperties.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No properties linked to this lead yet.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {lead.leadProperties.map((lp) => (
-                    <div
-                      key={lp.id}
-                      className="flex items-center justify-between rounded-lg border border-border p-3"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground text-sm">
-                            {lp.property.name}
-                          </span>
-                          <Badge variant="outline" className="text-[10px]">
-                            {lp.property.type}
-                          </Badge>
-                          <Badge
-                            variant="secondary"
-                            className={`text-[10px] ${
-                              lp.property.status === "Available"
-                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
-                                : lp.property.status === "Sold"
-                                ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-                                : "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
-                            }`}
-                          >
-                            {lp.property.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                          {lp.property.location && <span>{lp.property.location}</span>}
-                          {lp.property.price && (
-                            <span className="font-medium text-foreground">
-                              ₹{lp.property.price.toLocaleString()}
-                            </span>
-                          )}
-                          {lp.property.size && <span>{lp.property.size}</span>}
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleRemoveProperty(lp.property.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+              {lead.project ? (
+                <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground text-sm">
+                        {lead.project.name}
+                      </span>
                     </div>
-                  ))}
+                  </div>
+                  {canEdit && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={handleRemoveProject}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No project assigned to this lead.
+                </p>
               )}
             </CardContent>
           </Card>
@@ -1002,41 +971,34 @@ export function LeadDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Property Dialog */}
-      <Dialog open={addPropertyOpen} onOpenChange={setAddPropertyOpen}>
+      {/* Set Project Dialog */}
+      <Dialog open={addProjectOpen} onOpenChange={setAddProjectOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Property</DialogTitle>
+            <DialogTitle>Set Project</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">
-              <Label>Select Property</Label>
-              <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+              <Label>Select Project</Label>
+              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose a property..." />
+                  <SelectValue placeholder="Choose a project..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableProperties
-                    .filter(
-                      (p) =>
-                        !lead.leadProperties?.some(
-                          (lp) => lp.property.id === p.id
-                        )
-                    )
-                    .map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name} — {p.type} {p.price ? `(₹${p.price.toLocaleString()})` : ""}
-                      </SelectItem>
-                    ))}
+                  {availableProjects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name} {p.location ? `- ${p.location}` : ""}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <Button
-              onClick={handleAddProperty}
+              onClick={handleAddProject}
               className="w-full bg-brand hover:bg-brand-dark"
-              disabled={!selectedPropertyId}
+              disabled={!selectedProjectId}
             >
-              Link Property
+              Set Project
             </Button>
           </div>
         </DialogContent>

@@ -12,7 +12,6 @@ import {
   Shield,
   ArrowRight,
   MapPin,
-  Home,
   Target,
 } from "lucide-react";
 
@@ -137,9 +136,9 @@ export function LandingPage() {
                 color: "amber",
               },
               {
-                icon: Home,
-                title: "Property Management",
-                desc: "Manage your entire property inventory with status tracking and project associations.",
+                icon: Building2,
+                title: "Project Management",
+                desc: "Manage your projects with add/delete functionality. Admin-only project management.",
                 color: "violet",
               },
               {
