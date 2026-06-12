@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
 import {
@@ -14,12 +17,12 @@ import {
 } from "@/components/ui/table";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line,
+  ResponsiveContainer, LineChart, Line,
 } from "recharts";
 import {
   Download, Calendar, TrendingUp, Building2, Users, Phone,
   Clock, MapPin, ChevronDown, ChevronUp, FileSpreadsheet,
-  BarChart3, Target, Pencil, ExternalLink,
+  BarChart3, Target, Pencil, Filter, RotateCcw,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 
@@ -35,6 +38,26 @@ const statusColors: Record<string, string> = {
   Won: "#22c55e",
   Lost: "#ef4444",
 };
+
+const SOURCES = [
+  "Manual", "Website", "Referral", "Social Media", "Walk-in",
+  "Call", "CSV Import", "Housing.com", "99acres", "MagicBricks",
+];
+
+// Quick date range presets
+const DATE_PRESETS = [
+  { label: "Today", days: 0 },
+  { label: "Last 7 Days", days: 7 },
+  { label: "Last 30 Days", days: 30 },
+  { label: "This Month", days: -1 },
+  { label: "Last Month", days: -2 },
+  { label: "Last 3 Months", days: 90 },
+];
+
+interface ProjectItem {
+  id: string;
+  name: string;
+}
 
 // ─── KPI Card ───
 function KpiCard({ label, value, icon: Icon, color, sub }: {
@@ -89,14 +112,33 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+function getDateRange(preset: number): { from: string; to: string } {
+  const now = new Date();
+  const to = now.toISOString().split("T")[0];
+  let from: string;
+
+  if (preset === -1) {
+    // This Month
+    from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+  } else if (preset === -2) {
+    // Last Month
+    const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    from = firstDayLastMonth.toISOString().split("T")[0];
+    return { from, to: lastDayLastMonth.toISOString().split("T")[0] };
+  } else {
+    from = new Date(now.getTime() - preset * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  }
+  return { from, to };
+}
+
 // ─── Lead Row with Update Button ───
 function LeadRow({ lead }: { lead: Record<string, unknown> }) {
   const { setSelectedLeadId, setPage } = useAppStore();
   const handleUpdate = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    const leadId = lead.id as string;
-    setSelectedLeadId(leadId);
+    setSelectedLeadId(lead.id as string);
     setPage("lead-detail");
   };
   return (
@@ -122,8 +164,7 @@ function LeadRowSimple({ lead, showSource, showCreated }: { lead: Record<string,
   const handleUpdate = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    const leadId = lead.id as string;
-    setSelectedLeadId(leadId);
+    setSelectedLeadId(lead.id as string);
     setPage("lead-detail");
   };
   return (
@@ -161,13 +202,7 @@ async function handleExport(type: string, from?: string, to?: string) {
 }
 
 // ─── DATE-WISE REPORT ───
-function DateWiseReport() {
-  const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
-
-  const [fromDate, setFromDate] = useState(firstDay);
-  const [toDate, setToDate] = useState(lastDay);
+function DateWiseReport({ fromDate, toDate, projectId, sourceId }: { fromDate: string; toDate: string; projectId: string; sourceId: string }) {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -175,11 +210,14 @@ function DateWiseReport() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/reports/date-wise?from=${fromDate}&to=${toDate}`);
+      const params = new URLSearchParams({ from: fromDate, to: toDate });
+      if (projectId) params.set("project", projectId);
+      if (sourceId) params.set("source", sourceId);
+      const res = await fetch(`/api/reports/date-wise?${params}`);
       if (res.ok) setData(await res.json());
     } catch (e) { console.error(e); }
     setLoading(false);
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, projectId, sourceId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -191,23 +229,6 @@ function DateWiseReport() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end gap-3">
-        <div>
-          <Label className="text-xs font-medium text-muted-foreground">From Date</Label>
-          <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-44 h-9" />
-        </div>
-        <div>
-          <Label className="text-xs font-medium text-muted-foreground">To Date</Label>
-          <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-44 h-9" />
-        </div>
-        <Button onClick={fetchData} className="bg-brand hover:bg-brand-dark text-white h-9">
-          <Calendar className="mr-1.5 h-3.5 w-3.5" /> Generate
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => handleExport("leads", fromDate, toDate)} className="h-9">
-          <Download className="mr-1.5 h-3.5 w-3.5" /> Export CSV
-        </Button>
-      </div>
-
       {loading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {[...Array(5)].map((_, i) => <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />)}
@@ -342,13 +363,7 @@ function DateWiseReport() {
 }
 
 // ─── SOURCE-WISE REPORT ───
-function SourceWiseReport() {
-  const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
-
-  const [fromDate, setFromDate] = useState(firstDay);
-  const [toDate, setToDate] = useState(lastDay);
+function SourceWiseReport({ fromDate, toDate, projectId, sourceId }: { fromDate: string; toDate: string; projectId: string; sourceId: string }) {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedSource, setExpandedSource] = useState<string | null>(null);
@@ -356,11 +371,14 @@ function SourceWiseReport() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/reports/source-wise?from=${fromDate}&to=${toDate}`);
+      const params = new URLSearchParams({ from: fromDate, to: toDate });
+      if (projectId) params.set("project", projectId);
+      if (sourceId) params.set("source", sourceId);
+      const res = await fetch(`/api/reports/source-wise?${params}`);
       if (res.ok) setData(await res.json());
     } catch (e) { console.error(e); }
     setLoading(false);
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, projectId, sourceId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -372,20 +390,6 @@ function SourceWiseReport() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end gap-3">
-        <div>
-          <Label className="text-xs font-medium text-muted-foreground">From Date</Label>
-          <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-44 h-9" />
-        </div>
-        <div>
-          <Label className="text-xs font-medium text-muted-foreground">To Date</Label>
-          <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-44 h-9" />
-        </div>
-        <Button onClick={fetchData} className="bg-brand hover:bg-brand-dark text-white h-9">
-          <BarChart3 className="mr-1.5 h-3.5 w-3.5" /> Generate
-        </Button>
-      </div>
-
       {loading ? (
         <div className="grid gap-3 sm:grid-cols-3">
           {[...Array(3)].map((_, i) => <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />)}
@@ -545,13 +549,7 @@ function SourceWiseReport() {
 }
 
 // ─── PROJECT-WISE REPORT ───
-function ProjectWiseReport() {
-  const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
-
-  const [fromDate, setFromDate] = useState(firstDay);
-  const [toDate, setToDate] = useState(lastDay);
+function ProjectWiseReport({ fromDate, toDate, projectId, sourceId }: { fromDate: string; toDate: string; projectId: string; sourceId: string }) {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
@@ -559,11 +557,14 @@ function ProjectWiseReport() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/reports/project-wise?from=${fromDate}&to=${toDate}`);
+      const params = new URLSearchParams({ from: fromDate, to: toDate });
+      if (projectId) params.set("project", projectId);
+      if (sourceId) params.set("source", sourceId);
+      const res = await fetch(`/api/reports/project-wise?${params}`);
       if (res.ok) setData(await res.json());
     } catch (e) { console.error(e); }
     setLoading(false);
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, projectId, sourceId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -577,20 +578,6 @@ function ProjectWiseReport() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end gap-3">
-        <div>
-          <Label className="text-xs font-medium text-muted-foreground">From Date</Label>
-          <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-44 h-9" />
-        </div>
-        <div>
-          <Label className="text-xs font-medium text-muted-foreground">To Date</Label>
-          <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-44 h-9" />
-        </div>
-        <Button onClick={fetchData} className="bg-brand hover:bg-brand-dark text-white h-9">
-          <Building2 className="mr-1.5 h-3.5 w-3.5" /> Generate
-        </Button>
-      </div>
-
       {loading ? (
         <div className="grid gap-3 sm:grid-cols-3">
           {[...Array(3)].map((_, i) => <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />)}
@@ -778,9 +765,46 @@ function ProjectWiseReport() {
 // ─── MAIN REPORTS PAGE ───
 export function ReportsPage() {
   const [activeTab, setActiveTab] = useState("date-wise");
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
+
+  // Shared filter state
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+
+  const [fromDate, setFromDate] = useState(firstDay);
+  const [toDate, setToDate] = useState(lastDay);
+  const [projectId, setProjectId] = useState("all");
+  const [sourceId, setSourceId] = useState("all");
+
+  // Fetch projects for the dropdown
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/projects");
+        if (res.ok) setProjects(await res.json());
+      } catch (e) { console.error(e); }
+    })();
+  }, []);
+
+  const handlePreset = (preset: number) => {
+    const { from, to } = getDateRange(preset);
+    setFromDate(from);
+    setToDate(to);
+  };
+
+  const resetFilters = () => {
+    setFromDate(firstDay);
+    setToDate(lastDay);
+    setProjectId("all");
+    setSourceId("all");
+  };
+
+  const hasActiveFilters = projectId !== "all" || sourceId !== "all" || fromDate !== firstDay || toDate !== lastDay;
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
@@ -789,15 +813,116 @@ export function ReportsPage() {
           <p className="text-sm text-muted-foreground mt-0.5">Analyze leads by date, source, and project</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => handleExport("leads")} className="h-8">
+          <Button variant="outline" size="sm" onClick={() => handleExport("leads", fromDate, toDate)} className="h-8">
             <Download className="mr-1 h-3 w-3" /> Export Leads
           </Button>
-          <Button variant="outline" size="sm" onClick={() => handleExport("callLogs")} className="h-8">
+          <Button variant="outline" size="sm" onClick={() => handleExport("callLogs", fromDate, toDate)} className="h-8">
             <Download className="mr-1 h-3 w-3" /> Export Calls
           </Button>
         </div>
       </div>
 
+      {/* ─── UNIFIED FILTER BAR ─── */}
+      <Card className="border-brand/20">
+        <CardContent className="p-4">
+          <div className="space-y-3">
+            {/* Row 1: Quick Date Presets */}
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Quick Date Range</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {DATE_PRESETS.map((preset) => (
+                  <Button
+                    key={preset.label}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => handlePreset(preset.days)}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Row 2: Custom Filters */}
+            <div className="flex flex-wrap items-end gap-3">
+              {/* Custom Date Range */}
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground">From Date</Label>
+                <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-40 h-9" />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground">To Date</Label>
+                <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-40 h-9" />
+              </div>
+
+              {/* Project Filter */}
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground">Project</Label>
+                <Select value={projectId} onValueChange={setProjectId}>
+                  <SelectTrigger className="w-48 h-9">
+                    <Building2 className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue placeholder="All Projects" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Projects</SelectItem>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Source Filter */}
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground">Source</Label>
+                <Select value={sourceId} onValueChange={setSourceId}>
+                  <SelectTrigger className="w-44 h-9">
+                    <Filter className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue placeholder="All Sources" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sources</SelectItem>
+                    {SOURCES.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Reset Button */}
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" className="h-9 text-muted-foreground hover:text-foreground" onClick={resetFilters}>
+                  <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset
+                </Button>
+              )}
+            </div>
+
+            {/* Active filter indicators */}
+            {hasActiveFilters && (
+              <div className="flex flex-wrap gap-1.5">
+                {fromDate !== firstDay || toDate !== lastDay ? (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <Calendar className="h-3 w-3" /> {formatDate(fromDate)} — {formatDate(toDate)}
+                  </Badge>
+                ) : null}
+                {projectId !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <Building2 className="h-3 w-3" /> {projects.find(p => p.id === projectId)?.name || "Project"}
+                  </Badge>
+                )}
+                {sourceId !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <Filter className="h-3 w-3" /> {sourceId}
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="date-wise" className="gap-1.5">
@@ -812,15 +937,15 @@ export function ReportsPage() {
         </TabsList>
 
         <TabsContent value="date-wise" className="mt-4">
-          <DateWiseReport />
+          <DateWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} />
         </TabsContent>
 
         <TabsContent value="source-wise" className="mt-4">
-          <SourceWiseReport />
+          <SourceWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} />
         </TabsContent>
 
         <TabsContent value="project-wise" className="mt-4">
-          <ProjectWiseReport />
+          <ProjectWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} />
         </TabsContent>
       </Tabs>
     </div>

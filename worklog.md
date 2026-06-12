@@ -1,19 +1,27 @@
 ---
 Task ID: 1
 Agent: Main Agent
-Task: Fix Update button not working in GLM preview browser
+Task: Add custom date selection, project-wise, and source-wise filter options to Reports section
 
 Work Log:
-- Read lead-list.tsx, reports-page.tsx, store.ts, page.tsx, app-layout.tsx, lead-detail.tsx to understand navigation flow
-- Identified the root cause: click event propagation from Update button inside expanded table rows was bubbling up to parent TableRow's onClick handler, causing the row to collapse (unmounting the button) before navigation could complete
-- Fixed reports-page.tsx: Added onClick={(e) => e.stopPropagation()} to expanded row's TableCell (colSpan cells) in all 3 report sections (Date-wise, Source-wise, Project-wise)
-- Fixed reports-page.tsx: Added e.preventDefault() and e.stopPropagation() to LeadRow and LeadRowSimple handleUpdate functions
-- Fixed reports-page.tsx: Added onMouseDown={(e) => e.stopPropagation()} to both Update Button components to prevent mousedown event from propagating
-- Fixed lead-list.tsx: Added e.stopPropagation() and e.preventDefault() to the Update button onClick handler
-- Build verified: `npx next build` completes successfully with no errors
+- Updated all 3 API routes (date-wise, source-wise, project-wise) to accept `project` and `source` query params for filtering
+- Completely rewrote reports-page.tsx with a unified filter bar approach:
+  - Added shared filter state (fromDate, toDate, projectId, sourceId) at the top-level ReportsPage component
+  - All 3 report tabs (Date-wise, Source-wise, Project-wise) now receive filter props and pass them to API calls
+  - Removed duplicate date pickers from each individual tab component
+- Added quick date preset buttons: Today, Last 7 Days, Last 30 Days, This Month, Last Month, Last 3 Months
+- Added custom From/To date pickers in the unified filter bar
+- Added Project dropdown filter (fetches projects from /api/projects)
+- Added Source dropdown filter (10 sources: Manual, Website, Referral, etc.)
+- Added Reset button to clear all filters
+- Added active filter indicator badges showing current selections
+- Filter bar is styled with a gold/brand border accent to stand out
+- Build verified: `npx next build` succeeds with no errors
 
 Stage Summary:
-- All Update buttons now properly stop event propagation to prevent parent row click handlers from interfering
-- Expanded row cells stop propagation to contain clicks within the expanded area
-- Both mousedown and click events are now stopped from propagating
-- The navigation flow: setSelectedLeadId(id) -> setPage("lead-detail") should now work reliably
+- Reports section now has a single unified filter bar at the top
+- Custom date range selection with quick presets
+- Project-wise filter dropdown
+- Source-wise filter dropdown
+- All filters apply across all 3 report tabs simultaneously
+- API endpoints updated to support project and source filtering

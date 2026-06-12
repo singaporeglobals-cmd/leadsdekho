@@ -10,6 +10,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
+  const projectFilter = searchParams.get("project");
+  const sourceFilter = searchParams.get("source");
 
   // Default: current month
   const now = new Date();
@@ -22,6 +24,16 @@ export async function GET(req: NextRequest) {
   const where: Record<string, unknown> = {
     createdAt: { gte: startDate, lte: endDate },
   };
+
+  // Project filter
+  if (projectFilter) {
+    where.project = { id: projectFilter };
+  }
+
+  // Source filter
+  if (sourceFilter) {
+    where.source = sourceFilter;
+  }
 
   // Role-based filtering
   if (user.role === "sales" || user.role === "telecalling") {
