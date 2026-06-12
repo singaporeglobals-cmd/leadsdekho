@@ -15,6 +15,7 @@ import { LeadDetail } from "@/components/lead-detail";
 import { LeadImport } from "@/components/lead-import";
 import { ProjectManagement } from "@/components/project-management";
 import { SiteVisitModule } from "@/components/site-visit-module";
+import { BookingsPage } from "@/components/bookings-page";
 import { ReportsPage } from "@/components/reports-page";
 import { UserManagement } from "@/components/user-management";
 
@@ -66,6 +67,8 @@ export default function Home() {
         return <ProjectManagement />;
       case "site-visits":
         return <SiteVisitModule />;
+      case "bookings":
+        return <BookingsPage />;
       case "reports":
         return <ReportsPage />;
       case "users":

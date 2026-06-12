@@ -19,6 +19,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface DashboardData {
   role: string;
@@ -36,17 +43,36 @@ const statusColors: Record<string, string> = {
   Lost: "bg-red-500 text-white",
 };
 
+function generateMonthOptions() {
+  const options = [{ value: "all", label: "All Time" }];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    options.push({ value, label });
+  }
+  return options;
+}
+
 export function AdminDashboard() {
   const { setPage } = useAppStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [month, setMonth] = useState("all");
 
   useEffect(() => {
-    fetch("/api/dashboard")
-      .then((r) => r.json())
-      .then((d) => setData(d))
-      .finally(() => setLoading(false));
-  }, []);
+    let cancelled = false;
+    (async () => {
+      const res = await fetch(`/api/dashboard?month=${month}`);
+      if (!cancelled && res.ok) {
+        const d = await res.json();
+        setData(d);
+      }
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [month]);
 
   if (loading) {
     return (
@@ -83,8 +109,27 @@ export function AdminDashboard() {
     _count: { currentLeads: number; primaryLeads: number; callLogs: number };
   }>;
 
+  const monthOptions = generateMonthOptions();
+
   return (
     <div className="space-y-6">
+      {/* Month Filter - Top Right */}
+      <div className="flex items-center justify-end">
+        <Select value={month} onValueChange={setMonth}>
+          <SelectTrigger className="w-[160px] h-9">
+            <CalendarCheck className="mr-1 h-3 w-3" />
+            <SelectValue placeholder="Select month" />
+          </SelectTrigger>
+          <SelectContent>
+            {monthOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card className="border-l-4 border-l-brand">
@@ -151,17 +196,17 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-brand">
+        <Card className="border-l-4 border-l-emerald-500">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Won Deals</p>
+                <p className="text-sm text-muted-foreground">Booking</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {statusCounts["Won"] || 0}
+                  {data.bookedCount as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-brand-light p-3">
-                <TrendingUp className="h-5 w-5 text-brand" />
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950 p-3">
+                <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
           </CardContent>
@@ -677,17 +722,17 @@ export function SalesDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-brand">
+        <Card className="border-l-4 border-l-emerald-500">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Won Deals</p>
+                <p className="text-sm text-muted-foreground">Booking</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {data.wonDeals as number}
+                  {data.bookedCount as number}
                 </p>
               </div>
-              <div className="rounded-lg bg-brand-light p-3">
-                <TrendingUp className="h-5 w-5 text-brand" />
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950 p-3">
+                <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
           </CardContent>

@@ -34,7 +34,8 @@ const navItems: NavItem[] = [
   { id: "leads", label: "Leads", icon: Users },
   { id: "lead-import", label: "Import Leads", icon: ChevronRight, roles: ["admin"] },
   { id: "site-visits", label: "Site Visits", icon: MapPin },
-  { id: "projects", label: "Projects", icon: Building2, roles: ["admin"] },
+  { id: "bookings", label: "Bookings", icon: Building2 },
+  { id: "projects", label: "Projects", icon: Home, roles: ["admin"] },
   { id: "reports", label: "Reports", icon: BarChart3 },
   { id: "users", label: "User Management", icon: UserCog, roles: ["admin"] },
 ];
@@ -208,6 +209,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {currentPage === "lead-import" && "Import Leads"}
             {currentPage === "projects" && "Projects"}
             {currentPage === "site-visits" && "Site Visits"}
+            {currentPage === "bookings" && "Bookings"}
             {currentPage === "reports" && "Reports"}
             {currentPage === "users" && "User Management"}
           </h1>

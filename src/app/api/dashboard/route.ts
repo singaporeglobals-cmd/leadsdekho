@@ -7,16 +7,26 @@ export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Parse month filter
+  const monthParam = req.nextUrl.searchParams.get("month");
+  let dateFilter: { createdAt?: { gte?: Date; lte?: Date } } = {};
+  if (monthParam && monthParam !== "all") {
+    const [year, month] = monthParam.split("-").map(Number);
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+    dateFilter = { createdAt: { gte: startDate, lte: endDate } };
+  }
+
   if (user.role === "admin") {
-    return await getAdminDashboard();
+    return await getAdminDashboard(dateFilter);
   } else if (user.role === "telecalling") {
-    return await getTelecallingDashboard(user.id);
+    return await getTelecallingDashboard(user.id, dateFilter);
   } else {
-    return await getSalesDashboard(user.id);
+    return await getSalesDashboard(user.id, dateFilter);
   }
 }
 
-async function getAdminDashboard() {
+async function getAdminDashboard(dateFilter: { createdAt?: { gte?: Date; lte?: Date } }) {
   const [
     totalLeads,
     leadsByStatus,
@@ -26,11 +36,13 @@ async function getAdminDashboard() {
     todayFollowUps,
     pendingFollowUps,
     totalProjects,
+    bookedCount,
   ] = await Promise.all([
-    db.lead.count(),
-    db.lead.groupBy({ by: ["pipelineStatus"], _count: true }),
-    db.lead.groupBy({ by: ["source"], _count: true }),
+    db.lead.count({ where: dateFilter }),
+    db.lead.groupBy({ by: ["pipelineStatus"], where: dateFilter, _count: true }),
+    db.lead.groupBy({ by: ["source"], where: dateFilter, _count: true }),
     db.lead.findMany({
+      where: dateFilter,
       take: 10,
       orderBy: { createdAt: "desc" },
       include: {
@@ -69,6 +81,9 @@ async function getAdminDashboard() {
       },
     }),
     db.project.count(),
+    db.lead.count({
+      where: { leadStatus: "Booked", ...dateFilter },
+    }),
   ]);
 
   const statusCounts: Record<string, number> = {};
@@ -91,10 +106,13 @@ async function getAdminDashboard() {
     todayFollowUps,
     pendingFollowUps,
     totalProjects,
+    bookedCount,
   });
 }
 
-async function getTelecallingDashboard(userId: string) {
+async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?: { gte?: Date; lte?: Date } }) {
+  const userWhere = { currentOwnerId: userId, ...dateFilter };
+
   const [
     myLeadsCount,
     myLeadsByStatus,
@@ -105,10 +123,10 @@ async function getTelecallingDashboard(userId: string) {
     allLeads,
     recentCallLogs,
   ] = await Promise.all([
-    db.lead.count({ where: { currentOwnerId: userId } }),
+    db.lead.count({ where: userWhere }),
     db.lead.groupBy({
       by: ["pipelineStatus"],
-      where: { currentOwnerId: userId },
+      where: userWhere,
       _count: true,
     }),
     db.followUp.count({
@@ -137,7 +155,7 @@ async function getTelecallingDashboard(userId: string) {
       take: 10,
     }),
     db.callLog.count({ where: { userId } }),
-    db.lead.count(),
+    db.lead.count({ where: dateFilter }),
     db.callLog.findMany({
       where: { userId },
       take: 5,
@@ -164,24 +182,26 @@ async function getTelecallingDashboard(userId: string) {
   });
 }
 
-async function getSalesDashboard(userId: string) {
+async function getSalesDashboard(userId: string, dateFilter: { createdAt?: { gte?: Date; lte?: Date } }) {
+  const userWhere = { OR: [{ currentOwnerId: userId }, { primaryOwnerId: userId }], ...dateFilter };
+
   const [
     myLeadsCount,
     myLeadsByStatus,
     visitsScheduled,
     dealsInNegotiation,
-    wonDeals,
     recentLeads,
     todayFollowUps,
     pendingFollowUps,
     pendingFollowUpsList,
+    bookedCount,
   ] = await Promise.all([
     db.lead.count({
-      where: { OR: [{ currentOwnerId: userId }, { primaryOwnerId: userId }] },
+      where: userWhere,
     }),
     db.lead.groupBy({
       by: ["pipelineStatus"],
-      where: { OR: [{ currentOwnerId: userId }, { primaryOwnerId: userId }] },
+      where: userWhere,
       _count: true,
     }),
     db.siteVisit.count({
@@ -195,16 +215,11 @@ async function getSalesDashboard(userId: string) {
       where: {
         currentOwnerId: userId,
         pipelineStatus: "Negotiation",
-      },
-    }),
-    db.lead.count({
-      where: {
-        OR: [{ currentOwnerId: userId }, { primaryOwnerId: userId }],
-        pipelineStatus: "Won",
+        ...dateFilter,
       },
     }),
     db.lead.findMany({
-      where: { OR: [{ currentOwnerId: userId }, { primaryOwnerId: userId }] },
+      where: userWhere,
       take: 10,
       orderBy: { updatedAt: "desc" },
       include: {
@@ -237,6 +252,13 @@ async function getSalesDashboard(userId: string) {
       orderBy: { scheduledAt: "asc" },
       take: 10,
     }),
+    db.lead.count({
+      where: {
+        OR: [{ currentOwnerId: userId }, { primaryOwnerId: userId }],
+        leadStatus: "Booked",
+        ...dateFilter,
+      },
+    }),
   ]);
 
   const statusCounts: Record<string, number> = {};
@@ -250,7 +272,7 @@ async function getSalesDashboard(userId: string) {
     statusCounts,
     visitsScheduled,
     dealsInNegotiation,
-    wonDeals,
+    bookedCount,
     recentLeads,
     todayFollowUps,
     pendingFollowUps,

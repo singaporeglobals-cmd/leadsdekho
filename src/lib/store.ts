@@ -12,6 +12,7 @@ export type AppPage =
   | "lead-import"
   | "projects"
   | "site-visits"
+  | "bookings"
   | "reports"
   | "users";
 

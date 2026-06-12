@@ -1,56 +1,69 @@
 ---
-Task ID: 1
+Task ID: 2
 Agent: Main Agent
-Task: Implement all pending feature requests for Leads Dekho CRM
+Task: Implement 6 new features for Leads Dekho CRM
 
 Work Log:
-- Read entire codebase structure: Prisma schema, all components, all API routes
-- Analyzed 9 combined tasks (3 old + 6 new)
-- Found that several tasks were already implemented in previous session:
-  - Properties → Projects rename (already done)
-  - Lead status dropdown with 6 options (already done in feedback dialog + reports)
-  - Copy icon next to phone numbers (already done in dashboard + lead list)
-- Implemented remaining tasks:
+- Read entire codebase: dashboard.tsx, lead-list.tsx, lead-detail.tsx, site-visit-module.tsx, app-layout.tsx, store.ts, api/dashboard/route.ts, page.tsx
+- Analyzed 6 feature requests and planned implementation order
 
-1. **Import Leads Bulk Select** (MAJOR):
-   - Redesigned lead-import.tsx Step 2 with row checkboxes
-   - Added "Select All" and "Select Non-Duplicates" buttons
-   - Changed "Project Name (editable)" from text input to dropdown from DB projects
-   - Added per-row source dropdown
-   - Added per-row assignee dropdown
-   - Changed "Bulk Apply" to "Apply to Selected" - works on selected rows only
-   - Added selection count display
+Features Implemented:
 
-2. **Import Confirm API** - Updated to support per-row projectId and assignToId:
-   - Per-row projectId takes priority over projectMapping
-   - Per-row assignToId takes priority over global assignTo
-   - Added batch processing (BATCH_SIZE=10) with Promise.all for performance
-   - Fire-and-forget timeline events and assignment records
+1. **Admin Dashboard - Month-wise Dropdown** (Feature 1):
+   - Added `month` state and `generateMonthOptions()` function to AdminDashboard
+   - Dropdown shows "All Time" (default) + 12 months going back from current date
+   - Passes `month=YYYY-MM` or `month=all` to `/api/dashboard?month=...`
+   - Updated API route to accept `month` query param and filter all queries by `createdAt` range
+   - All dashboard data (totalLeads, statusCounts, sourceCounts, recentLeads, bookedCount) filtered by selected month
 
-3. **Removed "CSV Import" default source** from import/route.ts (changed to "Manual")
+2. **Leads Section - Bulk Delete Icon** (Feature 2):
+   - Added `bulkDeleteOpen` state to LeadList
+   - Added Delete button next to Assign button when leads selected (admin only)
+   - Button shows count: "Delete (N)"
+   - Confirmation dialog warns about permanent deletion
+   - On confirm, iterates through selected lead IDs and calls DELETE API
+   - After deletion, clears selection and refreshes list
 
-4. **Custom Date Filter in Lead Section**:
-   - Added DATE_PRESETS (Today, Last 7 Days, Last 30 Days, This Month, Last Month)
-   - Added getDateRange helper function
-   - Added preset buttons with Calendar icons
-   - Added "Clear" button to reset all filters
+3. **Replace "Won Deals" with "Booking"** (Feature 3):
+   - Admin Dashboard: Changed "Won Deals" card to "Booking" showing `data.bookedCount`
+   - Sales Dashboard: Changed "Won Deals" card to "Booking" showing `data.bookedCount`
+   - API: Added `bookedCount` query (`leadStatus: "Booked"`) to both `getAdminDashboard()` and `getSalesDashboard()`
+   - Month filter applied to bookedCount queries as well
+   - Changed card border color from brand to emerald-500 for Booking
 
-5. **Lead Status Filter in Lead Section**:
-   - Added LEAD_STATUSES array with 6 options
-   - Added leadStatusFilter state
-   - Added Lead Status dropdown in filter bar
-   - Added leadStatus parameter to API request
+4. **Remove "Call Type" Option** (Feature 4):
+   - `lead-detail.tsx`: Removed Call Type dropdown from `CallLogForm` component
+   - Kept `callType` as hardcoded "Feedback" (read-only state, no UI selector)
+   - `lead-list.tsx`: Removed Call Type dropdown from feedback dialog
+   - Default callType value preserved in all handlers
 
-6. **Added leadStatus filter to API** - /api/leads route now accepts leadStatus parameter
+5. **"Site Visit Done" leads in Site Visit menu** (Feature 5):
+   - Modified SiteVisitModule to fetch leads with `leadStatus=Site Visit Done`
+   - Creates virtual visit entries for those leads (id prefixed with `virtual-svd-`)
+   - Only adds virtual entries for leads WITHOUT existing SiteVisit records (avoids duplicates)
+   - Virtual entries shown with "Via Lead Status" badge and brand-colored left border
+   - Cannot be updated from site visit module (no Update button for virtual entries)
+   - Added "Via Lead Status" summary card showing count of virtual visits
+   - Fixed dark mode support for all text colors
 
-7. **Performance Optimizations**:
-   - Added debounced search (300ms) to prevent excessive API calls
-   - Changed users/projects/properties fetch from sequential to parallel (Promise.all)
-   - Added searchTimeoutRef and useCallback for memoization
+6. **"BOOKED" leads in Booking menu** (Feature 6):
+   - Added `"bookings"` to `AppPage` type union in store.ts
+   - Added nav item `{ id: "bookings", label: "Bookings", icon: Building2 }` to app-layout.tsx
+   - Created `bookings-page.tsx` with BookingsPage component
+   - Fetches leads with `leadStatus=Booked` from `/api/leads?leadStatus=Booked`
+   - Summary cards: Total Bookings, Today's Bookings, This Month's Bookings
+   - Search functionality for filtering by name/phone/email/project/owner
+   - Card layout with emerald left border, "Booked" badge, project/owner/date info
+   - View button navigates to lead detail
+   - Added header title "Bookings" in app layout
+   - Added case in page.tsx for "bookings" page
 
-8. **Build and Deploy** - Successfully built and deployed to Vercel
+7. **Build and Deploy**:
+   - Successfully built and deployed to Vercel
+   - App URL: https://my-project-tau-ten-86.vercel.app
+   - All lint checks pass (pre-existing lint warnings in unchanged files only)
 
 Stage Summary:
-- All 9 tasks implemented
-- App deployed to: https://my-project-tau-ten-86.vercel.app
-- Key changes: lead-import.tsx bulk select, lead-list.tsx date presets + leadStatus filter + debounced search, API leadStatus support, performance optimization
+- All 6 features implemented and working
+- Key files modified: dashboard.tsx, lead-list.tsx, lead-detail.tsx, site-visit-module.tsx, app-layout.tsx, store.ts, page.tsx, api/dashboard/route.ts
+- New file created: bookings-page.tsx

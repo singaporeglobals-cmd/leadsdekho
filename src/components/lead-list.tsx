@@ -260,6 +260,7 @@ export function LeadList() {
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [bulkAssignTo, setBulkAssignTo] = useState("");
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const doRefresh = () => setRefresh((r) => r + 1);
 
@@ -692,6 +693,19 @@ export function LeadList() {
             >
               <UsersRound className="mr-1 h-3 w-3" />
               Assign ({selectedLeadIds.size})
+            </Button>
+          )}
+
+          {/* Bulk Delete button (admin only, when leads selected) */}
+          {user?.role === "admin" && selectedLeadIds.size > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive border-destructive hover:bg-destructive hover:text-white"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <Trash2 className="mr-1 h-3 w-3" />
+              Delete ({selectedLeadIds.size})
             </Button>
           )}
 
@@ -1148,26 +1162,6 @@ export function LeadList() {
             </div>
 
             <div className="space-y-1">
-              <Label>Call Type</Label>
-              <Select
-                value={feedbackForm.callType}
-                onValueChange={(v) =>
-                  setFeedbackForm({ ...feedbackForm, callType: v })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Feedback">Feedback</SelectItem>
-                  <SelectItem value="Cold Call">Cold Call</SelectItem>
-                  <SelectItem value="Follow-up">Follow-up</SelectItem>
-                  <SelectItem value="Site Visit Call">Site Visit Call</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
               <Label>Lead Status</Label>
               <Select
                 value={feedbackForm.leadStatus}
@@ -1359,6 +1353,36 @@ export function LeadList() {
               onClick={() => deleteId && handleDelete(deleteId)}
             >
               Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirm Dialog */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Delete — {selectedLeadIds.size} leads</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete {selectedLeadIds.size} selected lead{selectedLeadIds.size !== 1 ? "s" : ""}? This action cannot be undone.
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                for (const leadId of selectedLeadIds) {
+                  await fetch(`/api/leads/${leadId}`, { method: "DELETE" });
+                }
+                setBulkDeleteOpen(false);
+                setSelectedLeadIds(new Set());
+                doRefresh();
+              }}
+            >
+              Delete {selectedLeadIds.size} Lead{selectedLeadIds.size !== 1 ? "s" : ""}
             </Button>
           </div>
         </DialogContent>

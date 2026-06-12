@@ -1026,7 +1026,7 @@ function CallLogForm({
   currentStatus?: string;
 }) {
   const [notes, setNotes] = useState("");
-  const [callType, setCallType] = useState("Feedback");
+  const [callType] = useState("Feedback");
   const [followUpDate, setFollowUpDate] = useState("");
   const [dropLead, setDropLead] = useState(false);
   const [leadStatus, setLeadStatus] = useState(currentStatus || "");
@@ -1042,20 +1042,6 @@ function CallLogForm({
 
   return (
     <div className="space-y-3">
-      <div className="space-y-1">
-        <Label>Call Type</Label>
-        <Select value={callType} onValueChange={setCallType}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Feedback">Feedback</SelectItem>
-            <SelectItem value="Cold Call">Cold Call</SelectItem>
-            <SelectItem value="Follow-up">Follow-up</SelectItem>
-            <SelectItem value="Site Visit Call">Site Visit Call</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
       <div className="space-y-1">
         <Label>Notes *</Label>
         <Textarea

@@ -45,6 +45,17 @@ interface SiteVisitItem {
   feedback: string | null;
   user: { id: string; name: string };
   lead: { id: string; name: string; phone: string };
+  isViaLeadStatus?: boolean;
+}
+
+interface LeadWithVisitDone {
+  id: string;
+  name: string;
+  phone: string;
+  leadStatus: string;
+  currentOwner: { id: string; name: string };
+  project: { id: string; name: string } | null;
+  createdAt: string;
 }
 
 export function SiteVisitModule() {
@@ -64,6 +75,7 @@ export function SiteVisitModule() {
     (async () => {
       setLoading(true);
       try {
+        // Fetch actual site visits
         const leadsRes = await fetch("/api/leads?limit=100");
         const leadsData = await leadsRes.json();
 
@@ -74,6 +86,33 @@ export function SiteVisitModule() {
             const vData = await vRes.json();
             for (const v of vData) {
               allVisits.push({ ...v, lead: { id: lead.id, name: lead.name, phone: lead.phone } });
+            }
+          }
+        }
+
+        // Also fetch leads with leadStatus "Site Visit Done"
+        const svDoneRes = await fetch("/api/leads?leadStatus=Site+Visit+Done");
+        if (!cancelled && svDoneRes.ok) {
+          const svDoneData = await svDoneRes.json();
+          const svDoneLeads = (svDoneData.leads || []) as LeadWithVisitDone[];
+
+          // Get lead IDs that already have actual site visit records
+          const leadsWithVisits = new Set(allVisits.map((v) => v.leadId));
+
+          // Add virtual visit entries for leads with "Site Visit Done" status but no actual visit record
+          for (const lead of svDoneLeads) {
+            if (!leadsWithVisits.has(lead.id)) {
+              allVisits.push({
+                id: `virtual-svd-${lead.id}`,
+                leadId: lead.id,
+                scheduledAt: lead.createdAt,
+                notes: "Via Lead Status: Site Visit Done",
+                status: "Completed",
+                feedback: null,
+                user: lead.currentOwner || { id: "", name: "Unknown" },
+                lead: { id: lead.id, name: lead.name, phone: lead.phone },
+                isViaLeadStatus: true,
+              });
             }
           }
         }
@@ -99,7 +138,7 @@ export function SiteVisitModule() {
   }, [statusFilter, refresh]);
 
   const handleUpdateVisit = async () => {
-    if (!updateDialog) return;
+    if (!updateDialog || updateDialog.isViaLeadStatus) return;
     const res = await fetch(`/api/leads/${updateDialog.leadId}/site-visits`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -115,13 +154,14 @@ export function SiteVisitModule() {
     }
   };
 
-  const today = new Date().toISOString().split("T")[0];
   const upcomingVisits = visits.filter(
     (v) => v.status === "Scheduled" && new Date(v.scheduledAt) >= new Date()
   );
   const pastVisits = visits.filter(
     (v) => v.status !== "Scheduled" || new Date(v.scheduledAt) < new Date()
   );
+
+  const virtualVisitCount = visits.filter((v) => v.isViaLeadStatus).length;
 
   return (
     <div className="space-y-4">
@@ -131,8 +171,8 @@ export function SiteVisitModule() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Upcoming</p>
-                <p className="text-2xl font-bold">{upcomingVisits.length}</p>
+                <p className="text-sm text-muted-foreground">Upcoming</p>
+                <p className="text-2xl font-bold text-foreground">{upcomingVisits.length}</p>
               </div>
               <Calendar className="h-5 w-5 text-amber-500" />
             </div>
@@ -142,8 +182,8 @@ export function SiteVisitModule() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Completed</p>
-                <p className="text-2xl font-bold">
+                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold text-foreground">
                   {visits.filter((v) => v.status === "Completed").length}
                 </p>
               </div>
@@ -155,8 +195,8 @@ export function SiteVisitModule() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Cancelled</p>
-                <p className="text-2xl font-bold">
+                <p className="text-sm text-muted-foreground">Cancelled</p>
+                <p className="text-2xl font-bold text-foreground">
                   {visits.filter((v) => v.status === "Cancelled").length}
                 </p>
               </div>
@@ -168,12 +208,12 @@ export function SiteVisitModule() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">No Show</p>
-                <p className="text-2xl font-bold">
-                  {visits.filter((v) => v.status === "No Show").length}
+                <p className="text-sm text-muted-foreground">Via Lead Status</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {virtualVisitCount}
                 </p>
               </div>
-              <Clock className="h-5 w-5 text-gray-500" />
+              <MapPin className="h-5 w-5 text-brand" />
             </div>
           </CardContent>
         </Card>
@@ -201,7 +241,7 @@ export function SiteVisitModule() {
           {[...Array(3)].map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardContent className="p-4">
-                <div className="h-16 rounded bg-gray-200" />
+                <div className="h-16 rounded bg-muted" />
               </CardContent>
             </Card>
           ))}
@@ -209,9 +249,9 @@ export function SiteVisitModule() {
       ) : visits.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center py-12">
-            <MapPin className="h-10 w-10 text-gray-300" />
-            <p className="mt-2 text-gray-500">No site visits found</p>
-            <p className="text-sm text-gray-400">
+            <MapPin className="h-10 w-10 text-muted-foreground" />
+            <p className="mt-2 text-muted-foreground">No site visits found</p>
+            <p className="text-sm text-muted-foreground">
               Schedule visits from a lead detail page
             </p>
           </CardContent>
@@ -219,12 +259,12 @@ export function SiteVisitModule() {
       ) : (
         <div className="space-y-3">
           {visits.map((visit) => (
-            <Card key={visit.id} className="hover:shadow-md transition-shadow">
+            <Card key={visit.id} className={`hover:shadow-md transition-shadow ${visit.isViaLeadStatus ? "border-l-4 border-l-brand" : ""}`}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-semibold text-foreground">
                         {visit.lead.name}
                       </span>
                       <Badge
@@ -233,27 +273,32 @@ export function SiteVisitModule() {
                       >
                         {visit.status}
                       </Badge>
+                      {visit.isViaLeadStatus && (
+                        <Badge variant="outline" className="text-xs border-brand/30 text-brand">
+                          Via Lead Status
+                        </Badge>
+                      )}
                     </div>
-                    <div className="mt-1 text-sm text-gray-500">
+                    <div className="mt-1 text-sm text-muted-foreground">
                       {visit.lead.phone}
                     </div>
-                    <div className="mt-1 flex items-center gap-1 text-xs text-gray-400">
+                    <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                       <Calendar className="h-3 w-3" />
                       {new Date(visit.scheduledAt).toLocaleString()}
                     </div>
-                    {visit.notes && (
-                      <div className="mt-1 text-sm text-gray-600">
+                    {visit.notes && !visit.isViaLeadStatus && (
+                      <div className="mt-1 text-sm text-foreground">
                         {visit.notes}
                       </div>
                     )}
                     {visit.feedback && (
-                      <div className="mt-1 text-xs text-gray-500">
+                      <div className="mt-1 text-xs text-muted-foreground">
                         Feedback: {visit.feedback}
                       </div>
                     )}
                   </div>
                   <div className="flex gap-1">
-                    {visit.status === "Scheduled" && (
+                    {visit.status === "Scheduled" && !visit.isViaLeadStatus && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -288,20 +333,20 @@ export function SiteVisitModule() {
 
       {/* Update Visit Dialog */}
       <Dialog
-        open={!!updateDialog}
+        open={!!updateDialog && !updateDialog?.isViaLeadStatus}
         onOpenChange={() => setUpdateDialog(null)}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Update Site Visit</DialogTitle>
           </DialogHeader>
-          {updateDialog && (
+          {updateDialog && !updateDialog.isViaLeadStatus && (
             <div className="space-y-3">
               <div>
                 <div className="font-medium">
                   {updateDialog.lead.name}
                 </div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-muted-foreground">
                   Scheduled:{" "}
                   {new Date(updateDialog.scheduledAt).toLocaleString()}
                 </div>
