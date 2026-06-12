@@ -10,7 +10,7 @@ export type AppPage =
   | "leads"
   | "lead-detail"
   | "lead-import"
-  | "properties"
+  | "projects"
   | "site-visits"
   | "reports"
   | "users";

@@ -263,7 +263,7 @@ export function LeadDetail() {
     }
   };
 
-  const handleLogCall = async (notes: string, callType: string, followUpDate?: string, dropLead?: boolean) => {
+  const handleLogCall = async (notes: string, callType: string, followUpDate?: string, dropLead?: boolean, leadStatus?: string) => {
     if (!lead) return;
     const res = await fetch(`/api/leads/${lead.id}/call-logs`, {
       method: "POST",
@@ -271,6 +271,14 @@ export function LeadDetail() {
       body: JSON.stringify({ notes, callType }),
     });
     if (res.ok) {
+      // If lead status selected, update it
+      if (leadStatus) {
+        await fetch(`/api/leads/${lead.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pipelineStatus: leadStatus }),
+        });
+      }
       // If follow-up date set, schedule it
       if (followUpDate) {
         await fetch(`/api/leads/${lead.id}/follow-ups`, {
@@ -943,7 +951,7 @@ export function LeadDetail() {
           <DialogHeader>
             <DialogTitle>Log Call</DialogTitle>
           </DialogHeader>
-          <CallLogForm onSubmit={handleLogCall} />
+          <CallLogForm onSubmit={handleLogCall} currentStatus={lead?.pipelineStatus} />
         </DialogContent>
       </Dialog>
 
@@ -1040,13 +1048,25 @@ export function LeadDetail() {
 // Sub-forms
 function CallLogForm({
   onSubmit,
+  currentStatus,
 }: {
-  onSubmit: (notes: string, callType: string, followUpDate?: string, dropLead?: boolean) => void;
+  onSubmit: (notes: string, callType: string, followUpDate?: string, dropLead?: boolean, leadStatus?: string) => void;
+  currentStatus?: string;
 }) {
   const [notes, setNotes] = useState("");
   const [callType, setCallType] = useState("Feedback");
   const [followUpDate, setFollowUpDate] = useState("");
   const [dropLead, setDropLead] = useState(false);
+  const [leadStatus, setLeadStatus] = useState(currentStatus || "");
+
+  const LEAD_STATUS_OPTIONS = [
+    "Not Connected",
+    "Site Visit Done",
+    "Prospect",
+    "Not Interested",
+    "Site Visit Promised",
+    "Booked",
+  ];
 
   return (
     <div className="space-y-3">
@@ -1093,8 +1113,21 @@ function CallLogForm({
           Drop this lead (mark as Lost)
         </label>
       </div>
+      <div className="space-y-1">
+        <Label>Lead Status</Label>
+        <Select value={leadStatus} onValueChange={setLeadStatus}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select lead status..." />
+          </SelectTrigger>
+          <SelectContent>
+            {LEAD_STATUS_OPTIONS.map((s) => (
+              <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <Button
-        onClick={() => onSubmit(notes, callType, followUpDate || undefined, dropLead)}
+        onClick={() => onSubmit(notes, callType, followUpDate || undefined, dropLead, leadStatus || undefined)}
         className="w-full bg-brand hover:bg-brand-dark"
         disabled={!notes}
       >

@@ -15,6 +15,7 @@ import {
   MapPin,
   Clock,
   AlertCircle,
+  Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -138,7 +139,7 @@ export function AdminDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Properties</p>
+                <p className="text-sm text-muted-foreground">Total Projects</p>
                 <p className="text-2xl font-bold text-foreground">
                   {data.totalProperties as number}
                 </p>
@@ -293,7 +294,7 @@ export function AdminDashboard() {
                       </Badge>
                     </div>
                     <div className="mt-0.5 text-sm text-muted-foreground">
-                      {lead.phone} · Owner: {lead.currentOwner.name}
+                      <span className="flex items-center gap-1">{lead.phone}<button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(lead.phone); }} className="inline-flex text-muted-foreground hover:text-brand transition-colors"><Copy className="h-3 w-3" /></button></span> · Owner: {lead.currentOwner.name}
                     </div>
                   </div>
                   <Button
@@ -514,7 +515,7 @@ export function TelecallingDashboard() {
                         {new Date(fu.scheduledAt).toLocaleDateString()}
                       </Badge>
                     </div>
-                    <div className="text-sm text-muted-foreground">{fu.lead.phone}</div>
+                    <div className="text-sm text-muted-foreground flex items-center gap-1">{fu.lead.phone}<button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(fu.lead.phone); }} className="inline-flex text-muted-foreground hover:text-brand transition-colors"><Copy className="h-3 w-3" /></button></div>
                     <div className="mt-1 text-xs text-muted-foreground">
                       {fu.notes}
                     </div>
@@ -752,7 +753,7 @@ export function SalesDashboard() {
                         {new Date(fu.scheduledAt).toLocaleDateString()}
                       </Badge>
                     </div>
-                    <div className="text-sm text-muted-foreground">{fu.lead.phone}</div>
+                    <div className="text-sm text-muted-foreground flex items-center gap-1">{fu.lead.phone}<button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(fu.lead.phone); }} className="inline-flex text-muted-foreground hover:text-brand transition-colors"><Copy className="h-3 w-3" /></button></div>
                     <div className="mt-1 text-xs text-muted-foreground">{fu.notes}</div>
                   </div>
                 ))}
@@ -797,7 +798,7 @@ export function SalesDashboard() {
                         {lead.pipelineStatus}
                       </Badge>
                     </div>
-                    <div className="text-sm text-muted-foreground">{lead.phone}</div>
+                    <div className="text-sm text-muted-foreground flex items-center gap-1">{lead.phone}<button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(lead.phone); }} className="inline-flex text-muted-foreground hover:text-brand transition-colors"><Copy className="h-3 w-3" /></button></div>
                   </div>
                   <Button
                     variant="ghost"

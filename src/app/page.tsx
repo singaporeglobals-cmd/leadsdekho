@@ -13,7 +13,7 @@ import {
 import { LeadList } from "@/components/lead-list";
 import { LeadDetail } from "@/components/lead-detail";
 import { LeadImport } from "@/components/lead-import";
-import { PropertyManagement } from "@/components/property-management";
+import { ProjectManagement } from "@/components/project-management";
 import { SiteVisitModule } from "@/components/site-visit-module";
 import { ReportsPage } from "@/components/reports-page";
 import { UserManagement } from "@/components/user-management";
@@ -62,8 +62,8 @@ export default function Home() {
         return <LeadDetail />;
       case "lead-import":
         return <LeadImport />;
-      case "properties":
-        return <PropertyManagement />;
+      case "projects":
+        return <ProjectManagement />;
       case "site-visits":
         return <SiteVisitModule />;
       case "reports":
