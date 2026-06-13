@@ -167,22 +167,39 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               if (item.children && item.children.length > 0) {
                 return (
                   <div key={item.id}>
-                    <button
-                      onClick={() => setReportsOpen(!reportsOpen)}
-                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                        isReportsActive
-                          ? "bg-brand/20 text-brand"
-                          : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                      }`}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {item.label}
-                      {reportsOpen || isReportsActive ? (
-                        <ChevronDown className="ml-auto h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="ml-auto h-4 w-4" />
-                      )}
-                    </button>
+                    <div className="flex items-center">
+                      <button
+                        onClick={() => {
+                          setPage(item.id);
+                          setReportsOpen(true);
+                          setSidebarOpen(false);
+                        }}
+                        className={`flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                          currentPage === item.id
+                            ? "bg-brand text-white"
+                            : isReportsActive
+                              ? "bg-brand/20 text-brand"
+                              : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                        }`}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {item.label}
+                      </button>
+                      <button
+                        onClick={() => setReportsOpen(!reportsOpen)}
+                        className={`flex items-center justify-center rounded-lg px-2 py-2.5 text-sm transition-colors ${
+                          isReportsActive
+                            ? "text-brand hover:bg-gray-800"
+                            : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                        }`}
+                      >
+                        {reportsOpen || isReportsActive ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                     {(reportsOpen || isReportsActive) && (
                       <div className="ml-4 mt-1 space-y-1">
                         {item.children.map((child) => {

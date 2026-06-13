@@ -596,9 +596,9 @@ export function LeadList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Users</SelectItem>
-                {users.filter((u) => u.isActive).map((u) => (
+                {users.filter((u) => u.isActive && u.role !== "admin").map((u) => (
                   <SelectItem key={u.id} value={u.id}>
-                    {u.name}
+                    {u.name} ({u.role})
                   </SelectItem>
                 ))}
               </SelectContent>
