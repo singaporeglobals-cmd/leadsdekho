@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useAppStore, type AppPage } from "@/lib/store";
+import { useAppStore, type AppPage, isAdminRole } from "@/lib/store";
 import { LandingPage } from "@/components/landing-page";
 import { LoginPage } from "@/components/login-page";
 import { AppLayout } from "@/components/app-layout";
@@ -20,6 +20,7 @@ import { ReportsPage } from "@/components/reports-page";
 import { LeadsReportPage } from "@/components/leads-report-page";
 import { UserReportPage } from "@/components/user-report-page";
 import { UserManagement } from "@/components/user-management";
+import { LeadSourceManagement } from "@/components/lead-source-management";
 
 export default function Home() {
   const { currentPage, isAuthenticated, isLoading, checkAuth } = useAppStore();
@@ -54,7 +55,7 @@ export default function Home() {
     switch (currentPage) {
       case "dashboard": {
         const role = useAppStore.getState().user?.role;
-        if (role === "admin") return <AdminDashboard />;
+        if (isAdminRole(role || "")) return <AdminDashboard />;
         if (role === "telecalling") return <TelecallingDashboard />;
         if (role === "sales") return <SalesDashboard />;
         return <AdminDashboard />;
@@ -67,6 +68,8 @@ export default function Home() {
         return <LeadImport />;
       case "projects":
         return <ProjectManagement />;
+      case "lead-sources":
+        return <LeadSourceManagement />;
       case "site-visits":
         return <SiteVisitModule />;
       case "bookings":

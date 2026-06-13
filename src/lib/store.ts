@@ -11,6 +11,7 @@ export type AppPage =
   | "lead-detail"
   | "lead-import"
   | "projects"
+  | "lead-sources"
   | "site-visits"
   | "bookings"
   | "reports"
@@ -23,6 +24,16 @@ export interface UserInfo {
   email: string;
   name: string;
   role: string;
+}
+
+// Helper: check if user has admin-level access (admin or super_admin)
+export function isAdminRole(role: string): boolean {
+  return role === "admin" || role === "super_admin";
+}
+
+// Helper: check if user is super_admin
+export function isSuperAdmin(role: string): boolean {
+  return role === "super_admin";
 }
 
 interface AppState {

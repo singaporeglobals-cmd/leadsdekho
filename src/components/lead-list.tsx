@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useAppStore } from "@/lib/store";
+import { useAppStore, isAdminRole } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -275,7 +275,7 @@ export function LeadList() {
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (leadStatusFilter !== "all") params.set("leadStatus", leadStatusFilter);
       if (sourceFilter !== "all") params.set("source", sourceFilter);
-      if (userFilter !== "all" && user?.role === "admin") params.set("owner", userFilter);
+      if (userFilter !== "all" && isAdminRole(user?.role || "")) params.set("owner", userFilter);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo) params.set("dateTo", dateTo);
 
@@ -301,7 +301,7 @@ export function LeadList() {
       ]);
       if (!cancelled && uRes.ok) {
         const userData = await uRes.json();
-        if (user?.role === "admin") {
+        if (isAdminRole(user?.role || "")) {
           setUsers(userData);
         } else {
           setUsers(userData.filter((u: UserItem) => u.isActive));
@@ -588,7 +588,7 @@ export function LeadList() {
             />
           </div>
           {/* User/Assignee filter - Admin only */}
-          {user?.role === "admin" && (
+          {isAdminRole(user?.role || "") && (
             <Select value={userFilter} onValueChange={setUserFilter}>
               <SelectTrigger className="w-[180px] h-9">
                 <UsersRound className="mr-1 h-3 w-3" />
@@ -677,7 +677,7 @@ export function LeadList() {
             Refresh
           </Button>
           {/* Import only for admin */}
-          {user?.role === "admin" && (
+          {isAdminRole(user?.role || "") && (
             <Button
               variant="outline"
               size="sm"
@@ -689,7 +689,7 @@ export function LeadList() {
           )}
 
           {/* Bulk Assign button (admin only, when leads selected) */}
-          {user?.role === "admin" && selectedLeadIds.size > 0 && (
+          {isAdminRole(user?.role || "") && selectedLeadIds.size > 0 && (
             <Button
               variant="outline"
               size="sm"
@@ -702,7 +702,7 @@ export function LeadList() {
           )}
 
           {/* Bulk Delete button (admin only, when leads selected) */}
-          {user?.role === "admin" && selectedLeadIds.size > 0 && (
+          {isAdminRole(user?.role || "") && selectedLeadIds.size > 0 && (
             <Button
               variant="outline"
               size="sm"
@@ -838,7 +838,7 @@ export function LeadList() {
                     </SelectContent>
                   </Select>
                 </div>
-                {user?.role === "admin" && users.length > 0 && (
+                {isAdminRole(user?.role || "") && users.length > 0 && (
                   <div className="space-y-1">
                     <Label>Assign To</Label>
                     <Select
@@ -910,7 +910,7 @@ export function LeadList() {
           {/* Header row */}
           <div className="hidden md:grid md:grid-cols-[auto_1fr_1fr_auto] gap-4 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border">
             <div className="w-8">
-              {user?.role === "admin" && (
+              {isAdminRole(user?.role || "") && (
                 <Checkbox
                   checked={selectedLeadIds.size === leads.length && leads.length > 0}
                   onCheckedChange={toggleSelectAll}
@@ -934,7 +934,7 @@ export function LeadList() {
               <div className="flex flex-col md:grid md:grid-cols-[auto_1fr_1fr_auto] gap-2 md:gap-4">
                 {/* Checkbox column (admin only) */}
                 <div className="hidden md:flex items-center w-8">
-                  {user?.role === "admin" && (
+                  {isAdminRole(user?.role || "") && (
                     <Checkbox
                       checked={selectedLeadIds.has(lead.id)}
                       onCheckedChange={() => toggleSelectLead(lead.id)}
@@ -946,7 +946,7 @@ export function LeadList() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Mobile checkbox for admin */}
-                    {user?.role === "admin" && (
+                    {isAdminRole(user?.role || "") && (
                       <Checkbox
                         checked={selectedLeadIds.has(lead.id)}
                         onCheckedChange={() => toggleSelectLead(lead.id)}
@@ -1115,7 +1115,7 @@ export function LeadList() {
                           )}
                         </>
                       )}
-                      {user?.role === "admin" && (
+                      {isAdminRole(user?.role || "") && (
                         <DropdownMenuItem
                           className="text-destructive"
                           onClick={() => setDeleteId(lead.id)}

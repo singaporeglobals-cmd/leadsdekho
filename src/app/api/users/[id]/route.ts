@@ -10,10 +10,20 @@ export async function PUT(
 ) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (user.role !== "admin") return NextResponse.json({ error: "Admin only" }, { status: 403 });
+  if (user.role !== "admin" && user.role !== "super_admin") return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
   const { id } = await params;
   const { name, email, role, isActive, password } = await req.json();
+
+  // Only super_admin can modify admin/super_admin users
+  if (role === "super_admin" && user.role !== "super_admin") {
+    return NextResponse.json({ error: "Only Super Admin can modify Super Admin accounts" }, { status: 403 });
+  }
+
+  const targetUser = await db.user.findUnique({ where: { id } });
+  if (targetUser?.role === "super_admin" && user.role !== "super_admin") {
+    return NextResponse.json({ error: "Only Super Admin can modify Super Admin accounts" }, { status: 403 });
+  }
 
   const updateData: Record<string, unknown> = {};
   if (name !== undefined) updateData.name = name;
@@ -45,9 +55,15 @@ export async function DELETE(
 ) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (user.role !== "admin") return NextResponse.json({ error: "Admin only" }, { status: 403 });
+  if (user.role !== "admin" && user.role !== "super_admin") return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
   const { id } = await params;
+
+  // Don't allow deactivating super_admin unless you're super_admin
+  const targetUser = await db.user.findUnique({ where: { id } });
+  if (targetUser?.role === "super_admin" && user.role !== "super_admin") {
+    return NextResponse.json({ error: "Cannot deactivate Super Admin" }, { status: 403 });
+  }
 
   const updated = await db.user.update({
     where: { id },

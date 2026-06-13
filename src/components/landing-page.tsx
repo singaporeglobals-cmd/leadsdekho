@@ -1,10 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAppStore } from "@/lib/store";
+import { ContactFormDialog } from "@/components/contact-form-dialog";
 import {
-  Building2,
   Users,
   TrendingUp,
   Phone,
@@ -13,22 +14,39 @@ import {
   ArrowRight,
   MapPin,
   Target,
+  Sun,
+  Moon,
+  Building2,
 } from "lucide-react";
 
 export function LandingPage() {
   const { setPage } = useAppStore();
+  const [contactOpen, setContactOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+    document.documentElement.classList.toggle("dark");
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-light via-background to-steel-light">
+    <div className={darkMode ? "dark" : ""}>
+    <div className="min-h-screen bg-gradient-to-br from-brand-light via-background to-steel-light dark:from-gray-900 dark:via-gray-950 dark:to-gray-900">
       {/* Navigation */}
       <nav className="flex items-center justify-between px-6 py-4 lg:px-12">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-white">
-            <Building2 className="h-5 w-5" />
-          </div>
+          <img src="/logo.png" alt="Leads Dekho" className="h-9 w-9 rounded-lg object-cover" />
           <span className="text-xl font-bold text-foreground">Leads Dekho</span>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleDarkMode}
+            className="h-9 w-9"
+          >
+            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
           <Button
             variant="ghost"
             onClick={() => setPage("login")}
@@ -37,7 +55,7 @@ export function LandingPage() {
             Sign In
           </Button>
           <Button
-            onClick={() => setPage("login")}
+            onClick={() => setContactOpen(true)}
             className="bg-brand hover:bg-brand-dark text-white"
           >
             Get Started
@@ -48,9 +66,9 @@ export function LandingPage() {
       {/* Hero Section */}
       <section className="px-6 py-16 lg:px-12 lg:py-24">
         <div className="mx-auto max-w-6xl text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-muted px-4 py-1.5 text-sm font-medium text-brand-dark">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-muted px-4 py-1.5 text-sm font-medium text-brand-dark dark:text-brand">
             <Target className="h-4 w-4" />
-            Real Estate CRM Built for Growth
+            CRM Built for Growth
           </div>
           <h1 className="mb-6 text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             Close More Deals with
@@ -64,7 +82,7 @@ export function LandingPage() {
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Button
               size="lg"
-              onClick={() => setPage("login")}
+              onClick={() => setContactOpen(true)}
               className="bg-brand px-8 text-base hover:bg-brand-dark"
             >
               Start Free Trial
@@ -233,7 +251,7 @@ export function LandingPage() {
           <Button
             size="lg"
             variant="secondary"
-            onClick={() => setPage("login")}
+            onClick={() => setContactOpen(true)}
             className="bg-white text-brand-dark hover:bg-gray-100 px-8"
           >
             Get Started Now
@@ -246,17 +264,18 @@ export function LandingPage() {
       <footer className="border-t border-border bg-muted px-6 py-8 lg:px-12">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-brand text-white">
-              <Building2 className="h-4 w-4" />
-            </div>
+            <img src="/logo.png" alt="Leads Dekho" className="h-7 w-7 rounded-md object-cover" />
             <span className="font-semibold text-foreground">Leads Dekho</span>
           </div>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <span>Real Estate CRM</span>
-            <span>Built with Next.js</span>
+          <div className="text-sm text-muted-foreground">
+            Developed By Matrik Saha
           </div>
         </div>
       </footer>
+
+      {/* Contact Form Dialog */}
+      <ContactFormDialog open={contactOpen} onOpenChange={setContactOpen} />
+    </div>
     </div>
   );
 }

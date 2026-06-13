@@ -212,7 +212,7 @@ export function LeadDetail() {
   }, [selectedLeadId]);
 
   const canEdit =
-    user?.role === "admin" || lead?.currentOwnerId === user?.id;
+    user?.role === "admin" || user?.role === "super_admin" || lead?.currentOwnerId === user?.id;
 
   const isViewOnly =
     lead &&

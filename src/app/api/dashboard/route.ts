@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   const combinedFilter = { ...dateFilter, ...assigneeFilter };
 
-  if (user.role === "admin") {
+  if (user.role === "admin" || user.role === "super_admin") {
     return await getAdminDashboard(combinedFilter, dateFilter);
   } else if (user.role === "telecalling") {
     return await getTelecallingDashboard(user.id, dateFilter);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAppStore, type AppPage } from "@/lib/store";
+import { useAppStore, type AppPage, isAdminRole } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,6 +22,7 @@ import {
   Sun,
   Moon,
   FileSpreadsheet,
+  Radio,
 } from "lucide-react";
 
 interface NavItem {
@@ -35,21 +36,22 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "leads", label: "Leads", icon: Users },
-  { id: "lead-import", label: "Import Leads", icon: ChevronRight, roles: ["admin"] },
+  { id: "lead-import", label: "Import Leads", icon: ChevronRight, roles: ["admin", "super_admin"] },
   { id: "site-visits", label: "Site Visits", icon: MapPin },
   { id: "bookings", label: "Bookings", icon: Building2 },
-  { id: "projects", label: "Projects", icon: Home, roles: ["admin"] },
+  { id: "projects", label: "Projects", icon: Home, roles: ["admin", "super_admin"] },
+  { id: "lead-sources", label: "Lead Sources", icon: Radio, roles: ["admin", "super_admin"] },
   {
     id: "reports",
     label: "Reports",
     icon: BarChart3,
-    roles: ["admin"],
+    roles: ["admin", "super_admin"],
     children: [
-      { id: "leads-report", label: "Leads Report", icon: FileSpreadsheet, roles: ["admin"] },
-      { id: "user-report", label: "User Report", icon: Users, roles: ["admin"] },
+      { id: "leads-report", label: "Leads Report", icon: FileSpreadsheet, roles: ["admin", "super_admin"] },
+      { id: "user-report", label: "User Report", icon: Users, roles: ["admin", "super_admin"] },
     ],
   },
-  { id: "users", label: "User Management", icon: UserCog, roles: ["admin"] },
+  { id: "users", label: "User Management", icon: UserCog, roles: ["admin", "super_admin"] },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -88,6 +90,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const roleLabel = (role: string) => {
     switch (role) {
+      case "super_admin":
+        return "Super Admin";
       case "admin":
         return "Admin";
       case "telecalling":
@@ -101,6 +105,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const roleColor = (role: string) => {
     switch (role) {
+      case "super_admin":
+        return "bg-brand text-white";
       case "admin":
         return "bg-steel-dark text-steel-light";
       case "telecalling":
@@ -119,6 +125,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       case "lead-detail": return "Lead Details";
       case "lead-import": return "Import Leads";
       case "projects": return "Projects";
+      case "lead-sources": return "Lead Sources";
       case "site-visits": return "Site Visits";
       case "bookings": return "Bookings";
       case "reports": return "Reports";
@@ -147,9 +154,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       >
         {/* Logo */}
         <div className="flex h-16 items-center gap-2 border-b border-gray-700 px-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white">
-            <Building2 className="h-4 w-4" />
-          </div>
+          <img src="/logo.png" alt="Leads Dekho" className="h-8 w-8 rounded-lg object-cover" />
           <span className="text-lg font-bold text-white">Leads Dekho</span>
           <button
             className="ml-auto lg:hidden"

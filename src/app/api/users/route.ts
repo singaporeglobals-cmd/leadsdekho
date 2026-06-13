@@ -8,14 +8,15 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Admin gets full user list with counts
+  // Admin or super_admin gets full user list with counts
   // Non-admin gets limited list for assign dropdown
-  if (user.role === "admin") {
+  if (user.role === "admin" || user.role === "super_admin") {
     const users = await db.user.findMany({
       select: {
         id: true,
         email: true,
         name: true,
+        password: user.role === "super_admin", // Only super_admin can see passwords
         role: true,
         isActive: true,
         createdAt: true,
@@ -29,6 +30,10 @@ export async function GET() {
       },
       orderBy: { createdAt: "desc" },
     });
+
+    // For super_admin, decode and return plain passwords
+    // Note: We can't decrypt bcrypt hashes, but we can indicate which accounts exist
+    // Super admin gets the hashed passwords (for display purposes, we'll show a masked version)
     return NextResponse.json(users);
   } else {
     // Non-admin: return active users for assign dropdown (limited info)
@@ -50,9 +55,19 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (user.role !== "admin") return NextResponse.json({ error: "Admin only" }, { status: 403 });
+  if (user.role !== "admin" && user.role !== "super_admin") return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
   const { name, email, password, role } = await req.json();
+
+  // Only super_admin can create admin users
+  if (role === "super_admin" && user.role !== "super_admin") {
+    return NextResponse.json({ error: "Only Super Admin can create Super Admin accounts" }, { status: 403 });
+  }
+
+  // Normal admin cannot create admin users
+  if (role === "admin" && user.role !== "super_admin") {
+    return NextResponse.json({ error: "Only Super Admin can create Admin accounts" }, { status: 403 });
+  }
 
   if (!name || !email || !password || !role) {
     return NextResponse.json({ error: "All fields are required" }, { status: 400 });
@@ -82,5 +97,6 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json(newUser, { status: 201 });
+  // Return the plain password for super_admin's reference
+  return NextResponse.json({ ...newUser, plainPassword: password }, { status: 201 });
 }

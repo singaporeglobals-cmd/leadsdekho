@@ -28,16 +28,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, UserCog, Shield, Phone, Users } from "lucide-react";
-import { useAppStore } from "@/lib/store";
+import { Plus, Edit, UserCog, Shield, Phone, Users, Eye, EyeOff, Key, Crown } from "lucide-react";
+import { useAppStore, isAdminRole, isSuperAdmin } from "@/lib/store";
 
 interface UserItem {
   id: string;
   name: string;
   email: string;
+  password?: string;
   role: string;
   isActive: boolean;
   createdAt: string;
+  plainPassword?: string;
   _count?: {
     currentLeads: number;
     primaryLeads: number;
@@ -46,7 +48,8 @@ interface UserItem {
 }
 
 const roleColors: Record<string, string> = {
-  admin: "bg-brand-muted text-brand-dark",
+  super_admin: "bg-brand text-white",
+  admin: "bg-steel-dark text-steel-light",
   telecalling: "bg-amber-100 text-amber-700",
   sales: "bg-sky-100 text-sky-700",
 };
@@ -55,6 +58,9 @@ export function UserManagement() {
   const { user } = useAppStore();
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [newPasswordDialog, setNewPasswordDialog] = useState<UserItem | null>(null);
+  const [newPassword, setNewPassword] = useState("");
 
   // Dialog
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -75,7 +81,7 @@ export function UserManagement() {
   };
 
   useEffect(() => {
-    if (user?.role !== "admin") return;
+    if (!user || !isAdminRole(user.role)) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -86,7 +92,7 @@ export function UserManagement() {
     return () => { cancelled = true; };
   }, [user?.role]);
 
-  if (user?.role !== "admin") {
+  if (!user || !isAdminRole(user.role)) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -98,13 +104,15 @@ export function UserManagement() {
     );
   }
 
+  const isSuper = isSuperAdmin(user.role);
+
   const openCreate = () => {
     setEditingUser(null);
     setForm({
       name: "",
       email: "",
       password: "",
-      role: "telecalling",
+      role: isSuper ? "admin" : "telecalling",
       isActive: true,
     });
     setDialogOpen(true);
@@ -150,6 +158,9 @@ export function UserManagement() {
       if (res.ok) {
         setDialogOpen(false);
         fetchUsers();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to create user");
       }
     }
   };
@@ -159,22 +170,54 @@ export function UserManagement() {
     if (res.ok) fetchUsers();
   };
 
+  const handleResetPassword = async () => {
+    if (!newPasswordDialog || !newPassword) return;
+    const res = await fetch(`/api/users/${newPasswordDialog.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: newPassword }),
+    });
+    if (res.ok) {
+      setNewPasswordDialog(null);
+      setNewPassword("");
+      fetchUsers();
+    }
+  };
+
+  // Filter users based on role: normal admin can't see super_admin
+  const visibleUsers = isSuper ? users : users.filter(u => u.role !== "super_admin");
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Team Members</h2>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <UserCog className="h-5 w-5 text-brand" /> Team Members
+          </h2>
           <p className="text-sm text-gray-500">
-            {users.length} user{users.length !== 1 ? "s" : ""}
+            {visibleUsers.length} user{visibleUsers.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <Button
-          size="sm"
-          className="bg-brand hover:bg-brand-dark"
-          onClick={openCreate}
-        >
-          <Plus className="mr-1 h-3 w-3" /> Add User
-        </Button>
+        <div className="flex items-center gap-2">
+          {isSuper && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowPasswords(!showPasswords)}
+              className="text-xs"
+            >
+              {showPasswords ? <EyeOff className="mr-1 h-3 w-3" /> : <Eye className="mr-1 h-3 w-3" />}
+              {showPasswords ? "Hide Passwords" : "Show Passwords"}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className="bg-brand hover:bg-brand-dark"
+            onClick={openCreate}
+          >
+            <Plus className="mr-1 h-3 w-3" /> {isSuper ? "Add Admin" : "Add User"}
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -186,7 +229,8 @@ export function UserManagement() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>Email / ID</TableHead>
+                  {isSuper && showPasswords && <TableHead>Password</TableHead>}
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Leads</TableHead>
@@ -195,15 +239,25 @@ export function UserManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((u) => (
+                {visibleUsers.map((u) => (
                   <TableRow key={u.id}>
-                    <TableCell className="font-medium">{u.name}</TableCell>
-                    <TableCell>{u.email}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {u.role === "super_admin" && <Crown className="h-4 w-4 text-brand" />}
+                        {u.name}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm">{u.email}</TableCell>
+                    {isSuper && showPasswords && (
+                      <TableCell className="text-sm font-mono">
+                        <Badge variant="outline" className="text-xs font-mono">
+                          {u.plainPassword || "••••••••"}
+                        </Badge>
+                      </TableCell>
+                    )}
                     <TableCell>
-                      <Badge
-                        className={roleColors[u.role] || ""}
-                      >
-                        {u.role}
+                      <Badge className={roleColors[u.role] || ""}>
+                        {u.role === "super_admin" ? "Super Admin" : u.role}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -226,6 +280,20 @@ export function UserManagement() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
+                        {isSuper && u.role !== "super_admin" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => {
+                              setNewPasswordDialog(u);
+                              setNewPassword("");
+                            }}
+                            title="Reset Password"
+                          >
+                            <Key className="h-3 w-3" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -234,7 +302,7 @@ export function UserManagement() {
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
-                        {u.isActive && u.id !== user?.id && (
+                        {u.isActive && u.id !== user?.id && u.role !== "super_admin" && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -259,7 +327,7 @@ export function UserManagement() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingUser ? "Edit User" : "Add User"}
+              {editingUser ? "Edit User" : isSuper ? "Add Admin User" : "Add User"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
@@ -301,11 +369,20 @@ export function UserManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-3 w-3" /> Admin
-                    </div>
-                  </SelectItem>
+                  {isSuper && (
+                    <SelectItem value="super_admin">
+                      <div className="flex items-center gap-2">
+                        <Crown className="h-3 w-3" /> Super Admin
+                      </div>
+                    </SelectItem>
+                  )}
+                  {isSuper && (
+                    <SelectItem value="admin">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-3 w-3" /> Admin
+                      </div>
+                    </SelectItem>
+                  )}
                   <SelectItem value="telecalling">
                     <div className="flex items-center gap-2">
                       <Phone className="h-3 w-3" /> Telecalling
@@ -336,6 +413,38 @@ export function UserManagement() {
               {editingUser ? "Update User" : "Create User"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={!!newPasswordDialog} onOpenChange={() => setNewPasswordDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+          </DialogHeader>
+          {newPasswordDialog && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Reset password for <strong>{newPasswordDialog.name}</strong>
+              </p>
+              <div className="space-y-1">
+                <Label>New Password</Label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                />
+              </div>
+              <Button
+                onClick={handleResetPassword}
+                className="w-full bg-brand hover:bg-brand-dark"
+                disabled={!newPassword}
+              >
+                Reset Password
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
