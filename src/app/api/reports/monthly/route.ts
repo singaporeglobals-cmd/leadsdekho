@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     db.lead.count({
       where: {
         ...where,
-        pipelineStatus: "Won",
+        leadStatus: "Booked",
       },
     }),
     db.lead.count({
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
     statusCounts,
     sourceCounts,
     callLogsCount,
-    wonLeads,
+    bookedLeads,
     lostLeads,
   });
 }

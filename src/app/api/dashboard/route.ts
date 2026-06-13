@@ -17,8 +17,17 @@ export async function GET(req: NextRequest) {
     dateFilter = { createdAt: { gte: startDate, lte: endDate } };
   }
 
+  // Parse assignee filter
+  const assigneeParam = req.nextUrl.searchParams.get("assignee");
+  let assigneeFilter: { currentOwnerId?: string } = {};
+  if (assigneeParam && assigneeParam !== "all") {
+    assigneeFilter = { currentOwnerId: assigneeParam };
+  }
+
+  const combinedFilter = { ...dateFilter, ...assigneeFilter };
+
   if (user.role === "admin") {
-    return await getAdminDashboard(dateFilter);
+    return await getAdminDashboard(combinedFilter, dateFilter);
   } else if (user.role === "telecalling") {
     return await getTelecallingDashboard(user.id, dateFilter);
   } else {
@@ -26,23 +35,26 @@ export async function GET(req: NextRequest) {
   }
 }
 
-async function getAdminDashboard(dateFilter: { createdAt?: { gte?: Date; lte?: Date } }) {
+async function getAdminDashboard(combinedFilter: { createdAt?: { gte?: Date; lte?: Date }; currentOwnerId?: string }, dateFilter: { createdAt?: { gte?: Date; lte?: Date } }) {
   const [
     totalLeads,
     leadsByStatus,
     leadsBySource,
+    leadsByOwner,
     recentLeads,
     teamMembers,
+    ownerUsers,
     todayFollowUps,
     pendingFollowUps,
     totalProjects,
     bookedCount,
   ] = await Promise.all([
-    db.lead.count({ where: dateFilter }),
-    db.lead.groupBy({ by: ["pipelineStatus"], where: dateFilter, _count: true }),
-    db.lead.groupBy({ by: ["source"], where: dateFilter, _count: true }),
+    db.lead.count({ where: combinedFilter }),
+    db.lead.groupBy({ by: ["pipelineStatus"], where: combinedFilter, _count: true }),
+    db.lead.groupBy({ by: ["source"], where: combinedFilter, _count: true }),
+    db.lead.groupBy({ by: ["currentOwnerId"], where: dateFilter, _count: true }),
     db.lead.findMany({
-      where: dateFilter,
+      where: combinedFilter,
       take: 10,
       orderBy: { createdAt: "desc" },
       include: {
@@ -66,6 +78,10 @@ async function getAdminDashboard(dateFilter: { createdAt?: { gte?: Date; lte?: D
         },
       },
     }),
+    db.user.findMany({
+      where: { isActive: true, role: { in: ["telecalling", "sales"] } },
+      select: { id: true, name: true, role: true },
+    }),
     db.followUp.count({
       where: {
         scheduledAt: {
@@ -82,7 +98,7 @@ async function getAdminDashboard(dateFilter: { createdAt?: { gte?: Date; lte?: D
     }),
     db.project.count(),
     db.lead.count({
-      where: { leadStatus: "Booked", ...dateFilter },
+      where: { leadStatus: "Booked", ...combinedFilter },
     }),
   ]);
 
@@ -101,8 +117,10 @@ async function getAdminDashboard(dateFilter: { createdAt?: { gte?: Date; lte?: D
     totalLeads,
     statusCounts,
     sourceCounts,
+    leadsByOwner,
     recentLeads,
     teamMembers,
+    ownerUsers,
     todayFollowUps,
     pendingFollowUps,
     totalProjects,

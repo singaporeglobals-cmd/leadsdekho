@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
     bySource[src].statusBreakdown[lead.pipelineStatus] = (bySource[src].statusBreakdown[lead.pipelineStatus] || 0) + 1;
     const projName = lead.project?.name || "No Project";
     bySource[src].projectBreakdown[projName] = (bySource[src].projectBreakdown[projName] || 0) + 1;
-    if (lead.pipelineStatus === "Won") bySource[src].wonCount++;
+    if (lead.leadStatus === "Booked") bySource[src].wonCount++;
     if (lead.pipelineStatus === "Lost") bySource[src].lostCount++;
     bySource[src].callCount += lead.callLogs.length;
     bySource[src].followUpCount += lead.followUps.length;
@@ -106,15 +106,15 @@ export async function GET(req: NextRequest) {
   // Chart data
   const sourceLeadCounts = Object.values(bySource)
     .sort((a, b) => b.total - a.total)
-    .map((s) => ({ name: s.source, leads: s.total, won: s.wonCount, lost: s.lostCount }));
+    .map((s) => ({ name: s.source, leads: s.total, booked: s.wonCount, lost: s.lostCount }));
 
   const sourceWinRate = Object.values(bySource)
     .filter((s) => s.total > 0)
     .map((s) => ({
       name: s.source,
-      winRate: s.total > 0 ? Math.round((s.wonCount / s.total) * 100) : 0,
+      bookingRate: s.total > 0 ? Math.round((s.wonCount / s.total) * 100) : 0,
       total: s.total,
-      won: s.wonCount,
+      booked: s.wonCount,
     }));
 
   return NextResponse.json({

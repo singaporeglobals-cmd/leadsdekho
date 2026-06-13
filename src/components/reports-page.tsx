@@ -35,7 +35,7 @@ const statusColors: Record<string, string> = {
   "Visit Scheduled": "#f59e0b",
   Visited: "#8b5cf6",
   Negotiation: "#f97316",
-  Won: "#22c55e",
+  Booked: "#22c55e",
   Lost: "#ef4444",
 };
 
@@ -238,7 +238,7 @@ function DateWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }:
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <KpiCard label="Total Leads" value={summary.totalLeads || 0} icon={Users} color="#dfb338" />
-            <KpiCard label="Won Deals" value={summary.won || 0} icon={Target} color="#22c55e" sub={`${summary.totalLeads ? Math.round(((summary.won || 0) / summary.totalLeads) * 100) : 0}% win rate`} />
+            <KpiCard label="Bookings" value={summary.won || 0} icon={Target} color="#22c55e" sub={`${summary.totalLeads ? Math.round(((summary.won || 0) / summary.totalLeads) * 100) : 0}% booking rate`} />
             <KpiCard label="Total Calls" value={summary.totalCalls || 0} icon={Phone} color="#3b82f6" />
             <KpiCard label="Follow-ups" value={summary.totalFollowUps || 0} icon={Clock} color="#8b5cf6" />
             <KpiCard label="Site Visits" value={summary.totalSiteVisits || 0} icon={MapPin} color="#f59e0b" />
@@ -286,7 +286,7 @@ function DateWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }:
                       <TableHead>Date</TableHead>
                       <TableHead className="text-center">Leads</TableHead>
                       <TableHead className="text-center">New</TableHead>
-                      <TableHead className="text-center">Won</TableHead>
+                      <TableHead className="text-center">Booked</TableHead>
                       <TableHead className="text-center">Lost</TableHead>
                       <TableHead>Status Breakdown</TableHead>
                     </TableRow>
@@ -313,7 +313,7 @@ function DateWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }:
                               <Badge className="bg-brand/15 text-brand font-bold">{day.total as number}</Badge>
                             </TableCell>
                             <TableCell className="text-center">{statusBreakdown["New"] || 0}</TableCell>
-                            <TableCell className="text-center text-green-600 font-semibold">{statusBreakdown["Won"] || 0}</TableCell>
+                            <TableCell className="text-center text-green-600 font-semibold">{statusBreakdown["Booked"] || 0}</TableCell>
                             <TableCell className="text-center text-red-600 font-semibold">{statusBreakdown["Lost"] || 0}</TableCell>
                             <TableCell>
                               <div className="flex flex-wrap gap-1">
@@ -422,7 +422,7 @@ function SourceWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId 
                         <Tooltip content={<CustomTooltip />} />
                         <Legend />
                         <Bar dataKey="leads" fill="#dfb338" name="Total Leads" radius={[0, 4, 4, 0]} />
-                        <Bar dataKey="won" fill="#22c55e" name="Won" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="booked" fill="#22c55e" name="Booked" radius={[0, 4, 4, 0]} />
                         <Bar dataKey="lost" fill="#ef4444" name="Lost" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -435,7 +435,7 @@ function SourceWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId 
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Target className="h-4 w-4 text-green-600" /> Win Rate by Source
+                    <Target className="h-4 w-4 text-green-600" /> Booking Rate by Source
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -446,7 +446,7 @@ function SourceWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId 
                         <XAxis dataKey="name" fontSize={11} />
                         <YAxis fontSize={11} unit="%" />
                         <Tooltip content={<CustomTooltip />} />
-                        <Bar dataKey="winRate" fill="#22c55e" name="Win Rate %" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="bookingRate" fill="#22c55e" name="Booking Rate %" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -469,9 +469,9 @@ function SourceWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId 
                       <TableHead className="w-10"></TableHead>
                       <TableHead>Source</TableHead>
                       <TableHead className="text-center">Total Leads</TableHead>
-                      <TableHead className="text-center">Won</TableHead>
+                      <TableHead className="text-center">Booked</TableHead>
                       <TableHead className="text-center">Lost</TableHead>
-                      <TableHead className="text-center">Win Rate</TableHead>
+                      <TableHead className="text-center">Booking Rate</TableHead>
                       <TableHead className="text-center">Calls</TableHead>
                       <TableHead className="text-center">Follow-ups</TableHead>
                       <TableHead className="text-center">Site Visits</TableHead>
@@ -611,7 +611,7 @@ function ProjectWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId
                         <Tooltip content={<CustomTooltip />} />
                         <Legend />
                         <Bar dataKey="leads" fill="#dfb338" name="Total Leads" radius={[0, 4, 4, 0]} />
-                        <Bar dataKey="won" fill="#22c55e" name="Won" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="booked" fill="#22c55e" name="Booked" radius={[0, 4, 4, 0]} />
                         <Bar dataKey="lost" fill="#ef4444" name="Lost" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -624,7 +624,7 @@ function ProjectWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Target className="h-4 w-4 text-green-600" /> Win Rate by Project
+                    <Target className="h-4 w-4 text-green-600" /> Booking Rate by Project
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -635,7 +635,7 @@ function ProjectWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId
                         <XAxis dataKey="name" fontSize={11} />
                         <YAxis fontSize={11} unit="%" />
                         <Tooltip content={<CustomTooltip />} />
-                        <Bar dataKey="winRate" fill="#22c55e" name="Win Rate %" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="bookingRate" fill="#22c55e" name="Booking Rate %" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -685,9 +685,9 @@ function ProjectWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId
                       <TableHead>Project</TableHead>
                       <TableHead>Location</TableHead>
                       <TableHead className="text-center">Total Leads</TableHead>
-                      <TableHead className="text-center">Won</TableHead>
+                      <TableHead className="text-center">Booked</TableHead>
                       <TableHead className="text-center">Lost</TableHead>
-                      <TableHead className="text-center">Win Rate</TableHead>
+                      <TableHead className="text-center">Booking Rate</TableHead>
                       <TableHead className="text-center">Calls</TableHead>
                       <TableHead className="text-center">Site Visits</TableHead>
                     </TableRow>

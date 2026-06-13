@@ -36,7 +36,8 @@ const navItems: NavItem[] = [
   { id: "site-visits", label: "Site Visits", icon: MapPin },
   { id: "bookings", label: "Bookings", icon: Building2 },
   { id: "projects", label: "Projects", icon: Home, roles: ["admin"] },
-  { id: "reports", label: "Reports", icon: BarChart3 },
+  { id: "leads-report", label: "Leads Report", icon: BarChart3, roles: ["admin"] },
+  { id: "user-report", label: "User Report", icon: Users, roles: ["admin"] },
   { id: "users", label: "User Management", icon: UserCog, roles: ["admin"] },
 ];
 
@@ -210,7 +211,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {currentPage === "projects" && "Projects"}
             {currentPage === "site-visits" && "Site Visits"}
             {currentPage === "bookings" && "Bookings"}
-            {currentPage === "reports" && "Reports"}
+            {currentPage === "leads-report" && "Leads Report"}
+            {currentPage === "user-report" && "User Report"}
             {currentPage === "users" && "User Management"}
           </h1>
           {/* Header theme toggle */}

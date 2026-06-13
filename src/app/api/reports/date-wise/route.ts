@@ -137,7 +137,7 @@ export async function GET(req: NextRequest) {
     contacted: leads.filter((l) => l.pipelineStatus === "Contacted").length,
     qualified: leads.filter((l) => l.pipelineStatus === "Qualified").length,
     visited: leads.filter((l) => l.pipelineStatus === "Visited" || l.pipelineStatus === "Visit Scheduled").length,
-    won: leads.filter((l) => l.pipelineStatus === "Won").length,
+    won: leads.filter((l) => l.leadStatus === "Booked").length,
     lost: leads.filter((l) => l.pipelineStatus === "Lost").length,
     totalCalls: callLogs.length,
     totalFollowUps: followUps.length,

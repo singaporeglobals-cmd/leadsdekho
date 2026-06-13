@@ -13,7 +13,8 @@ export type AppPage =
   | "projects"
   | "site-visits"
   | "bookings"
-  | "reports"
+  | "leads-report"
+  | "user-report"
   | "users";
 
 export interface UserInfo {

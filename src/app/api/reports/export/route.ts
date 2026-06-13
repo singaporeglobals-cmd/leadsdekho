@@ -66,6 +66,57 @@ export async function GET(req: NextRequest) {
     logs.forEach((log) => {
       csvContent += `"${log.lead.name}","${log.lead.phone}","${log.callType}","${log.notes.replace(/"/g, '""')}","${log.user.name}","${log.callDate.toISOString()}"\n`;
     });
+  } else if (type === "leadsReport") {
+    const source = searchParams.get("source");
+    const project = searchParams.get("project");
+
+    // Build where clause
+    const leadsWhere: Record<string, unknown> = {};
+    if (from || to) {
+      leadsWhere.createdAt = {
+        ...(from ? { gte: new Date(from + "T00:00:00.000Z") } : {}),
+        ...(to ? { lte: new Date(to + "T23:59:59.999Z") } : {}),
+      };
+    }
+    if (source && source !== "all") leadsWhere.source = source;
+    if (project && project !== "all") leadsWhere.projectId = project;
+
+    // Admin only
+    if (user.role !== "admin") {
+      leadsWhere.OR = [{ currentOwnerId: user.id }, { primaryOwnerId: user.id }];
+    }
+
+    const leads = await db.lead.findMany({
+      where: leadsWhere,
+      include: {
+        currentOwner: { select: { name: true } },
+        project: { select: { name: true } },
+        callLogs: {
+          select: { notes: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Build CSV with feedback in one cell
+    csvContent = "Date,Lead Source,Name,Number,Mail ID,Project Name,Assign Executive,Feedback\n";
+    leads.forEach((lead) => {
+      const date = lead.createdAt.toISOString().split("T")[0];
+      const [y, m, d] = date.split("-");
+      const formattedDate = `${d}.${m}.${y.slice(2)}`;
+
+      // Concatenate all feedback notes with dates
+      const feedbackParts = lead.callLogs.map((log) => {
+        const logDate = log.createdAt.toISOString().split("T")[0];
+        const [ly, lm, ld] = logDate.split("-");
+        const shortDate = `${ld}.${lm}`;
+        return `${log.notes.toUpperCase()}...${shortDate}`;
+      });
+      const feedback = feedbackParts.join(" ") || "-";
+
+      csvContent += `"${formattedDate}","${lead.source}","${lead.name}","${lead.phone}","${lead.email || ""}","${lead.project?.name || ""}","${lead.currentOwner.name}","${feedback.replace(/"/g, '""')}"\n`;
+    });
   } else if (type === "siteVisits") {
     const visits = await db.siteVisit.findMany({
       where: {

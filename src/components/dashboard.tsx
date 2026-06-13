@@ -60,11 +60,15 @@ export function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState("all");
+  const [assignFilter, setAssignFilter] = useState("all");
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const res = await fetch(`/api/dashboard?month=${month}`);
+      const params = new URLSearchParams();
+      params.set("month", month);
+      if (assignFilter && assignFilter !== "all") params.set("assignee", assignFilter);
+      const res = await fetch(`/api/dashboard?${params}`);
       if (!cancelled && res.ok) {
         const d = await res.json();
         setData(d);
@@ -72,7 +76,7 @@ export function AdminDashboard() {
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [month]);
+  }, [month, assignFilter]);
 
   if (loading) {
     return (
@@ -108,13 +112,42 @@ export function AdminDashboard() {
     role: string;
     _count: { currentLeads: number; primaryLeads: number; callLogs: number };
   }>;
+  const ownerUsers = (data.ownerUsers || []) as Array<{
+    id: string;
+    name: string;
+    role: string;
+  }>;
+  const leadsByOwner = (data.leadsByOwner || []) as Array<{
+    currentOwnerId: string;
+    _count: number;
+  }>;
+
+  // Build owner lead count map
+  const ownerLeadCountMap: Record<string, number> = {};
+  leadsByOwner.forEach((item) => {
+    ownerLeadCountMap[item.currentOwnerId] = item._count;
+  });
 
   const monthOptions = generateMonthOptions();
 
   return (
     <div className="space-y-6">
-      {/* Month Filter - Top Right */}
-      <div className="flex items-center justify-end">
+      {/* Filters - Top Right */}
+      <div className="flex items-center justify-end gap-2">
+        <Select value={assignFilter} onValueChange={setAssignFilter}>
+          <SelectTrigger className="w-[180px] h-9">
+            <Users className="mr-1 h-3 w-3" />
+            <SelectValue placeholder="All Users" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Users</SelectItem>
+            {ownerUsers.map((u) => (
+              <SelectItem key={u.id} value={u.id}>
+                {u.name} ({ownerLeadCountMap[u.id] || 0})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={month} onValueChange={setMonth}>
           <SelectTrigger className="w-[160px] h-9">
             <CalendarCheck className="mr-1 h-3 w-3" />
