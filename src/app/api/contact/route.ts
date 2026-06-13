@@ -1,5 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+
+export async function GET() {
+  try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== "super_admin") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const submissions = await db.contactSubmission.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json(submissions);
+  } catch (error) {
+    console.error("Fetch enquiries error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch enquiries" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

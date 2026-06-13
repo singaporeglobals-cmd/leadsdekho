@@ -17,7 +17,8 @@ export type AppPage =
   | "reports"
   | "leads-report"
   | "user-report"
-  | "users";
+  | "users"
+  | "enquiries";
 
 export interface UserInfo {
   id: string;

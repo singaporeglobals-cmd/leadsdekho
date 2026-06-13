@@ -21,6 +21,7 @@ import { LeadsReportPage } from "@/components/leads-report-page";
 import { UserReportPage } from "@/components/user-report-page";
 import { UserManagement } from "@/components/user-management";
 import { LeadSourceManagement } from "@/components/lead-source-management";
+import { EnquiryManagement } from "@/components/enquiry-management";
 
 export default function Home() {
   const { currentPage, isAuthenticated, isLoading, checkAuth } = useAppStore();
@@ -82,6 +83,8 @@ export default function Home() {
         return <UserReportPage />;
       case "users":
         return <UserManagement />;
+      case "enquiries":
+        return <EnquiryManagement />;
       default:
         return <AdminDashboard />;
     }

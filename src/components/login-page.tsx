@@ -112,57 +112,7 @@ export function LoginPage() {
               </Button>
             </form>
 
-            {/* Demo credentials */}
-            <div className="mt-6 border-t border-border pt-4">
-              <p className="mb-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Demo Accounts
-              </p>
-              <div className="space-y-2">
-                {[
-                  {
-                    email: "admin@crm.com",
-                    password: "admin123",
-                    role: "Admin",
-                    color: "emerald",
-                  },
-                  {
-                    email: "telecaller@crm.com",
-                    password: "tele123",
-                    role: "Telecalling",
-                    color: "amber",
-                  },
-                  {
-                    email: "sales@crm.com",
-                    password: "sales123",
-                    role: "Sales",
-                    color: "sky",
-                  },
-                ].map((demo) => (
-                  <button
-                    key={demo.email}
-                    onClick={() => {
-                      setEmail(demo.email);
-                      setPassword(demo.password);
-                    }}
-                    className="flex w-full items-center justify-between rounded-lg border border-border px-3 py-2 text-left transition-colors hover:bg-muted"
-                  >
-                    <div>
-                      <div className="text-sm font-medium text-foreground">
-                        {demo.email}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Password: {demo.password}
-                      </div>
-                    </div>
-                    <span
-                      className={`rounded-full bg-${demo.color}-100 px-2 py-0.5 text-xs font-medium text-${demo.color}-700`}
-                    >
-                      {demo.role}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
+
           </CardContent>
         </Card>
       </div>

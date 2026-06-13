@@ -23,6 +23,7 @@ import {
   Moon,
   FileSpreadsheet,
   Radio,
+  Mail,
 } from "lucide-react";
 
 interface NavItem {
@@ -52,6 +53,7 @@ const navItems: NavItem[] = [
     ],
   },
   { id: "users", label: "User Management", icon: UserCog, roles: ["admin", "super_admin"] },
+  { id: "enquiries", label: "Enquiries", icon: Mail, roles: ["super_admin"] },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -132,6 +134,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       case "leads-report": return "Leads Report";
       case "user-report": return "User Report";
       case "users": return "User Management";
+      case "enquiries": return "Enquiries";
       default: return "Dashboard";
     }
   };
