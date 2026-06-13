@@ -48,19 +48,9 @@ interface SiteVisitItem {
   isViaLeadStatus?: boolean;
 }
 
-interface LeadWithVisitDone {
-  id: string;
-  name: string;
-  phone: string;
-  leadStatus: string;
-  currentOwner: { id: string; name: string };
-  project: { id: string; name: string } | null;
-  createdAt: string;
-}
-
 export function SiteVisitModule() {
-  const { user, setSelectedLeadId, setPage } = useAppStore();
-  const [visits, setVisits] = useState<SiteVisitItem[]>([]);
+  const { setSelectedLeadId, setPage } = useAppStore();
+  const [allVisits, setAllVisits] = useState<SiteVisitItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
   const [refresh, setRefresh] = useState(0);
@@ -75,59 +65,10 @@ export function SiteVisitModule() {
     (async () => {
       setLoading(true);
       try {
-        // Fetch actual site visits
-        const leadsRes = await fetch("/api/leads?limit=100");
-        const leadsData = await leadsRes.json();
-
-        const allVisits: SiteVisitItem[] = [];
-        for (const lead of leadsData.leads || []) {
-          const vRes = await fetch(`/api/leads/${lead.id}/site-visits`);
-          if (!cancelled && vRes.ok) {
-            const vData = await vRes.json();
-            for (const v of vData) {
-              allVisits.push({ ...v, lead: { id: lead.id, name: lead.name, phone: lead.phone } });
-            }
-          }
-        }
-
-        // Also fetch leads with leadStatus "Site Visit Done"
-        const svDoneRes = await fetch("/api/leads?leadStatus=Site+Visit+Done");
-        if (!cancelled && svDoneRes.ok) {
-          const svDoneData = await svDoneRes.json();
-          const svDoneLeads = (svDoneData.leads || []) as LeadWithVisitDone[];
-
-          // Get lead IDs that already have actual site visit records
-          const leadsWithVisits = new Set(allVisits.map((v) => v.leadId));
-
-          // Add virtual visit entries for leads with "Site Visit Done" status but no actual visit record
-          for (const lead of svDoneLeads) {
-            if (!leadsWithVisits.has(lead.id)) {
-              allVisits.push({
-                id: `virtual-svd-${lead.id}`,
-                leadId: lead.id,
-                scheduledAt: lead.createdAt,
-                notes: "Via Lead Status: Site Visit Done",
-                status: "Completed",
-                feedback: null,
-                user: lead.currentOwner || { id: "", name: "Unknown" },
-                lead: { id: lead.id, name: lead.name, phone: lead.phone },
-                isViaLeadStatus: true,
-              });
-            }
-          }
-        }
-
-        allVisits.sort(
-          (a, b) =>
-            new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime()
-        );
-
-        if (!cancelled) {
-          setVisits(
-            statusFilter === "all"
-              ? allVisits
-              : allVisits.filter((v) => v.status === statusFilter)
-          );
+        const res = await fetch("/api/site-visits");
+        if (!cancelled && res.ok) {
+          const data = await res.json();
+          setAllVisits(data.visits || []);
         }
       } catch {
         // ignore
@@ -135,7 +76,7 @@ export function SiteVisitModule() {
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [statusFilter, refresh]);
+  }, [refresh]);
 
   const handleUpdateVisit = async () => {
     if (!updateDialog || updateDialog.isViaLeadStatus) return;
@@ -153,6 +94,11 @@ export function SiteVisitModule() {
       setRefresh(r => r + 1);
     }
   };
+
+  // Filter visits by status
+  const visits = statusFilter === "all"
+    ? allVisits
+    : allVisits.filter((v) => v.status === statusFilter);
 
   const upcomingVisits = visits.filter(
     (v) => v.status === "Scheduled" && new Date(v.scheduledAt) >= new Date()
@@ -252,7 +198,7 @@ export function SiteVisitModule() {
             <MapPin className="h-10 w-10 text-muted-foreground" />
             <p className="mt-2 text-muted-foreground">No site visits found</p>
             <p className="text-sm text-muted-foreground">
-              Schedule visits from a lead detail page
+              Schedule visits from a lead detail page or set lead status to &quot;Site Visit Done&quot;
             </p>
           </CardContent>
         </Card>

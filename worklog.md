@@ -101,3 +101,25 @@ Stage Summary:
 - URL: https://my-project-tau-ten-86.vercel.app
 - New API endpoints: /api/reports/user, /api/reports/export?type=leadsReport
 - New pages: leads-report, user-report (admin only)
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix Site Visit menu, add user filter to lead list, restructure Reports with sub-menus
+
+Work Log:
+- Created /api/site-visits endpoint that fetches both actual site visit records AND leads with leadStatus="Site Visit Done"
+- Rewrote site-visit-module.tsx to use the new /api/site-visits endpoint instead of N+1 fetch pattern
+- Removed "All Status" (pipeline status) dropdown from lead-list.tsx
+- Added user/assignee filter dropdown (admin only) to lead-list.tsx using UsersRound icon
+- Added userFilter state to lead-list and passed owner param to /api/leads
+- Added "reports" page to AppPage type in store.ts
+- Restructured sidebar in app-layout.tsx to show Reports with collapsible sub-menus (Leads Report, User Report)
+- Added ReportsPage route to page.tsx
+- Added projectId and allCallLogs params support to /api/leads endpoint
+- Updated leads-report-page.tsx to pass allCallLogs=true for full feedback display
+
+Stage Summary:
+- Site Visit menu now properly shows leads with "Site Visit Done" status
+- Lead management has user/assignee filter (admin only) instead of pipeline status filter
+- Reports sidebar shows collapsible sub-menus: Leads Report & User Report
+- Deployed to https://my-project-tau-ten-86.vercel.app

@@ -191,6 +191,7 @@ export function LeadList() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [leadStatusFilter, setLeadStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [userFilter, setUserFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [refresh, setRefresh] = useState(0);
@@ -274,6 +275,7 @@ export function LeadList() {
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (leadStatusFilter !== "all") params.set("leadStatus", leadStatusFilter);
       if (sourceFilter !== "all") params.set("source", sourceFilter);
+      if (userFilter !== "all" && user?.role === "admin") params.set("owner", userFilter);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo) params.set("dateTo", dateTo);
 
@@ -286,7 +288,7 @@ export function LeadList() {
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, dateFrom, dateTo, refresh]);
+  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, userFilter, dateFrom, dateTo, refresh, user?.role]);
 
   // Fetch users, projects, and properties for ALL roles - parallel for speed
   useEffect(() => {
@@ -585,20 +587,23 @@ export function LeadList() {
               className="pl-9 h-9"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px] h-9">
-              <Filter className="mr-1 h-3 w-3" />
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              {PIPELINE_STAGES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* User/Assignee filter - Admin only */}
+          {user?.role === "admin" && (
+            <Select value={userFilter} onValueChange={setUserFilter}>
+              <SelectTrigger className="w-[180px] h-9">
+                <UsersRound className="mr-1 h-3 w-3" />
+                <SelectValue placeholder="All Users" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Users</SelectItem>
+                {users.filter((u) => u.isActive).map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
             <SelectTrigger className="w-[140px] h-9">
               <SelectValue placeholder="Source" />
@@ -642,12 +647,12 @@ export function LeadList() {
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[130px]" placeholder="From" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[130px]" placeholder="To" />
           {/* Clear all filters */}
-          {(statusFilter !== "all" || leadStatusFilter !== "all" || sourceFilter !== "all" || dateFrom || dateTo) && (
+          {(statusFilter !== "all" || leadStatusFilter !== "all" || sourceFilter !== "all" || userFilter !== "all" || dateFrom || dateTo) && (
             <Button
               variant="ghost"
               size="sm"
               className="h-9 text-muted-foreground hover:text-foreground"
-              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSourceFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); }}
+              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSourceFilter("all"); setUserFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); }}
             >
               <RotateCcw className="mr-1 h-3 w-3" /> Clear
             </Button>

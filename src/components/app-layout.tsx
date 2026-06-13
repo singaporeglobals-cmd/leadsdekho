@@ -1,9 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useAppStore, type AppPage } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "next-themes";
 import {
@@ -18,8 +18,10 @@ import {
   Menu,
   X,
   ChevronRight,
+  ChevronDown,
   Sun,
   Moon,
+  FileSpreadsheet,
 } from "lucide-react";
 
 interface NavItem {
@@ -27,6 +29,7 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   roles?: string[];
+  children?: { id: AppPage; label: string; icon: React.ElementType; roles?: string[] }[];
 }
 
 const navItems: NavItem[] = [
@@ -36,8 +39,16 @@ const navItems: NavItem[] = [
   { id: "site-visits", label: "Site Visits", icon: MapPin },
   { id: "bookings", label: "Bookings", icon: Building2 },
   { id: "projects", label: "Projects", icon: Home, roles: ["admin"] },
-  { id: "leads-report", label: "Leads Report", icon: BarChart3, roles: ["admin"] },
-  { id: "user-report", label: "User Report", icon: Users, roles: ["admin"] },
+  {
+    id: "reports",
+    label: "Reports",
+    icon: BarChart3,
+    roles: ["admin"],
+    children: [
+      { id: "leads-report", label: "Leads Report", icon: FileSpreadsheet, roles: ["admin"] },
+      { id: "user-report", label: "User Report", icon: Users, roles: ["admin"] },
+    ],
+  },
   { id: "users", label: "User Management", icon: UserCog, roles: ["admin"] },
 ];
 
@@ -45,10 +56,27 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, currentPage, setPage, logout, sidebarOpen, setSidebarOpen } =
     useAppStore();
   const { theme, setTheme } = useTheme();
+  const [reportsOpen, setReportsOpen] = useState(false);
 
   const filteredNavItems = navItems.filter(
     (item) => !item.roles || item.roles.includes(user?.role || "")
   );
+
+  // Filter children based on roles too
+  const filteredNavItemsWithChildren = filteredNavItems.map((item) => {
+    if (item.children) {
+      return {
+        ...item,
+        children: item.children.filter(
+          (child) => !child.roles || child.roles.includes(user?.role || "")
+        ),
+      };
+    }
+    return item;
+  });
+
+  // Check if Reports or its children are active
+  const isReportsActive = currentPage === "reports" || currentPage === "leads-report" || currentPage === "user-report";
 
   const getInitials = (name: string) =>
     name
@@ -81,6 +109,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         return "bg-sky-900 text-sky-300";
       default:
         return "bg-gray-700 text-gray-300";
+    }
+  };
+
+  const getPageTitle = () => {
+    switch (currentPage) {
+      case "dashboard": return "Dashboard";
+      case "leads": return "Lead Management";
+      case "lead-detail": return "Lead Details";
+      case "lead-import": return "Import Leads";
+      case "projects": return "Projects";
+      case "site-visits": return "Site Visits";
+      case "bookings": return "Bookings";
+      case "reports": return "Reports";
+      case "leads-report": return "Leads Report";
+      case "user-report": return "User Report";
+      case "users": return "User Management";
+      default: return "Dashboard";
     }
   };
 
@@ -117,7 +162,55 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Nav */}
         <ScrollArea className="flex-1 px-3 py-4">
           <nav className="space-y-1">
-            {filteredNavItems.map((item) => {
+            {filteredNavItemsWithChildren.map((item) => {
+              // Check if item has children (Reports group)
+              if (item.children && item.children.length > 0) {
+                return (
+                  <div key={item.id}>
+                    <button
+                      onClick={() => setReportsOpen(!reportsOpen)}
+                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                        isReportsActive
+                          ? "bg-brand/20 text-brand"
+                          : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                      }`}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                      {reportsOpen || isReportsActive ? (
+                        <ChevronDown className="ml-auto h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="ml-auto h-4 w-4" />
+                      )}
+                    </button>
+                    {(reportsOpen || isReportsActive) && (
+                      <div className="ml-4 mt-1 space-y-1">
+                        {item.children.map((child) => {
+                          const isChildActive = currentPage === child.id;
+                          return (
+                            <button
+                              key={child.id}
+                              onClick={() => {
+                                setPage(child.id);
+                                setSidebarOpen(false);
+                              }}
+                              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                                isChildActive
+                                  ? "bg-brand text-white"
+                                  : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                              }`}
+                            >
+                              <child.icon className="h-4 w-4" />
+                              {child.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               const isActive = currentPage === item.id;
               return (
                 <button
@@ -204,16 +297,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <Menu className="h-5 w-5 text-foreground" />
           </button>
           <h1 className="text-lg font-semibold text-foreground flex-1">
-            {currentPage === "dashboard" && "Dashboard"}
-            {currentPage === "leads" && "Lead Management"}
-            {currentPage === "lead-detail" && "Lead Details"}
-            {currentPage === "lead-import" && "Import Leads"}
-            {currentPage === "projects" && "Projects"}
-            {currentPage === "site-visits" && "Site Visits"}
-            {currentPage === "bookings" && "Bookings"}
-            {currentPage === "leads-report" && "Leads Report"}
-            {currentPage === "user-report" && "User Report"}
-            {currentPage === "users" && "User Management"}
+            {getPageTitle()}
           </h1>
           {/* Header theme toggle */}
           <Button

@@ -15,8 +15,10 @@ export async function GET(req: NextRequest) {
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "50");
   const ownerFilter = searchParams.get("owner");
-  const dateFrom = searchParams.get("dateFrom");
-  const dateTo = searchParams.get("dateTo");
+  const dateFrom = searchParams.get("dateFrom") || searchParams.get("from");
+  const dateTo = searchParams.get("dateTo") || searchParams.get("to");
+  const projectId = searchParams.get("project");
+  const allCallLogs = searchParams.get("allCallLogs") === "true";
 
   const where: Record<string, unknown> = {};
 
@@ -36,6 +38,7 @@ export async function GET(req: NextRequest) {
   if (leadStatus) where.leadStatus = leadStatus;
   if (source) where.source = source;
   if (ownerFilter) where.currentOwnerId = ownerFilter;
+  if (projectId) where.projectId = projectId;
   if (dateFrom || dateTo) {
     where.createdAt = {};
     if (dateFrom) (where.createdAt as Record<string, unknown>).gte = new Date(dateFrom);
@@ -69,7 +72,7 @@ export async function GET(req: NextRequest) {
         primaryOwner: { select: { id: true, name: true, email: true, role: true } },
         currentOwner: { select: { id: true, name: true, email: true, role: true } },
         project: { select: { id: true, name: true } },
-        callLogs: { orderBy: { createdAt: "desc" }, take: 1, include: { user: { select: { name: true } } } },
+        callLogs: { orderBy: { createdAt: "desc" }, ...(allCallLogs ? {} : { take: 1 }), include: { user: { select: { name: true } } } },
       },
       orderBy: { updatedAt: "desc" },
       skip: (page - 1) * limit,

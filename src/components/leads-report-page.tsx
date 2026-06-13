@@ -81,6 +81,7 @@ export function LeadsReportPage() {
         if (sourceFilter && sourceFilter !== "all") params.set("source", sourceFilter);
         if (projectFilter && projectFilter !== "all") params.set("project", projectFilter);
         params.set("limit", "100");
+        params.set("allCallLogs", "true");
 
         const res = await fetch(`/api/leads?${params}`);
         if (!cancelled && res.ok) {
