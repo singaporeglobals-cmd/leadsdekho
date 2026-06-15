@@ -54,6 +54,22 @@ export async function POST(
     include: { user: { select: { id: true, name: true } } },
   });
 
+  // Auto-update pipeline status from "New" to "Contacted" when feedback is given
+  if (lead.pipelineStatus === "New") {
+    await db.lead.update({
+      where: { id },
+      data: { pipelineStatus: "Contacted" },
+    });
+    await db.timelineEvent.create({
+      data: {
+        leadId: id,
+        userId: user.id,
+        eventType: "StatusChanged",
+        description: `Status auto-changed from New to Contacted (feedback given)`,
+      },
+    });
+  }
+
   // Timeline event
   await db.timelineEvent.create({
     data: {

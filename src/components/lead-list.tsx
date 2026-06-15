@@ -288,7 +288,20 @@ export function LeadList() {
       const res = await fetch(`/api/leads?${params.toString()}`);
       if (!cancelled && res.ok) {
         const data = await res.json();
-        setLeads(data.leads || []);
+        let leadsData: Lead[] = data.leads || [];
+        // When "My Leads" filter is active, sort so fresh/unacted leads are at top
+        // and acted-upon leads sink to bottom
+        if (myLeadsFilter) {
+          leadsData = leadsData.sort((a, b) => {
+            const aActed = a.callLogs && a.callLogs.length > 0 ? 1 : 0;
+            const bActed = b.callLogs && b.callLogs.length > 0 ? 1 : 0;
+            // Fresh leads (not acted upon) come first
+            if (aActed !== bActed) return aActed - bActed;
+            // Within same group, newer leads first
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          });
+        }
+        setLeads(leadsData);
         setTotal(data.total || 0);
       }
       if (!cancelled) setLoading(false);
@@ -972,12 +985,26 @@ export function LeadList() {
           </div>
 
           {/* Lead rows */}
-          {leads.map((lead) => (
+          {leads.map((lead, idx) => {
+            // In My Leads view, add a divider between fresh and acted-upon leads
+            const isFresh = !lead.callLogs || lead.callLogs.length === 0;
+            const prevLead = idx > 0 ? leads[idx - 1] : null;
+            const prevIsFresh = prevLead ? (!prevLead.callLogs || prevLead.callLogs.length === 0) : true;
+            const showDivider = myLeadsFilter && prevIsFresh && !isFresh;
+
+            return (
+            <div key={lead.id}>
+              {showDivider && (
+                <div className="flex items-center gap-3 px-4 py-2 bg-muted/30 border-b border-border">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">Previously Contacted</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+              )}
             <div
-              key={lead.id}
               className={`border-b border-border last:border-b-0 px-4 py-3 transition-colors ${
                 selectedLeadIds.has(lead.id) ? "bg-brand/5" : "hover:bg-muted/30"
-              }`}
+              } ${myLeadsFilter && isFresh ? "border-l-2 border-l-emerald-500" : ""}`}
             >
               {/* Row 1: Main info */}
               <div className="flex flex-col md:grid md:grid-cols-[auto_1fr_1fr_auto] gap-2 md:gap-4">
@@ -1012,6 +1039,11 @@ export function LeadList() {
                     >
                       {lead.pipelineStatus}
                     </Badge>
+                    {myLeadsFilter && isFresh && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-emerald-500/50 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30">
+                        Fresh
+                      </Badge>
+                    )}
                     {lead.leadStatus && lead.leadStatus !== "New" && (
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-brand/30 text-brand">
                         {lead.leadStatus}
@@ -1177,7 +1209,9 @@ export function LeadList() {
                 </div>
               </div>
             </div>
-          ))}
+            </div>
+            );
+          })}
         </div>
       )}
 

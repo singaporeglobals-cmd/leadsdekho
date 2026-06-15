@@ -20,3 +20,22 @@ Stage Summary:
 - Super admin has a new "Enquiries" menu in the sidebar that displays all home page contact form submissions
 - Enquiry page features: search, view details dialog, delete, call/email actions
 - API: GET /api/contact (super_admin only), DELETE /api/contact/[id] (super_admin only)
+---
+Task ID: 1
+Agent: Main Agent
+Task: Implement My Leads dynamic sorting and Fresh Leads auto-removal
+
+Work Log:
+- Read lead-list.tsx, leads API route, call-logs API route, and assign API route
+- Modified call-logs POST API: When feedback is given on a lead with pipelineStatus="New", auto-update to "Contacted"
+- Modified leads GET API: Fresh Leads filter now shows ALL New leads assigned to user (not just today's)
+- Modified lead-list.tsx frontend: My Leads view sorts leads so fresh/unacted (no call logs) appear at top, acted-upon leads sink to bottom
+- Added visual "Fresh" badge on fresh leads in My Leads view with green border indicator
+- Added "Previously Contacted" divider between fresh and acted-upon sections in My Leads
+- Built and deployed to Vercel production
+
+Stage Summary:
+- Fresh Leads: When user gives feedback, lead auto-moves from "New" to "Contacted" → disappears from Fresh Leads
+- My Leads: Fresh leads (no call logs) appear at top with green border + Fresh badge; acted-upon leads sink below divider
+- Both filters work with auto-refresh after feedback submission
+- Deployed to https://leadsdekho.in

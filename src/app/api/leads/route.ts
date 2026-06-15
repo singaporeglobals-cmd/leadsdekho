@@ -45,13 +45,9 @@ export async function GET(req: NextRequest) {
     ];
   }
 
-  // Fresh Leads filter - today's new leads assigned to current user
+  // Fresh Leads filter - new leads (pipelineStatus=New) assigned to current user
+  // Once feedback is given, pipelineStatus auto-changes to "Contacted" so they disappear from here
   if (fresh) {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
-
     where.AND = [
       {
         OR: [
@@ -61,7 +57,6 @@ export async function GET(req: NextRequest) {
       },
       {
         pipelineStatus: "New",
-        createdAt: { gte: todayStart, lte: todayEnd },
       },
     ];
     // Remove the top-level OR if it conflicts with AND
