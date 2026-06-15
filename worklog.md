@@ -39,3 +39,23 @@ Stage Summary:
 - My Leads: Fresh leads (no call logs) appear at top with green border + Fresh badge; acted-upon leads sink below divider
 - Both filters work with auto-refresh after feedback submission
 - Deployed to https://leadsdekho.in
+---
+Task ID: 2
+Agent: Main Agent
+Task: Optimize CRM loading speed
+
+Work Log:
+- Audited all API calls on page load - found 6 calls on lead-list page alone
+- Merged 3 separate /api/leads calls into 1 - main response now includes myLeadsCount and freshLeadsCount
+- Lazy-loaded /api/properties - only fetches when create dialog opens
+- Reduced lead-list page from 6 API calls to 3 on initial load
+- Disabled Prisma query logging in production (was logging every query)
+- Switched from Supabase direct connection to PgBouncer pooler connection (aws-0-ap-south-1.pooler.supabase.com:6543)
+- Updated Vercel environment variables with pooler URL
+
+Stage Summary:
+- Lead page API calls reduced: 6 → 3 (50% reduction)
+- PgBouncer connection pooling enabled for faster DB connections on serverless
+- Production query logging disabled (was causing overhead)
+- Properties lazy-loaded instead of on page mount
+- Deployed to https://leadsdekho.in

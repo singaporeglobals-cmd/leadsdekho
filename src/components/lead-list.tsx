@@ -303,20 +303,22 @@ export function LeadList() {
         }
         setLeads(leadsData);
         setTotal(data.total || 0);
+        // Extract counts from the same response (no extra API calls needed)
+        if (data.myLeadsCount !== undefined) setMyLeadsCount(data.myLeadsCount);
+        if (data.freshLeadsCount !== undefined) setFreshLeadsCount(data.freshLeadsCount);
       }
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, refresh, user?.role]);
 
-  // Fetch users, projects, and properties for ALL roles - parallel for speed
+  // Fetch users, projects - parallel for speed (properties lazy-loaded on dialog open)
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [uRes, pRes, propRes] = await Promise.all([
+      const [uRes, pRes] = await Promise.all([
         fetch("/api/users"),
         fetch("/api/projects"),
-        fetch("/api/properties"),
       ]);
       if (!cancelled && uRes.ok) {
         const userData = await uRes.json();
@@ -329,34 +331,23 @@ export function LeadList() {
       if (!cancelled && pRes.ok) {
         setProjects(await pRes.json());
       }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.role]);
+
+  // Lazy-load properties only when create dialog opens
+  useEffect(() => {
+    if (!createOpen || properties.length > 0) return;
+    let cancelled = false;
+    (async () => {
+      const propRes = await fetch("/api/properties");
       if (!cancelled && propRes.ok) {
         const propData = await propRes.json();
         setProperties(propData.properties || []);
       }
     })();
     return () => { cancelled = true; };
-  }, [user?.role]);
-
-  // Fetch My Leads count and Fresh Leads count
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    (async () => {
-      const [myRes, freshRes] = await Promise.all([
-        fetch("/api/leads?myLeads=true&limit=1"),
-        fetch("/api/leads?fresh=true&limit=1"),
-      ]);
-      if (!cancelled && myRes.ok) {
-        const data = await myRes.json();
-        setMyLeadsCount(data.total || 0);
-      }
-      if (!cancelled && freshRes.ok) {
-        const data = await freshRes.json();
-        setFreshLeadsCount(data.total || 0);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [user, refresh]);
+  }, [createOpen, properties.length]);
 
   const handleCreateLead = async () => {
     const body: Record<string, string> = {

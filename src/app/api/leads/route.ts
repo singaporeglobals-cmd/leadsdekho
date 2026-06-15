@@ -98,7 +98,39 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const [leads, total] = await Promise.all([
+  // Determine if we should include counts (default: true for efficiency)
+  const includeCounts = searchParams.get("includeCounts") !== "false";
+
+  // Build the count queries for My Leads and Fresh Leads (only when requested)
+  const myLeadsWhere = {
+    OR: [
+      { currentOwnerId: user.id },
+      { primaryOwnerId: user.id },
+    ],
+  };
+  const freshLeadsWhere = {
+    AND: [
+      {
+        OR: [
+          { currentOwnerId: user.id },
+          { primaryOwnerId: user.id },
+        ],
+      },
+      { pipelineStatus: "New" },
+    ],
+  };
+
+  const countPromises: Promise<number>[] = [
+    db.lead.count({ where }), // total for current filter
+  ];
+  if (includeCounts) {
+    countPromises.push(
+      db.lead.count({ where: myLeadsWhere }),
+      db.lead.count({ where: freshLeadsWhere })
+    );
+  }
+
+  const [leads, ...counts] = await Promise.all([
     db.lead.findMany({
       where,
       include: {
@@ -111,10 +143,14 @@ export async function GET(req: NextRequest) {
       skip: (page - 1) * limit,
       take: limit,
     }),
-    db.lead.count({ where }),
+    ...countPromises,
   ]);
 
-  return NextResponse.json({ leads, total, page, limit });
+  const total = counts[0];
+  const myLeadsCount = includeCounts ? counts[1] : undefined;
+  const freshLeadsCount = includeCounts ? counts[2] : undefined;
+
+  return NextResponse.json({ leads, total, page, limit, myLeadsCount, freshLeadsCount });
 }
 
 // POST /api/leads - Create a lead
