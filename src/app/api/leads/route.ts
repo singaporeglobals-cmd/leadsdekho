@@ -15,6 +15,8 @@ export async function GET(req: NextRequest) {
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "50");
   const ownerFilter = searchParams.get("owner");
+  const myLeads = searchParams.get("myLeads") === "true";
+  const fresh = searchParams.get("fresh") === "true";
   const dateFrom = searchParams.get("dateFrom") || searchParams.get("from");
   const dateTo = searchParams.get("dateTo") || searchParams.get("to");
   const projectId = searchParams.get("project");
@@ -24,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   // Role-based filtering
   if (user.role === "telecalling") {
-    // Telecalling sees ALL leads
+    // Telecalling sees ALL leads by default
   } else if (user.role === "sales") {
     // Sales sees leads where they are currentOwner OR primaryOwner
     where.OR = [
@@ -34,12 +36,45 @@ export async function GET(req: NextRequest) {
   }
   // Admin sees ALL leads
 
-  if (status) where.pipelineStatus = status;
+  // My Leads filter - show only leads assigned to current user
+  if (myLeads) {
+    // Override role-based filtering - only show user's own leads
+    where.OR = [
+      { currentOwnerId: user.id },
+      { primaryOwnerId: user.id },
+    ];
+  }
+
+  // Fresh Leads filter - today's new leads assigned to current user
+  if (fresh) {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    where.AND = [
+      {
+        OR: [
+          { currentOwnerId: user.id },
+          { primaryOwnerId: user.id },
+        ],
+      },
+      {
+        pipelineStatus: "New",
+        createdAt: { gte: todayStart, lte: todayEnd },
+      },
+    ];
+    // Remove the top-level OR if it conflicts with AND
+    delete where.OR;
+    delete where.pipelineStatus; // Already in AND
+  }
+
+  if (status && !fresh) where.pipelineStatus = status;
   if (leadStatus) where.leadStatus = leadStatus;
   if (source) where.source = source;
   if (ownerFilter) where.currentOwnerId = ownerFilter;
   if (projectId) where.projectId = projectId;
-  if (dateFrom || dateTo) {
+  if ((dateFrom || dateTo) && !fresh) {
     where.createdAt = {};
     if (dateFrom) (where.createdAt as Record<string, unknown>).gte = new Date(dateFrom);
     if (dateTo) {
@@ -49,20 +84,23 @@ export async function GET(req: NextRequest) {
     }
   }
   if (search) {
-    where.OR = user.role === "sales"
-      ? [
-          { currentOwnerId: user.id, name: { contains: search } },
-          { currentOwnerId: user.id, phone: { contains: search } },
-          { currentOwnerId: user.id, email: { contains: search } },
-          { primaryOwnerId: user.id, name: { contains: search } },
-          { primaryOwnerId: user.id, phone: { contains: search } },
-          { primaryOwnerId: user.id, email: { contains: search } },
-        ]
-      : [
-          { name: { contains: search } },
-          { phone: { contains: search } },
-          { email: { contains: search } },
-        ];
+    const searchConditions = [
+      { name: { contains: search } },
+      { phone: { contains: search } },
+      { email: { contains: search } },
+    ];
+    if (user.role === "sales" || myLeads) {
+      where.OR = [
+        { currentOwnerId: user.id, name: { contains: search } },
+        { currentOwnerId: user.id, phone: { contains: search } },
+        { currentOwnerId: user.id, email: { contains: search } },
+        { primaryOwnerId: user.id, name: { contains: search } },
+        { primaryOwnerId: user.id, phone: { contains: search } },
+        { primaryOwnerId: user.id, email: { contains: search } },
+      ];
+    } else {
+      where.OR = searchConditions;
+    }
   }
 
   const [leads, total] = await Promise.all([

@@ -194,6 +194,10 @@ export function LeadList() {
   const [userFilter, setUserFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [myLeadsFilter, setMyLeadsFilter] = useState(false);
+  const [freshLeadsFilter, setFreshLeadsFilter] = useState(false);
+  const [myLeadsCount, setMyLeadsCount] = useState(0);
+  const [freshLeadsCount, setFreshLeadsCount] = useState(0);
   const [refresh, setRefresh] = useState(0);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -278,6 +282,8 @@ export function LeadList() {
       if (userFilter !== "all" && isAdminRole(user?.role || "")) params.set("owner", userFilter);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo) params.set("dateTo", dateTo);
+      if (myLeadsFilter) params.set("myLeads", "true");
+      if (freshLeadsFilter) params.set("fresh", "true");
 
       const res = await fetch(`/api/leads?${params.toString()}`);
       if (!cancelled && res.ok) {
@@ -288,7 +294,7 @@ export function LeadList() {
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, userFilter, dateFrom, dateTo, refresh, user?.role]);
+  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, refresh, user?.role]);
 
   // Fetch users, projects, and properties for ALL roles - parallel for speed
   useEffect(() => {
@@ -317,6 +323,27 @@ export function LeadList() {
     })();
     return () => { cancelled = true; };
   }, [user?.role]);
+
+  // Fetch My Leads count and Fresh Leads count
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const [myRes, freshRes] = await Promise.all([
+        fetch("/api/leads?myLeads=true&limit=1"),
+        fetch("/api/leads?fresh=true&limit=1"),
+      ]);
+      if (!cancelled && myRes.ok) {
+        const data = await myRes.json();
+        setMyLeadsCount(data.total || 0);
+      }
+      if (!cancelled && freshRes.ok) {
+        const data = await freshRes.json();
+        setFreshLeadsCount(data.total || 0);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user, refresh]);
 
   const handleCreateLead = async () => {
     const body: Record<string, string> = {
@@ -647,28 +674,50 @@ export function LeadList() {
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[130px]" placeholder="From" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[130px]" placeholder="To" />
           {/* Clear all filters */}
-          {(statusFilter !== "all" || leadStatusFilter !== "all" || sourceFilter !== "all" || userFilter !== "all" || dateFrom || dateTo) && (
+          {(statusFilter !== "all" || leadStatusFilter !== "all" || sourceFilter !== "all" || userFilter !== "all" || dateFrom || dateTo || myLeadsFilter || freshLeadsFilter) && (
             <Button
               variant="ghost"
               size="sm"
               className="h-9 text-muted-foreground hover:text-foreground"
-              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSourceFilter("all"); setUserFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); }}
+              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSourceFilter("all"); setUserFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); setMyLeadsFilter(false); setFreshLeadsFilter(false); }}
             >
               <RotateCcw className="mr-1 h-3 w-3" /> Clear
             </Button>
           )}
-          {/* Fresh Leads quick filter for telecaller/sales */}
-          {(user?.role === "telecalling" || user?.role === "sales") && (
-            <Button
-              variant={statusFilter === "New" ? "default" : "outline"}
-              size="sm"
-              className="h-9"
-              onClick={() => setStatusFilter(statusFilter === "New" ? "all" : "New")}
-            >
-              <Sparkles className="mr-1 h-3 w-3" />
-              Fresh Leads
-            </Button>
-          )}
+          {/* My Leads quick filter */}
+          <Button
+            variant={myLeadsFilter ? "default" : "outline"}
+            size="sm"
+            className={`h-9 ${myLeadsFilter ? "bg-brand hover:bg-brand-dark" : ""}`}
+            onClick={() => {
+              const newVal = !myLeadsFilter;
+              setMyLeadsFilter(newVal);
+              if (newVal) setFreshLeadsFilter(false);
+            }}
+          >
+            <UsersRound className="mr-1 h-3 w-3" />
+            My Leads
+            <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">
+              {myLeadsCount}
+            </Badge>
+          </Button>
+          {/* Fresh Leads quick filter */}
+          <Button
+            variant={freshLeadsFilter ? "default" : "outline"}
+            size="sm"
+            className={`h-9 ${freshLeadsFilter ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}`}
+            onClick={() => {
+              const newVal = !freshLeadsFilter;
+              setFreshLeadsFilter(newVal);
+              if (newVal) setMyLeadsFilter(false);
+            }}
+          >
+            <Sparkles className="mr-1 h-3 w-3" />
+            Fresh
+            <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">
+              {freshLeadsCount}
+            </Badge>
+          </Button>
         </div>
 
         <div className="flex items-center gap-2">
