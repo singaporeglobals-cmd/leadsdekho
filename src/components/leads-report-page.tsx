@@ -17,7 +17,7 @@ import {
   Building2, Clock,
 } from "lucide-react";
 
-const SOURCES = [
+const DEFAULT_SOURCES = [
   "Manual", "Website", "Referral", "Social Media", "Walk-in",
   "Call", "Housing.com", "99acres", "MagicBricks",
 ];
@@ -57,14 +57,26 @@ export function LeadsReportPage() {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [page, setPage] = useState(0);
+  const [sources, setSources] = useState<string[]>(DEFAULT_SOURCES);
   const PAGE_SIZE = 25;
 
-  // Fetch projects for dropdown
+  // Fetch projects and lead sources for dropdown
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/projects");
-        if (res.ok) setProjects(await res.json());
+        const [pRes, srcRes] = await Promise.all([
+          fetch("/api/projects"),
+          fetch("/api/lead-sources"),
+        ]);
+        if (pRes.ok) setProjects(await pRes.json());
+        if (srcRes.ok) {
+          const data = await srcRes.json();
+          if (Array.isArray(data) && data.length > 0) {
+            const dbSources = data.map((s: { name: string }) => s.name);
+            const merged = [...new Set([...dbSources, ...DEFAULT_SOURCES])];
+            setSources(merged);
+          }
+        }
       } catch (e) { console.error(e); }
     })();
   }, []);
@@ -169,7 +181,7 @@ export function LeadsReportPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Sources</SelectItem>
-                  {SOURCES.map((s) => (
+                  {sources.map((s) => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
                 </SelectContent>

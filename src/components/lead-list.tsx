@@ -70,7 +70,8 @@ const LEAD_STATUSES = [
   "Booked",
 ];
 
-const SOURCES = [
+// Sources will be fetched dynamically from database
+const DEFAULT_SOURCES = [
   "Manual",
   "Website",
   "Referral",
@@ -199,6 +200,7 @@ export function LeadList() {
   const [myLeadsCount, setMyLeadsCount] = useState(0);
   const [freshLeadsCount, setFreshLeadsCount] = useState(0);
   const [refresh, setRefresh] = useState(0);
+  const [sources, setSources] = useState<string[]>(DEFAULT_SOURCES);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Debounced search handler
@@ -312,13 +314,14 @@ export function LeadList() {
     return () => { cancelled = true; };
   }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, refresh, user?.role]);
 
-  // Fetch users, projects - parallel for speed (properties lazy-loaded on dialog open)
+  // Fetch users, projects, and lead sources - parallel for speed (properties lazy-loaded on dialog open)
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [uRes, pRes] = await Promise.all([
+      const [uRes, pRes, srcRes] = await Promise.all([
         fetch("/api/users"),
         fetch("/api/projects"),
+        fetch("/api/lead-sources"),
       ]);
       if (!cancelled && uRes.ok) {
         const userData = await uRes.json();
@@ -331,9 +334,18 @@ export function LeadList() {
       if (!cancelled && pRes.ok) {
         setProjects(await pRes.json());
       }
+      if (!cancelled && srcRes.ok) {
+        const srcData = await srcRes.json();
+        if (Array.isArray(srcData) && srcData.length > 0) {
+          const dbSources = srcData.map((s: { name: string }) => s.name);
+          // Merge DB sources with defaults, DB sources first, no duplicates
+          const merged = [...new Set([...dbSources, ...DEFAULT_SOURCES])];
+          setSources(merged);
+        }
+      }
     })();
     return () => { cancelled = true; };
-  }, [user?.role]);
+  }, [user?.role, refresh]);
 
   // Lazy-load properties only when create dialog opens
   useEffect(() => {
@@ -641,7 +653,7 @@ export function LeadList() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Sources</SelectItem>
-              {SOURCES.map((s) => (
+              {sources.map((s) => (
                 <SelectItem key={s} value={s}>
                   {s}
                 </SelectItem>

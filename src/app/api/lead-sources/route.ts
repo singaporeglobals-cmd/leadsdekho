@@ -6,10 +6,10 @@ import { getCurrentUser } from "@/lib/auth";
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (user.role !== "admin" && user.role !== "super_admin") return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
   const leadSources = await db.leadSource.findMany({
-    orderBy: { createdAt: "desc" },
+    where: { isActive: true },
+    orderBy: { name: "asc" },
     select: {
       id: true,
       name: true,

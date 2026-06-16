@@ -39,7 +39,7 @@ const statusColors: Record<string, string> = {
   Lost: "#ef4444",
 };
 
-const SOURCES = [
+const DEFAULT_SOURCES = [
   "Manual", "Website", "Referral", "Social Media", "Walk-in",
   "Call", "Housing.com", "99acres", "MagicBricks",
 ];
@@ -769,6 +769,7 @@ function ProjectWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId
 export function ReportsPage() {
   const [activeTab, setActiveTab] = useState("date-wise");
   const [projects, setProjects] = useState<ProjectItem[]>([]);
+  const [sources, setSources] = useState<string[]>(DEFAULT_SOURCES);
 
   // Shared filter state
   const now = new Date();
@@ -781,12 +782,23 @@ export function ReportsPage() {
   const [sourceId, setSourceId] = useState("all");
   const [leadStatusId, setLeadStatusId] = useState("all");
 
-  // Fetch projects for the dropdown
+  // Fetch projects and lead sources for the dropdown
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/projects");
-        if (res.ok) setProjects(await res.json());
+        const [pRes, srcRes] = await Promise.all([
+          fetch("/api/projects"),
+          fetch("/api/lead-sources"),
+        ]);
+        if (pRes.ok) setProjects(await pRes.json());
+        if (srcRes.ok) {
+          const data = await srcRes.json();
+          if (Array.isArray(data) && data.length > 0) {
+            const dbSources = data.map((s: { name: string }) => s.name);
+            const merged = [...new Set([...dbSources, ...DEFAULT_SOURCES])];
+            setSources(merged);
+          }
+        }
       } catch (e) { console.error(e); }
     })();
   }, []);
@@ -888,7 +900,7 @@ export function ReportsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Sources</SelectItem>
-                    {SOURCES.map((s) => (
+                    {sources.map((s) => (
                       <SelectItem key={s} value={s}>{s}</SelectItem>
                     ))}
                   </SelectContent>

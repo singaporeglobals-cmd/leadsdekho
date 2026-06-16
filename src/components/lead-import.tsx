@@ -36,7 +36,7 @@ import {
   Users,
 } from "lucide-react";
 
-const SOURCES = [
+const DEFAULT_SOURCES = [
   "Manual", "Website", "Referral", "Social Media", "Walk-in",
   "Call", "Housing.com", "99acres", "MagicBricks",
 ];
@@ -90,8 +90,9 @@ export function LeadImport() {
   // Project mapping: projectName -> projectId
   const [propertyMapping, setPropertyMapping] = useState<Record<string, string>>({});
   const [projects, setProjects] = useState<ProjectItem[]>([]);
+  const [sources, setSources] = useState<string[]>(DEFAULT_SOURCES);
 
-  // Fetch users and projects for admin
+  // Fetch users, projects, and lead sources for admin
   useEffect(() => {
     if (user?.role === "admin") {
       fetch("/api/users")
@@ -102,6 +103,17 @@ export function LeadImport() {
       fetch("/api/projects")
         .then((r) => r.json())
         .then((data) => setProjects(data))
+        .catch(() => {});
+
+      fetch("/api/lead-sources")
+        .then((r) => r.json())
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            const dbSources = data.map((s: { name: string }) => s.name);
+            const merged = [...new Set([...dbSources, ...DEFAULT_SOURCES])];
+            setSources(merged);
+          }
+        })
         .catch(() => {});
     }
   }, [user?.role]);
@@ -472,7 +484,7 @@ export function LeadImport() {
                     <SelectValue placeholder="Set Source" />
                   </SelectTrigger>
                   <SelectContent>
-                    {SOURCES.map((s) => (
+                    {sources.map((s) => (
                       <SelectItem key={s} value={s}>{s}</SelectItem>
                     ))}
                   </SelectContent>
@@ -550,7 +562,7 @@ export function LeadImport() {
                             <SelectValue placeholder="Source" />
                           </SelectTrigger>
                           <SelectContent>
-                            {SOURCES.map((s) => (
+                            {sources.map((s) => (
                               <SelectItem key={s} value={s}>{s}</SelectItem>
                             ))}
                           </SelectContent>
