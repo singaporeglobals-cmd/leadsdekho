@@ -17,10 +17,7 @@ import {
   Building2, Clock,
 } from "lucide-react";
 
-const DEFAULT_SOURCES = [
-  "Manual", "Website", "Referral", "Social Media", "Walk-in",
-  "Call", "Housing.com", "99acres", "MagicBricks",
-];
+// Sources are fetched dynamically from the database - no hardcoded fallback
 
 interface ProjectItem {
   id: string;
@@ -57,7 +54,7 @@ export function LeadsReportPage() {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [page, setPage] = useState(0);
-  const [sources, setSources] = useState<string[]>(DEFAULT_SOURCES);
+  const [sources, setSources] = useState<string[]>([]);
   const PAGE_SIZE = 25;
 
   // Fetch projects and lead sources for dropdown
@@ -71,10 +68,9 @@ export function LeadsReportPage() {
         if (pRes.ok) setProjects(await pRes.json());
         if (srcRes.ok) {
           const data = await srcRes.json();
-          if (Array.isArray(data) && data.length > 0) {
+          if (Array.isArray(data)) {
             const dbSources = data.map((s: { name: string }) => s.name);
-            const merged = [...new Set([...dbSources, ...DEFAULT_SOURCES])];
-            setSources(merged);
+            setSources(dbSources);
           }
         }
       } catch (e) { console.error(e); }

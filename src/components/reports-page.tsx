@@ -39,10 +39,7 @@ const statusColors: Record<string, string> = {
   Lost: "#ef4444",
 };
 
-const DEFAULT_SOURCES = [
-  "Manual", "Website", "Referral", "Social Media", "Walk-in",
-  "Call", "Housing.com", "99acres", "MagicBricks",
-];
+// Sources are fetched dynamically from the database - no hardcoded fallback
 
 // Quick date range presets
 const DATE_PRESETS = [
@@ -769,7 +766,7 @@ function ProjectWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId
 export function ReportsPage() {
   const [activeTab, setActiveTab] = useState("date-wise");
   const [projects, setProjects] = useState<ProjectItem[]>([]);
-  const [sources, setSources] = useState<string[]>(DEFAULT_SOURCES);
+  const [sources, setSources] = useState<string[]>([]);
 
   // Shared filter state
   const now = new Date();
@@ -793,10 +790,9 @@ export function ReportsPage() {
         if (pRes.ok) setProjects(await pRes.json());
         if (srcRes.ok) {
           const data = await srcRes.json();
-          if (Array.isArray(data) && data.length > 0) {
+          if (Array.isArray(data)) {
             const dbSources = data.map((s: { name: string }) => s.name);
-            const merged = [...new Set([...dbSources, ...DEFAULT_SOURCES])];
-            setSources(merged);
+            setSources(dbSources);
           }
         }
       } catch (e) { console.error(e); }

@@ -160,6 +160,7 @@ export function LeadDetail() {
   const [selectedProjectId, setSelectedProjectId] = useState("");
 
   const [users, setUsers] = useState<Array<{ id: string; name: string; role: string }>>([]);
+  const [sources, setSources] = useState<string[]>([]);
 
   const fetchLead = async () => {
     if (!selectedLeadId) return;
@@ -207,6 +208,15 @@ export function LeadDetail() {
 
       const uRes = await fetch("/api/users");
       if (!cancelled && uRes.ok) setUsers(await uRes.json());
+
+      // Fetch lead sources for the dropdown
+      const srcRes = await fetch("/api/lead-sources");
+      if (!cancelled && srcRes.ok) {
+        const srcData = await srcRes.json();
+        if (Array.isArray(srcData)) {
+          setSources(srcData.map((s: { name: string }) => s.name));
+        }
+      }
     })();
     return () => { cancelled = true; };
   }, [selectedLeadId]);
@@ -528,17 +538,7 @@ export function LeadDetail() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {[
-                          "Manual",
-                          "Website",
-                          "Referral",
-                          "Social Media",
-                          "Walk-in",
-                          "Call",
-                          "Housing.com",
-                          "99acres",
-                          "MagicBricks",
-                        ].map((s) => (
+                        {sources.map((s) => (
                           <SelectItem key={s} value={s}>
                             {s}
                           </SelectItem>

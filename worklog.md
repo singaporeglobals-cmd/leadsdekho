@@ -59,3 +59,28 @@ Stage Summary:
 - Production query logging disabled (was causing overhead)
 - Properties lazy-loaded instead of on page mount
 - Deployed to https://leadsdekho.in
+
+---
+Task ID: 6
+Agent: Main Agent
+Task: Fix lead sources not showing in Lead Management and Import Lead sections
+
+Work Log:
+- Analyzed two user screenshots: Lead Management dropdown showed only 9 hardcoded DEFAULT_SOURCES, while Lead Sources page showed 16 database sources
+- Identified root cause: DEFAULT_SOURCES hardcoded arrays in 5 components were used as fallback/merge, masking API failures
+- Also found bug: `SOURCES` (uppercase, undefined) used in lead-list.tsx create dialog instead of `sources` (state variable)
+- Updated /api/lead-sources/route.ts to support ?all=true query parameter for fetching all sources including inactive (admin only)
+- Removed DEFAULT_SOURCES from: lead-list.tsx, lead-import.tsx, lead-source-management.tsx, reports-page.tsx, leads-report-page.tsx
+- Added dynamic source fetching from DB in lead-detail.tsx (was completely hardcoded)
+- Fixed lead-import.tsx to fetch sources for ALL authenticated users (was admin-only)
+- Added proper error handling with console.error for source fetch failures
+- Fixed SOURCES → sources typo in lead-list.tsx create dialog
+- Changed createForm source default from "Manual" to "" (empty, user selects from DB sources)
+- Built and deployed to Vercel production
+
+Stage Summary:
+- All 6 components now fetch lead sources dynamically from the database
+- No hardcoded source lists remain in the codebase
+- Lead Source Management page now fetches ALL sources (including inactive) via ?all=true
+- Dropdowns only show active sources from the database
+- Deployed to https://leadsdekho.in

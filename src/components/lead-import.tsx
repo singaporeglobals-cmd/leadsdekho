@@ -36,10 +36,7 @@ import {
   Users,
 } from "lucide-react";
 
-const DEFAULT_SOURCES = [
-  "Manual", "Website", "Referral", "Social Media", "Walk-in",
-  "Call", "Housing.com", "99acres", "MagicBricks",
-];
+// Sources are fetched dynamically from the database - no hardcoded fallback
 
 interface ParsedRow {
   name: string;
@@ -90,9 +87,9 @@ export function LeadImport() {
   // Project mapping: projectName -> projectId
   const [propertyMapping, setPropertyMapping] = useState<Record<string, string>>({});
   const [projects, setProjects] = useState<ProjectItem[]>([]);
-  const [sources, setSources] = useState<string[]>(DEFAULT_SOURCES);
+  const [sources, setSources] = useState<string[]>([]);
 
-  // Fetch users, projects, and lead sources for admin
+  // Fetch users, projects, and lead sources
   useEffect(() => {
     if (user?.role === "admin") {
       fetch("/api/users")
@@ -104,18 +101,23 @@ export function LeadImport() {
         .then((r) => r.json())
         .then((data) => setProjects(data))
         .catch(() => {});
-
-      fetch("/api/lead-sources")
-        .then((r) => r.json())
-        .then((data) => {
-          if (Array.isArray(data) && data.length > 0) {
-            const dbSources = data.map((s: { name: string }) => s.name);
-            const merged = [...new Set([...dbSources, ...DEFAULT_SOURCES])];
-            setSources(merged);
-          }
-        })
-        .catch(() => {});
     }
+
+    // Fetch lead sources for all authenticated users
+    fetch("/api/lead-sources")
+      .then((r) => {
+        if (!r.ok) throw new Error(`Failed: ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const dbSources = data.map((s: { name: string }) => s.name);
+          setSources(dbSources);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching lead sources:", err);
+      });
   }, [user?.role]);
 
   // Redirect non-admin users

@@ -70,18 +70,7 @@ const LEAD_STATUSES = [
   "Booked",
 ];
 
-// Sources will be fetched dynamically from database
-const DEFAULT_SOURCES = [
-  "Manual",
-  "Website",
-  "Referral",
-  "Social Media",
-  "Walk-in",
-  "Call",
-  "Housing.com",
-  "99acres",
-  "MagicBricks",
-];
+// Sources are fetched dynamically from the database - no hardcoded fallback
 
 const DATE_PRESETS = [
   { label: "Today", days: 0 },
@@ -200,7 +189,7 @@ export function LeadList() {
   const [myLeadsCount, setMyLeadsCount] = useState(0);
   const [freshLeadsCount, setFreshLeadsCount] = useState(0);
   const [refresh, setRefresh] = useState(0);
-  const [sources, setSources] = useState<string[]>(DEFAULT_SOURCES);
+  const [sources, setSources] = useState<string[]>([]);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Debounced search handler
@@ -225,7 +214,7 @@ export function LeadList() {
     name: "",
     phone: "",
     email: "",
-    source: "Manual",
+    source: "",
     budget: "",
     notes: "",
     projectId: "",
@@ -318,30 +307,34 @@ export function LeadList() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [uRes, pRes, srcRes] = await Promise.all([
-        fetch("/api/users"),
-        fetch("/api/projects"),
-        fetch("/api/lead-sources"),
-      ]);
-      if (!cancelled && uRes.ok) {
-        const userData = await uRes.json();
-        if (isAdminRole(user?.role || "")) {
-          setUsers(userData);
-        } else {
-          setUsers(userData.filter((u: UserItem) => u.isActive));
+      try {
+        const [uRes, pRes, srcRes] = await Promise.all([
+          fetch("/api/users"),
+          fetch("/api/projects"),
+          fetch("/api/lead-sources"),
+        ]);
+        if (!cancelled && uRes.ok) {
+          const userData = await uRes.json();
+          if (isAdminRole(user?.role || "")) {
+            setUsers(userData);
+          } else {
+            setUsers(userData.filter((u: UserItem) => u.isActive));
+          }
         }
-      }
-      if (!cancelled && pRes.ok) {
-        setProjects(await pRes.json());
-      }
-      if (!cancelled && srcRes.ok) {
-        const srcData = await srcRes.json();
-        if (Array.isArray(srcData) && srcData.length > 0) {
-          const dbSources = srcData.map((s: { name: string }) => s.name);
-          // Merge DB sources with defaults, DB sources first, no duplicates
-          const merged = [...new Set([...dbSources, ...DEFAULT_SOURCES])];
-          setSources(merged);
+        if (!cancelled && pRes.ok) {
+          setProjects(await pRes.json());
         }
+        if (!cancelled && srcRes.ok) {
+          const srcData = await srcRes.json();
+          if (Array.isArray(srcData)) {
+            const dbSources = srcData.map((s: { name: string }) => s.name);
+            setSources(dbSources);
+          }
+        } else if (!cancelled) {
+          console.error("Failed to fetch lead sources:", srcRes.status);
+        }
+      } catch (err) {
+        console.error("Error fetching lead sources:", err);
       }
     })();
     return () => { cancelled = true; };
@@ -394,7 +387,7 @@ export function LeadList() {
         name: "",
         phone: "",
         email: "",
-        source: "Manual",
+        source: "",
         budget: "",
         notes: "",
         projectId: "",
@@ -837,7 +830,7 @@ export function LeadList() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {SOURCES.map((s) => (
+                        {sources.map((s) => (
                           <SelectItem key={s} value={s}>
                             {s}
                           </SelectItem>

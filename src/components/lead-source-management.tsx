@@ -76,7 +76,7 @@ export function LeadSourceManagement() {
   const fetchSources = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/lead-sources");
+      const res = await fetch("/api/lead-sources?all=true");
       if (res.ok) {
         const data = await res.json();
         setSources(data);
