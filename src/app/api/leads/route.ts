@@ -18,6 +18,8 @@ export async function GET(req: NextRequest) {
   const myLeads = searchParams.get("myLeads") === "true";
   const fresh = searchParams.get("fresh") === "true";
   const pendingFollowUps = searchParams.get("pendingFollowUps") === "true";
+  const todayFollowUps = searchParams.get("todayFollowUps") === "true";
+  const followUpDate = searchParams.get("followUpDate"); // YYYY-MM-DD
   const dateFrom = searchParams.get("dateFrom") || searchParams.get("from");
   const dateTo = searchParams.get("dateTo") || searchParams.get("to");
   const projectId = searchParams.get("project");
@@ -26,16 +28,14 @@ export async function GET(req: NextRequest) {
   const where: Record<string, unknown> = {};
 
   // Role-based filtering
-  if (user.role === "telecalling") {
-    // Telecalling sees ALL leads by default
-  } else if (user.role === "sales") {
-    // Sales sees leads where they are currentOwner OR primaryOwner
+  // Telecalling & Sales both see only their own leads by default
+  // Admin/super_admin see ALL leads
+  if (user.role === "telecalling" || user.role === "sales") {
     where.OR = [
       { currentOwnerId: user.id },
       { primaryOwnerId: user.id },
     ];
   }
-  // Admin sees ALL leads
 
   // My Leads filter - show only leads assigned to current user
   if (myLeads) {
@@ -72,12 +72,37 @@ export async function GET(req: NextRequest) {
   if (projectId) where.projectId = projectId;
 
   // Pending Follow-ups filter - leads that have at least one incomplete follow-up
-  // scheduled for the current user
+  // scheduled for the current user (any date)
   if (pendingFollowUps) {
     where.followUps = {
       some: {
         userId: user.id,
         completed: false,
+      },
+    };
+    // Restrict to user's own leads for telecalling/sales (admin sees all)
+    if (user.role === "telecalling" || user.role === "sales") {
+      where.OR = [
+        { currentOwnerId: user.id },
+        { primaryOwnerId: user.id },
+      ];
+    }
+  }
+
+  // Today's Follow-ups (or specific date) - leads with incomplete follow-ups
+  // scheduled on the given date (defaults to today)
+  if (todayFollowUps) {
+    const targetDate = followUpDate ? new Date(followUpDate) : new Date();
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    where.followUps = {
+      some: {
+        userId: user.id,
+        completed: false,
+        scheduledAt: { gte: startOfDay, lte: endOfDay },
       },
     };
     // Restrict to user's own leads for telecalling/sales (admin sees all)

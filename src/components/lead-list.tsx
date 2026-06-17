@@ -176,7 +176,7 @@ interface PropertyItem {
 }
 
 export function LeadList() {
-  const { user, setPage, setSelectedLeadId, pendingFollowUpsFilter, setPendingFollowUpsFilter } = useAppStore();
+  const { user, setPage, setSelectedLeadId, pendingFollowUpsFilter, setPendingFollowUpsFilter, todayFollowUpsFilter, setTodayFollowUpsFilter, followUpDate, setFollowUpDate } = useAppStore();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -259,6 +259,11 @@ export function LeadList() {
   const [inlineAssign, setInlineAssign] = useState<Record<string, string>>({});
   const [submittingAssign, setSubmittingAssign] = useState<Record<string, boolean>>({});
 
+  // Expanded feedback history per lead - shows all feedback logs instead of just last
+  const [expandedFeedback, setExpandedFeedback] = useState<Record<string, boolean>>({});
+  // Cached full call logs per lead (fetched on demand)
+  const [fullCallLogs, setFullCallLogs] = useState<Record<string, Array<{ id: string; notes: string; callType?: string; createdAt: string; user: { name: string } }>>>({});
+
   // Bulk select & assign
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
@@ -266,6 +271,32 @@ export function LeadList() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const doRefresh = () => setRefresh((r) => r + 1);
+
+  // Toggle expanded feedback history for a lead - fetches all call logs on first expand
+  const toggleFeedbackHistory = async (leadId: string) => {
+    const isExpanded = expandedFeedback[leadId];
+    if (isExpanded) {
+      setExpandedFeedback({ ...expandedFeedback, [leadId]: false });
+      return;
+    }
+    // Need to fetch full call logs if not cached
+    if (!fullCallLogs[leadId]) {
+      try {
+        const res = await fetch(`/api/leads/${leadId}/call-logs`);
+        if (res.ok) {
+          const data = await res.json();
+          // data is an array of call logs (most recent first)
+          setFullCallLogs({
+            ...fullCallLogs,
+            [leadId]: Array.isArray(data) ? data : (data.callLogs || []),
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching call logs:", err);
+      }
+    }
+    setExpandedFeedback({ ...expandedFeedback, [leadId]: true });
+  };
 
   // Fetch leads
   useEffect(() => {
@@ -283,6 +314,10 @@ export function LeadList() {
       if (myLeadsFilter) params.set("myLeads", "true");
       if (freshLeadsFilter) params.set("fresh", "true");
       if (pendingFollowUpsFilter) params.set("pendingFollowUps", "true");
+      if (todayFollowUpsFilter) {
+        params.set("todayFollowUps", "true");
+        if (followUpDate) params.set("followUpDate", followUpDate);
+      }
 
       const res = await fetch(`/api/leads?${params.toString()}`);
       if (!cancelled && res.ok) {
@@ -309,7 +344,7 @@ export function LeadList() {
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, pendingFollowUpsFilter, refresh, user?.role]);
+  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, pendingFollowUpsFilter, todayFollowUpsFilter, followUpDate, refresh, user?.role]);
 
   // Fetch users, projects, and lead sources - parallel for speed (properties lazy-loaded on dialog open)
   useEffect(() => {
@@ -691,12 +726,12 @@ export function LeadList() {
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[130px]" placeholder="From" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[130px]" placeholder="To" />
           {/* Clear all filters */}
-          {(statusFilter !== "all" || leadStatusFilter !== "all" || sourceFilter !== "all" || userFilter !== "all" || dateFrom || dateTo || myLeadsFilter || freshLeadsFilter || pendingFollowUpsFilter) && (
+          {(statusFilter !== "all" || leadStatusFilter !== "all" || sourceFilter !== "all" || userFilter !== "all" || dateFrom || dateTo || myLeadsFilter || freshLeadsFilter || pendingFollowUpsFilter || todayFollowUpsFilter) && (
             <Button
               variant="ghost"
               size="sm"
               className="h-9 text-muted-foreground hover:text-foreground"
-              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSourceFilter("all"); setUserFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); setMyLeadsFilter(false); setFreshLeadsFilter(false); setPendingFollowUpsFilter(false); }}
+              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSourceFilter("all"); setUserFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); setMyLeadsFilter(false); setFreshLeadsFilter(false); setPendingFollowUpsFilter(false); setTodayFollowUpsFilter(false); setFollowUpDate(""); }}
             >
               <RotateCcw className="mr-1 h-3 w-3" /> Clear
             </Button>
@@ -735,6 +770,35 @@ export function LeadList() {
               {freshLeadsCount}
             </Badge>
           </Button>
+          {/* Follow Up quick filter - shows leads with follow-ups scheduled for selected date */}
+          <Button
+            variant={todayFollowUpsFilter ? "default" : "outline"}
+            size="sm"
+            className={`h-9 ${todayFollowUpsFilter ? "bg-red-500 hover:bg-red-600 text-white" : ""}`}
+            onClick={() => {
+              const newVal = !todayFollowUpsFilter;
+              setTodayFollowUpsFilter(newVal);
+              if (newVal) {
+                // Default to today when first activated
+                if (!followUpDate) setFollowUpDate(new Date().toISOString().split("T")[0]);
+                setMyLeadsFilter(false);
+                setFreshLeadsFilter(false);
+                setPendingFollowUpsFilter(false);
+              }
+            }}
+          >
+            <CalendarClock className="mr-1 h-3 w-3" />
+            Follow Up
+          </Button>
+          {/* Date picker for follow-up filter - only visible when Follow Up filter is active */}
+          {todayFollowUpsFilter && (
+            <Input
+              type="date"
+              value={followUpDate}
+              onChange={(e) => setFollowUpDate(e.target.value)}
+              className="h-9 w-[150px]"
+            />
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -952,6 +1016,30 @@ export function LeadList() {
         </div>
       </div>
 
+      {/* Today's Follow-ups Filter Banner */}
+      {todayFollowUpsFilter && (
+        <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40 px-4 py-2.5">
+          <div className="flex items-center gap-2 text-sm text-red-700 dark:text-red-300">
+            <CalendarClock className="h-4 w-4" />
+            <span className="font-medium">
+              Showing leads with follow-ups scheduled for{" "}
+              {followUpDate
+                ? new Date(followUpDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                : "today"}
+              . As you complete calls, leads will disappear from this view.
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-red-700 hover:text-red-900 dark:text-red-300 dark:hover:text-red-100 hover:bg-red-100 dark:hover:bg-red-900/40"
+            onClick={() => { setTodayFollowUpsFilter(false); setFollowUpDate(""); }}
+          >
+            <XCircle className="mr-1 h-3.5 w-3.5" /> Clear
+          </Button>
+        </div>
+      )}
+
       {/* Pending Follow-ups Filter Banner */}
       {pendingFollowUpsFilter && (
         <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40 px-4 py-2.5">
@@ -1104,10 +1192,58 @@ export function LeadList() {
                       </span>
                     )}
                   </div>
-                  {/* Last feedback */}
+                  {/* Last feedback (clickable to expand full history) */}
                   {lead.callLogs.length > 0 && (
-                    <div className="mt-1 text-xs text-muted-foreground truncate max-w-md">
-                      Last: &quot;{lead.callLogs[0].notes}&quot;
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFeedbackHistory(lead.id);
+                      }}
+                      className="mt-1 text-xs text-muted-foreground hover:text-brand transition-colors text-left max-w-md truncate flex items-center gap-1"
+                      title="Click to view all feedback history"
+                    >
+                      <MessageSquare className="h-3 w-3 shrink-0" />
+                      <span className={expandedFeedback[lead.id] ? "font-medium" : ""}>
+                        {expandedFeedback[lead.id] ? `Hide feedback history (${lead.callLogs.length}+ logs)` : `Last: "${lead.callLogs[0].notes}"`}
+                      </span>
+                      {!expandedFeedback[lead.id] && <span className="text-[10px] text-brand">View all</span>}
+                    </button>
+                  )}
+                  {/* Expanded feedback history */}
+                  {expandedFeedback[lead.id] && (
+                    <div className="mt-2 w-full rounded-md border border-border bg-muted/30 p-2 max-h-60 overflow-y-auto">
+                      {fullCallLogs[lead.id] === undefined ? (
+                        <div className="text-xs text-muted-foreground flex items-center gap-2 py-1">
+                          <RefreshCw className="h-3 w-3 animate-spin" /> Loading feedback...
+                        </div>
+                      ) : fullCallLogs[lead.id].length === 0 ? (
+                        <div className="text-xs text-muted-foreground py-1">No feedback logs found.</div>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {fullCallLogs[lead.id].map((log) => (
+                            <div key={log.id} className="text-xs border-b border-border last:border-b-0 pb-1.5 last:pb-0">
+                              <div className="flex items-center justify-between gap-2 mb-0.5">
+                                <span className="font-medium text-foreground">{log.user?.name || "Unknown"}</span>
+                                <div className="flex items-center gap-1.5">
+                                  {log.callType && (
+                                    <Badge variant="outline" className="text-[9px] px-1 py-0">{log.callType}</Badge>
+                                  )}
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {new Date(log.createdAt).toLocaleString("en-IN", {
+                                      day: "2-digit",
+                                      month: "short",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="text-muted-foreground whitespace-pre-wrap break-words">{log.notes}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

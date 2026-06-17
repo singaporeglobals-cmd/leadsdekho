@@ -56,7 +56,7 @@ function generateMonthOptions() {
 }
 
 export function AdminDashboard() {
-  const { setPage, setPendingFollowUpsFilter } = useAppStore();
+  const { setPage, setTodayFollowUpsFilter, setFollowUpDate } = useAppStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState("all");
@@ -200,16 +200,17 @@ export function AdminDashboard() {
         <Card
           className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => {
-            setPendingFollowUpsFilter(true);
+            setTodayFollowUpsFilter(true);
+            setFollowUpDate(new Date().toISOString().split("T")[0]);
             setPage("leads");
           }}
         >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Pending Follow-ups</p>
+                <p className="text-sm text-muted-foreground">Today&apos;s Pending Follow-ups</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {data.pendingFollowUps as number}
+                  {data.todayFollowUps as number}
                 </p>
               </div>
               <div className="rounded-lg bg-red-50 dark:bg-red-950 p-3">
@@ -402,7 +403,7 @@ export function AdminDashboard() {
 }
 
 export function TelecallingDashboard() {
-  const { setPage, setPendingFollowUpsFilter } = useAppStore();
+  const { setPage, setTodayFollowUpsFilter, setFollowUpDate } = useAppStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -500,16 +501,17 @@ export function TelecallingDashboard() {
         <Card
           className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => {
-            setPendingFollowUpsFilter(true);
+            setTodayFollowUpsFilter(true);
+            setFollowUpDate(new Date().toISOString().split("T")[0]);
             setPage("leads");
           }}
         >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Pending Follow-ups</p>
+                <p className="text-sm text-muted-foreground">Today&apos;s Pending Follow-ups</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {pendingFollowUps}
+                  {todayFollowUps}
                 </p>
               </div>
               <div className="rounded-lg bg-red-50 dark:bg-red-950 p-3">
@@ -568,19 +570,20 @@ export function TelecallingDashboard() {
           </CardContent>
         </Card>
 
-        {/* Pending Follow-ups */}
+        {/* Today's Pending Follow-ups */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-red-500" />
-              Pending Follow-ups ({pendingFollowUps})
+              Today&apos;s Pending Follow-ups ({todayFollowUps})
             </CardTitle>
             <Button
               variant="ghost"
               size="sm"
               className="text-brand"
               onClick={() => {
-                setPendingFollowUpsFilter(true);
+                setTodayFollowUpsFilter(true);
+                setFollowUpDate(new Date().toISOString().split("T")[0]);
                 setPage("leads");
               }}
             >
@@ -658,7 +661,7 @@ export function TelecallingDashboard() {
 }
 
 export function SalesDashboard() {
-  const { setPage, setPendingFollowUpsFilter } = useAppStore();
+  const { setPage, setTodayFollowUpsFilter, setFollowUpDate } = useAppStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -741,16 +744,17 @@ export function SalesDashboard() {
         <Card
           className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => {
-            setPendingFollowUpsFilter(true);
+            setTodayFollowUpsFilter(true);
+            setFollowUpDate(new Date().toISOString().split("T")[0]);
             setPage("leads");
           }}
         >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Pending Follow-ups</p>
+                <p className="text-sm text-muted-foreground">Today&apos;s Pending Follow-ups</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {pendingFollowUps}
+                  {todayFollowUps}
                 </p>
               </div>
               <div className="rounded-lg bg-red-50 dark:bg-red-950 p-3">
@@ -828,14 +832,15 @@ export function SalesDashboard() {
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-red-500" />
-              Pending Follow-ups ({pendingFollowUps})
+              Today&apos;s Pending Follow-ups ({todayFollowUps})
             </CardTitle>
             <Button
               variant="ghost"
               size="sm"
               className="text-brand"
               onClick={() => {
-                setPendingFollowUpsFilter(true);
+                setTodayFollowUpsFilter(true);
+                setFollowUpDate(new Date().toISOString().split("T")[0]);
                 setPage("leads");
               }}
             >

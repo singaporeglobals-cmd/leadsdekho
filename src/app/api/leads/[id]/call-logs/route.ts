@@ -80,6 +80,32 @@ export async function POST(
     },
   });
 
+  // Auto-complete pending follow-ups for this lead that are due today or earlier
+  // This makes leads disappear from "Today's Follow-ups" filter once feedback is given
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  const pendingFollowUps = await db.followUp.findMany({
+    where: {
+      leadId: id,
+      completed: false,
+      scheduledAt: { lte: today },
+    },
+  });
+  if (pendingFollowUps.length > 0) {
+    await db.followUp.updateMany({
+      where: { id: { in: pendingFollowUps.map(f => f.id) } },
+      data: { completed: true, completedAt: new Date() },
+    });
+    await db.timelineEvent.create({
+      data: {
+        leadId: id,
+        userId: user.id,
+        eventType: "FollowUpCompleted",
+        description: `${pendingFollowUps.length} pending follow-up(s) auto-completed via feedback`,
+      },
+    });
+  }
+
   // Quick assign if specified
   if (assignTo) {
     const targetUser = await db.user.findUnique({ where: { id: assignTo } });

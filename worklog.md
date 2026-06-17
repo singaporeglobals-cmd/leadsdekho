@@ -108,3 +108,37 @@ Stage Summary:
 - Clicking "Pending Follow-ups" card on any dashboard now correctly navigates to Lead Management and shows only those specific pending follow-up leads
 - Red banner + Clear button at top of lead list tells the user a filter is active and lets them remove it
 - Each lead with pending follow-ups now shows an amber "Follow-up <DD MMM>" badge for quick visual identification
+
+---
+Task ID: 8
+Agent: Main Agent
+Task: Five changes — (1) Today's pending follow-ups on dashboard, (2) telecalling default to own leads, (3) Follow Up filter button, (4) expandable feedback history, (5) date picker for follow-up filter
+
+Work Log:
+- Added todayFollowUpsFilter + followUpDate state to Zustand store with setTodayFollowUpsFilter and setFollowUpDate actions
+- Updated /api/leads: 
+  - Added todayFollowUps=true query param that filters leads with incomplete follow-ups on a specific date (defaults to today)
+  - Added followUpDate=YYYY-MM-DD param to pick which date's follow-ups to show
+  - Changed telecalling default role-based filtering to ONLY see own leads (currentOwnerId OR primaryOwnerId), same as sales
+- Updated /api/leads/[id]/call-logs POST handler: auto-completes any pending follow-up for that lead due today or earlier when feedback is submitted (so leads disappear from today's follow-up filter after a call)
+- Dashboard (Admin/Telecalling/Sales): Renamed "Pending Follow-ups" card to "Today's Pending Follow-ups" using todayFollowUps count; clicking sets todayFollowUpsFilter and navigates to Lead Management
+- Lead-list.tsx:
+  - Added "Follow Up" red button next to Fresh button — toggles todayFollowUpsFilter
+  - Added date picker (input type=date) that appears only when Follow Up filter is active — defaults to today; user can pick tomorrow/day after to see future follow-ups
+  - Added red banner "Showing leads with follow-ups scheduled for <date>. As you complete calls, leads will disappear from this view."
+  - Updated Clear All Filters to reset both todayFollowUpsFilter and followUpDate
+  - Updated fetch useEffect to pass todayFollowUps and followUpDate params
+  - Added expandedFeedback state and fullCallLogs cache
+  - toggleFeedbackHistory function: lazily fetches /api/leads/[id]/call-logs and caches; toggles expand state
+  - Made "Last feedback" text on each lead row clickable — clicking expands inline panel showing ALL past feedback logs (user name, call type, timestamp, full notes)
+  - Each feedback log entry shows badge with call type, formatted timestamp, user name, and full notes (whitespace preserved)
+- Deployed to https://leadsdekho.in
+
+Stage Summary:
+- Dashboard Pending Follow-ups card now shows today's count, decreasing as user completes calls
+- Clicking the card opens Lead Management with only today's follow-up leads
+- Telecalling users now see ONLY their own leads by default (not all leads)
+- "Follow Up" button next to My Leads lets users quickly see today's follow-up queue
+- Date picker lets users see tomorrow's / day-after's follow-ups
+- When user gives feedback on a lead, that lead's pending follow-ups auto-complete, so the lead disappears from the Follow Up filter view on refresh
+- Clicking "Last: ..." feedback text on a lead row expands to show entire feedback history inline (no page navigation needed)
