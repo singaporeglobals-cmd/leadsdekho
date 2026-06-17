@@ -84,3 +84,27 @@ Stage Summary:
 - Lead Source Management page now fetches ALL sources (including inactive) via ?all=true
 - Dropdowns only show active sources from the database
 - Deployed to https://leadsdekho.in
+
+---
+Task ID: 7
+Agent: Main Agent
+Task: Fix Dashboard "Pending Follow-ups" card click showing ALL leads instead of only the 11 pending follow-up leads
+
+Work Log:
+- Investigated dashboard.tsx — found that all 3 dashboard variants (Admin, Telecalling, Sales) had non-clickable Pending Follow-ups cards or had "View Leads" buttons that only called setPage("leads") with no filter
+- Added pendingFollowUpsFilter: boolean flag + setPendingFollowUpsFilter action to Zustand store
+- Updated /api/leads to accept pendingFollowUps=true query parameter — filters leads that have at least one incomplete follow-up for the current user (using where.followUps.some {userId, completed:false})
+- For telecalling/sales roles, the filter also restricts to user's own leads; admin sees all
+- API now also returns followUps[] (1 pending follow-up) per lead so UI can show a "Follow-up <date>" badge
+- Made all 3 dashboard Pending Follow-ups cards clickable — they now set the filter and navigate to leads page
+- Updated both "View Leads" buttons (Telecalling + Sales) to also set the filter
+- Added a "Showing only leads with pending follow-ups" red banner at top of lead list with a Clear button when filter is active
+- Updated Clear All Filters button in lead-list to also reset the pendingFollowUpsFilter
+- Added followUps field to Lead TypeScript interface
+- Added CalendarClock badge next to lead name showing upcoming follow-up date
+- Deployed to https://leadsdekho.in
+
+Stage Summary:
+- Clicking "Pending Follow-ups" card on any dashboard now correctly navigates to Lead Management and shows only those specific pending follow-up leads
+- Red banner + Clear button at top of lead list tells the user a filter is active and lets them remove it
+- Each lead with pending follow-ups now shows an amber "Follow-up <DD MMM>" badge for quick visual identification

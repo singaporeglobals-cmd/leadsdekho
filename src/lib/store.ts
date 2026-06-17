@@ -50,6 +50,9 @@ interface AppState {
   // Sidebar
   sidebarOpen: boolean;
 
+  // Lead list cross-page filters
+  pendingFollowUpsFilter: boolean;
+
   // Actions
   setPage: (page: AppPage) => void;
   setUser: (user: UserInfo | null) => void;
@@ -58,6 +61,7 @@ interface AppState {
   checkAuth: () => Promise<void>;
   setSelectedLeadId: (id: string | null) => void;
   setSidebarOpen: (open: boolean) => void;
+  setPendingFollowUpsFilter: (v: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -67,11 +71,13 @@ export const useAppStore = create<AppState>((set) => ({
   isLoading: true,
   selectedLeadId: null,
   sidebarOpen: true,
+  pendingFollowUpsFilter: false,
 
   setPage: (page) => set({ currentPage: page }),
   setUser: (user) => set({ user, isAuthenticated: !!user }),
   setSelectedLeadId: (id) => set({ selectedLeadId: id }),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
+  setPendingFollowUpsFilter: (v) => set({ pendingFollowUpsFilter: v }),
 
   login: async (email, password) => {
     try {
@@ -109,7 +115,7 @@ export const useAppStore = create<AppState>((set) => ({
     } catch {
       // ignore
     }
-    set({ user: null, isAuthenticated: false, currentPage: "landing", selectedLeadId: null });
+    set({ user: null, isAuthenticated: false, currentPage: "landing", selectedLeadId: null, pendingFollowUpsFilter: false });
   },
 
   checkAuth: async () => {

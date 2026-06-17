@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
   const ownerFilter = searchParams.get("owner");
   const myLeads = searchParams.get("myLeads") === "true";
   const fresh = searchParams.get("fresh") === "true";
+  const pendingFollowUps = searchParams.get("pendingFollowUps") === "true";
   const dateFrom = searchParams.get("dateFrom") || searchParams.get("from");
   const dateTo = searchParams.get("dateTo") || searchParams.get("to");
   const projectId = searchParams.get("project");
@@ -69,6 +70,24 @@ export async function GET(req: NextRequest) {
   if (source) where.source = source;
   if (ownerFilter) where.currentOwnerId = ownerFilter;
   if (projectId) where.projectId = projectId;
+
+  // Pending Follow-ups filter - leads that have at least one incomplete follow-up
+  // scheduled for the current user
+  if (pendingFollowUps) {
+    where.followUps = {
+      some: {
+        userId: user.id,
+        completed: false,
+      },
+    };
+    // Restrict to user's own leads for telecalling/sales (admin sees all)
+    if (user.role === "telecalling" || user.role === "sales") {
+      where.OR = [
+        { currentOwnerId: user.id },
+        { primaryOwnerId: user.id },
+      ];
+    }
+  }
   if ((dateFrom || dateTo) && !fresh) {
     where.createdAt = {};
     if (dateFrom) (where.createdAt as Record<string, unknown>).gte = new Date(dateFrom);
@@ -138,6 +157,11 @@ export async function GET(req: NextRequest) {
         currentOwner: { select: { id: true, name: true, email: true, role: true } },
         project: { select: { id: true, name: true } },
         callLogs: { orderBy: { createdAt: "desc" }, ...(allCallLogs ? {} : { take: 1 }), include: { user: { select: { name: true } } } },
+        followUps: {
+          where: { completed: false },
+          orderBy: { scheduledAt: "asc" },
+          take: 1,
+        },
       },
       orderBy: { updatedAt: "desc" },
       skip: (page - 1) * limit,

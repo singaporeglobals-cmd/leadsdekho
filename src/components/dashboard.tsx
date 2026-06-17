@@ -56,7 +56,7 @@ function generateMonthOptions() {
 }
 
 export function AdminDashboard() {
-  const { setPage } = useAppStore();
+  const { setPage, setPendingFollowUpsFilter } = useAppStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState("all");
@@ -197,7 +197,13 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-red-500">
+        <Card
+          className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => {
+            setPendingFollowUpsFilter(true);
+            setPage("leads");
+          }}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -396,7 +402,7 @@ export function AdminDashboard() {
 }
 
 export function TelecallingDashboard() {
-  const { setPage } = useAppStore();
+  const { setPage, setPendingFollowUpsFilter } = useAppStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -491,7 +497,13 @@ export function TelecallingDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-red-500">
+        <Card
+          className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => {
+            setPendingFollowUpsFilter(true);
+            setPage("leads");
+          }}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -567,7 +579,10 @@ export function TelecallingDashboard() {
               variant="ghost"
               size="sm"
               className="text-brand"
-              onClick={() => setPage("leads")}
+              onClick={() => {
+                setPendingFollowUpsFilter(true);
+                setPage("leads");
+              }}
             >
               View Leads
             </Button>
@@ -643,7 +658,7 @@ export function TelecallingDashboard() {
 }
 
 export function SalesDashboard() {
-  const { setPage } = useAppStore();
+  const { setPage, setPendingFollowUpsFilter } = useAppStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -723,7 +738,13 @@ export function SalesDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-red-500">
+        <Card
+          className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => {
+            setPendingFollowUpsFilter(true);
+            setPage("leads");
+          }}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -809,6 +830,17 @@ export function SalesDashboard() {
               <AlertCircle className="h-4 w-4 text-red-500" />
               Pending Follow-ups ({pendingFollowUps})
             </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-brand"
+              onClick={() => {
+                setPendingFollowUpsFilter(true);
+                setPage("leads");
+              }}
+            >
+              View Leads
+            </Button>
           </CardHeader>
           <CardContent>
             {pendingFollowUpsList.length === 0 ? (

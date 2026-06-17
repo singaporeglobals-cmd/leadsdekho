@@ -48,6 +48,8 @@ import {
   Copy,
   Calendar,
   RotateCcw,
+  AlertCircle,
+  XCircle,
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -141,6 +143,11 @@ interface Lead {
     createdAt: string;
     user: { name: string };
   }>;
+  followUps?: Array<{
+    id: string;
+    scheduledAt: string;
+    notes: string | null;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -169,7 +176,7 @@ interface PropertyItem {
 }
 
 export function LeadList() {
-  const { user, setPage, setSelectedLeadId } = useAppStore();
+  const { user, setPage, setSelectedLeadId, pendingFollowUpsFilter, setPendingFollowUpsFilter } = useAppStore();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -275,6 +282,7 @@ export function LeadList() {
       if (dateTo) params.set("dateTo", dateTo);
       if (myLeadsFilter) params.set("myLeads", "true");
       if (freshLeadsFilter) params.set("fresh", "true");
+      if (pendingFollowUpsFilter) params.set("pendingFollowUps", "true");
 
       const res = await fetch(`/api/leads?${params.toString()}`);
       if (!cancelled && res.ok) {
@@ -301,7 +309,7 @@ export function LeadList() {
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, refresh, user?.role]);
+  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, pendingFollowUpsFilter, refresh, user?.role]);
 
   // Fetch users, projects, and lead sources - parallel for speed (properties lazy-loaded on dialog open)
   useEffect(() => {
@@ -683,12 +691,12 @@ export function LeadList() {
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[130px]" placeholder="From" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[130px]" placeholder="To" />
           {/* Clear all filters */}
-          {(statusFilter !== "all" || leadStatusFilter !== "all" || sourceFilter !== "all" || userFilter !== "all" || dateFrom || dateTo || myLeadsFilter || freshLeadsFilter) && (
+          {(statusFilter !== "all" || leadStatusFilter !== "all" || sourceFilter !== "all" || userFilter !== "all" || dateFrom || dateTo || myLeadsFilter || freshLeadsFilter || pendingFollowUpsFilter) && (
             <Button
               variant="ghost"
               size="sm"
               className="h-9 text-muted-foreground hover:text-foreground"
-              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSourceFilter("all"); setUserFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); setMyLeadsFilter(false); setFreshLeadsFilter(false); }}
+              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSourceFilter("all"); setUserFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); setMyLeadsFilter(false); setFreshLeadsFilter(false); setPendingFollowUpsFilter(false); }}
             >
               <RotateCcw className="mr-1 h-3 w-3" /> Clear
             </Button>
@@ -944,6 +952,24 @@ export function LeadList() {
         </div>
       </div>
 
+      {/* Pending Follow-ups Filter Banner */}
+      {pendingFollowUpsFilter && (
+        <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40 px-4 py-2.5">
+          <div className="flex items-center gap-2 text-sm text-red-700 dark:text-red-300">
+            <AlertCircle className="h-4 w-4" />
+            <span className="font-medium">Showing only leads with pending follow-ups</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-red-700 hover:text-red-900 dark:text-red-300 dark:hover:text-red-100 hover:bg-red-100 dark:hover:bg-red-900/40"
+            onClick={() => setPendingFollowUpsFilter(false)}
+          >
+            <XCircle className="mr-1 h-3.5 w-3.5" /> Clear
+          </Button>
+        </div>
+      )}
+
       {/* Count */}
       <div className="text-sm text-muted-foreground">
         {total} lead{total !== 1 ? "s" : ""} found
@@ -1043,6 +1069,12 @@ export function LeadList() {
                     {lead.leadStatus && lead.leadStatus !== "New" && (
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-brand/30 text-brand">
                         {lead.leadStatus}
+                      </Badge>
+                    )}
+                    {lead.followUps && lead.followUps.length > 0 && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-amber-500/50 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 flex items-center gap-1">
+                        <CalendarClock className="h-3 w-3" />
+                        Follow-up {new Date(lead.followUps[0].scheduledAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
                       </Badge>
                     )}
                     {canViewOnly(lead) && (
