@@ -28,40 +28,28 @@ export async function GET(req: NextRequest) {
   const where: Record<string, unknown> = {};
 
   // Role-based filtering
-  // Telecalling & Sales both see only their own leads by default
+  // Telecalling & Sales both see only leads CURRENTLY assigned to them (currentOwnerId)
+  // primaryOwnerId is NOT used because once a lead is reassigned, the original creator
+  // should no longer see it in their lists.
   // Admin/super_admin see ALL leads
   if (user.role === "telecalling" || user.role === "sales") {
-    where.OR = [
-      { currentOwnerId: user.id },
-      { primaryOwnerId: user.id },
-    ];
+    where.currentOwnerId = user.id;
   }
 
-  // My Leads filter - show only leads assigned to current user
+  // My Leads filter - show only leads CURRENTLY assigned to current user
   if (myLeads) {
-    // Override role-based filtering - only show user's own leads
-    where.OR = [
-      { currentOwnerId: user.id },
-      { primaryOwnerId: user.id },
-    ];
+    where.currentOwnerId = user.id;
   }
 
   // Fresh Leads filter - new leads (pipelineStatus=New) assigned to current user
   // Once feedback is given, pipelineStatus auto-changes to "Contacted" so they disappear from here
   if (fresh) {
     where.AND = [
-      {
-        OR: [
-          { currentOwnerId: user.id },
-          { primaryOwnerId: user.id },
-        ],
-      },
-      {
-        pipelineStatus: "New",
-      },
+      { currentOwnerId: user.id },
+      { pipelineStatus: "New" },
     ];
-    // Remove the top-level OR if it conflicts with AND
-    delete where.OR;
+    // Remove the top-level currentOwnerId if it conflicts with AND
+    delete where.currentOwnerId;
     delete where.pipelineStatus; // Already in AND
   }
 
@@ -71,26 +59,27 @@ export async function GET(req: NextRequest) {
   if (ownerFilter) where.currentOwnerId = ownerFilter;
   if (projectId) where.projectId = projectId;
 
-  // Pending Follow-ups filter - leads that have at least one incomplete follow-up
-  // scheduled for the current user (any date)
+  // Pending Follow-ups filter - leads that have at least one incomplete follow-up (any date).
+  // NOTE: We do NOT filter followUps by userId here, because the follow-up's userId is
+  // the person who CREATED it (e.g., a telecaller who called the lead), not the person
+  // currently responsible for the lead. Visibility is controlled by lead ownership:
+  //   - admin/super_admin: see ALL leads with pending follow-ups
+  //   - telecalling/sales: only leads where currentOwnerId == user.id
   if (pendingFollowUps) {
     where.followUps = {
       some: {
-        userId: user.id,
         completed: false,
       },
     };
-    // Restrict to user's own leads for telecalling/sales (admin sees all)
     if (user.role === "telecalling" || user.role === "sales") {
-      where.OR = [
-        { currentOwnerId: user.id },
-        { primaryOwnerId: user.id },
-      ];
+      where.currentOwnerId = user.id;
     }
   }
 
   // Today's Follow-ups (or specific date) - leads with incomplete follow-ups
-  // scheduled on the given date (defaults to today)
+  // scheduled on the given date (defaults to today).
+  // Same visibility rule as pendingFollowUps above: do NOT filter followUps by userId,
+  // only restrict by lead ownership for telecalling/sales.
   if (todayFollowUps) {
     const targetDate = followUpDate ? new Date(followUpDate) : new Date();
     const startOfDay = new Date(targetDate);
@@ -100,17 +89,12 @@ export async function GET(req: NextRequest) {
 
     where.followUps = {
       some: {
-        userId: user.id,
         completed: false,
         scheduledAt: { gte: startOfDay, lte: endOfDay },
       },
     };
-    // Restrict to user's own leads for telecalling/sales (admin sees all)
     if (user.role === "telecalling" || user.role === "sales") {
-      where.OR = [
-        { currentOwnerId: user.id },
-        { primaryOwnerId: user.id },
-      ];
+      where.currentOwnerId = user.id;
     }
   }
   if ((dateFrom || dateTo) && !fresh) {
@@ -128,14 +112,12 @@ export async function GET(req: NextRequest) {
       { phone: { contains: search } },
       { email: { contains: search } },
     ];
-    if (user.role === "sales" || myLeads) {
+    if (user.role === "telecalling" || user.role === "sales" || myLeads) {
+      // Restrict search to leads currently owned by the user
       where.OR = [
         { currentOwnerId: user.id, name: { contains: search } },
         { currentOwnerId: user.id, phone: { contains: search } },
         { currentOwnerId: user.id, email: { contains: search } },
-        { primaryOwnerId: user.id, name: { contains: search } },
-        { primaryOwnerId: user.id, phone: { contains: search } },
-        { primaryOwnerId: user.id, email: { contains: search } },
       ];
     } else {
       where.OR = searchConditions;
@@ -146,20 +128,13 @@ export async function GET(req: NextRequest) {
   const includeCounts = searchParams.get("includeCounts") !== "false";
 
   // Build the count queries for My Leads and Fresh Leads (only when requested)
+  // Use only currentOwnerId so that reassigned leads disappear from the original creator's counts.
   const myLeadsWhere = {
-    OR: [
-      { currentOwnerId: user.id },
-      { primaryOwnerId: user.id },
-    ],
+    currentOwnerId: user.id,
   };
   const freshLeadsWhere = {
     AND: [
-      {
-        OR: [
-          { currentOwnerId: user.id },
-          { primaryOwnerId: user.id },
-        ],
-      },
+      { currentOwnerId: user.id },
       { pipelineStatus: "New" },
     ],
   };

@@ -1,0 +1,1645 @@
+     1→"use client";
+     2→
+     3→import { useEffect, useState, useRef, useCallback } from "react";
+     4→import { useAppStore, isAdminRole } from "@/lib/store";
+     5→import { Button } from "@/components/ui/button";
+     6→import { Badge } from "@/components/ui/badge";
+     7→import { Input } from "@/components/ui/input";
+     8→import { Label } from "@/components/ui/label";
+     9→import { Checkbox } from "@/components/ui/checkbox";
+    10→import {
+    11→  Dialog,
+    12→  DialogContent,
+    13→  DialogHeader,
+    14→  DialogTitle,
+    15→  DialogTrigger,
+    16→} from "@/components/ui/dialog";
+    17→import {
+    18→  Select,
+    19→  SelectContent,
+    20→  SelectItem,
+    21→  SelectTrigger,
+    22→  SelectValue,
+    23→} from "@/components/ui/select";
+    24→import { Textarea } from "@/components/ui/textarea";
+    25→import {
+    26→  DropdownMenu,
+    27→  DropdownMenuContent,
+    28→  DropdownMenuItem,
+    29→  DropdownMenuTrigger,
+    30→} from "@/components/ui/dropdown-menu";
+    31→import {
+    32→  Search,
+    33→  Plus,
+    34→  MessageSquare,
+    35→  Trash2,
+    36→  Eye,
+    37→  MoreVertical,
+    38→  Lock,
+    39→  Filter,
+    40→  Upload,
+    41→  RefreshCw,
+    42→  Send,
+    43→  UserPlus,
+    44→  UsersRound,
+    45→  Sparkles,
+    46→  CalendarClock,
+    47→  Pencil,
+    48→  Copy,
+    49→  Calendar,
+    50→  RotateCcw,
+    51→  AlertCircle,
+    52→  XCircle,
+    53→} from "lucide-react";
+    54→
+    55→const PIPELINE_STAGES = [
+    56→  "New",
+    57→  "Contacted",
+    58→  "Qualified",
+    59→  "Visit Scheduled",
+    60→  "Visited",
+    61→  "Negotiation",
+    62→  "Won",
+    63→  "Lost",
+    64→];
+    65→
+    66→const LEAD_STATUSES = [
+    67→  "Not Connected",
+    68→  "Site Visit Done",
+    69→  "Prospect",
+    70→  "Not Interested",
+    71→  "Site Visit Promised",
+    72→  "Booked",
+    73→];
+    74→
+    75→// Sources are fetched dynamically from the database - no hardcoded fallback
+    76→
+    77→const DATE_PRESETS = [
+    78→  { label: "Today", days: 0 },
+    79→  { label: "Last 7 Days", days: 7 },
+    80→  { label: "Last 30 Days", days: 30 },
+    81→  { label: "This Month", days: -1 },
+    82→  { label: "Last Month", days: -2 },
+    83→];
+    84→
+    85→function getDateRange(preset: number): { from: string; to: string } {
+    86→  const now = new Date();
+    87→  const to = now.toISOString().split("T")[0];
+    88→  let from: string;
+    89→  if (preset === -1) {
+    90→    from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+    91→  } else if (preset === -2) {
+    92→    const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    93→    const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    94→    from = firstDayLastMonth.toISOString().split("T")[0];
+    95→    return { from, to: lastDayLastMonth.toISOString().split("T")[0] };
+    96→  } else {
+    97→    from = new Date(now.getTime() - preset * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    98→  }
+    99→  return { from, to };
+   100→}
+   101→
+   102→const statusColors: Record<string, string> = {
+   103→  New: "bg-slate-500 text-white",
+   104→  Contacted: "bg-blue-500 text-white",
+   105→  Qualified: "bg-cyan-500 text-white",
+   106→  "Visit Scheduled": "bg-amber-500 text-white",
+   107→  Visited: "bg-purple-500 text-white",
+   108→  Negotiation: "bg-orange-500 text-white",
+   109→  Won: "bg-emerald-500 text-white",
+   110→  Lost: "bg-red-500 text-white",
+   111→};
+   112→
+   113→const dotColors: Record<string, string> = {
+   114→  New: "bg-slate-500",
+   115→  Contacted: "bg-blue-500",
+   116→  Qualified: "bg-cyan-500",
+   117→  "Visit Scheduled": "bg-amber-500",
+   118→  Visited: "bg-purple-500",
+   119→  Negotiation: "bg-orange-500",
+   120→  Won: "bg-emerald-500",
+   121→  Lost: "bg-red-500",
+   122→};
+   123→
+   124→interface Lead {
+   125→  id: string;
+   126→  name: string;
+   127→  phone: string;
+   128→  email: string | null;
+   129→  source: string;
+   130→  budget: string | null;
+   131→  notes: string | null;
+   132→  pipelineStatus: string;
+   133→  leadStatus: string | null;
+   134→  lostReason: string | null;
+   135→  primaryOwnerId: string;
+   136→  currentOwnerId: string;
+   137→  primaryOwner: { id: string; name: string; email: string; role: string };
+   138→  currentOwner: { id: string; name: string; email: string; role: string };
+   139→  project: { id: string; name: string } | null;
+   140→  callLogs: Array<{
+   141→    id: string;
+   142→    notes: string;
+   143→    createdAt: string;
+   144→    user: { name: string };
+   145→  }>;
+   146→  followUps?: Array<{
+   147→    id: string;
+   148→    scheduledAt: string;
+   149→    notes: string | null;
+   150→  }>;
+   151→  createdAt: string;
+   152→  updatedAt: string;
+   153→}
+   154→
+   155→interface UserItem {
+   156→  id: string;
+   157→  name: string;
+   158→  email?: string;
+   159→  role: string;
+   160→  isActive: boolean;
+   161→}
+   162→
+   163→interface Project {
+   164→  id: string;
+   165→  name: string;
+   166→}
+   167→
+   168→interface PropertyItem {
+   169→  id: string;
+   170→  name: string;
+   171→  type: string;
+   172→  status: string;
+   173→  price: number | null;
+   174→  location: string | null;
+   175→  project: { id: string; name: string } | null;
+   176→}
+   177→
+   178→export function LeadList() {
+   179→  const { user, setPage, setSelectedLeadId, pendingFollowUpsFilter, setPendingFollowUpsFilter, todayFollowUpsFilter, setTodayFollowUpsFilter, followUpDate, setFollowUpDate } = useAppStore();
+   180→  const [leads, setLeads] = useState<Lead[]>([]);
+   181→  const [users, setUsers] = useState<UserItem[]>([]);
+   182→  const [projects, setProjects] = useState<Project[]>([]);
+   183→  const [properties, setProperties] = useState<PropertyItem[]>([]);
+   184→  const [total, setTotal] = useState(0);
+   185→  const [loading, setLoading] = useState(true);
+   186→  const [search, setSearch] = useState("");
+   187→  const [debouncedSearch, setDebouncedSearch] = useState("");
+   188→  const [statusFilter, setStatusFilter] = useState("all");
+   189→  const [leadStatusFilter, setLeadStatusFilter] = useState("all");
+   190→  const [sourceFilter, setSourceFilter] = useState("all");
+   191→  const [userFilter, setUserFilter] = useState("all");
+   192→  const [dateFrom, setDateFrom] = useState("");
+   193→  const [dateTo, setDateTo] = useState("");
+   194→  const [myLeadsFilter, setMyLeadsFilter] = useState(false);
+   195→  const [freshLeadsFilter, setFreshLeadsFilter] = useState(false);
+   196→  const [myLeadsCount, setMyLeadsCount] = useState(0);
+   197→  const [freshLeadsCount, setFreshLeadsCount] = useState(0);
+   198→  const [refresh, setRefresh] = useState(0);
+   199→  const [sources, setSources] = useState<string[]>([]);
+   200→  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+   201→
+   202→  // Debounced search handler
+   203→  const handleSearchChange = useCallback((value: string) => {
+   204→    setSearch(value);
+   205→    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+   206→    searchTimeoutRef.current = setTimeout(() => {
+   207→      setDebouncedSearch(value);
+   208→    }, 300);
+   209→  }, []);
+   210→
+   211→  // Handle date preset click
+   212→  const handleDatePreset = (preset: number) => {
+   213→    const { from, to } = getDateRange(preset);
+   214→    setDateFrom(from);
+   215→    setDateTo(to);
+   216→  };
+   217→
+   218→  // Create lead dialog
+   219→  const [createOpen, setCreateOpen] = useState(false);
+   220→  const [createForm, setCreateForm] = useState({
+   221→    name: "",
+   222→    phone: "",
+   223→    email: "",
+   224→    source: "",
+   225→    budget: "",
+   226→    notes: "",
+   227→    projectId: "",
+   228→    propertyId: "",
+   229→    assignTo: "",
+   230→  });
+   231→
+   232→  // Feedback dialog (for dropdown menu + direct button)
+   233→  const [feedbackOpen, setFeedbackOpen] = useState(false);
+   234→  const [feedbackLead, setFeedbackLead] = useState<Lead | null>(null);
+   235→  const [feedbackForm, setFeedbackForm] = useState({
+   236→    notes: "",
+   237→    callType: "Feedback",
+   238→    callDate: new Date().toISOString().slice(0, 16),
+   239→    assignTo: "",
+   240→    followUpDate: "",
+   241→    dropLead: false,
+   242→    leadStatus: "",
+   243→  });
+   244→
+   245→  // Assign dialog (for dropdown menu + direct button)
+   246→  const [assignOpen, setAssignOpen] = useState(false);
+   247→  const [assignLead, setAssignLead] = useState<Lead | null>(null);
+   248→  const [assignTo, setAssignTo] = useState("");
+   249→  const [assignReason, setAssignReason] = useState("");
+   250→
+   251→  // Delete confirm
+   252→  const [deleteId, setDeleteId] = useState<string | null>(null);
+   253→
+   254→  // Inline feedback state per lead
+   255→  const [inlineFeedback, setInlineFeedback] = useState<Record<string, string>>({});
+   256→  const [submittingFeedback, setSubmittingFeedback] = useState<Record<string, boolean>>({});
+   257→
+   258→  // Inline assign state per lead
+   259→  const [inlineAssign, setInlineAssign] = useState<Record<string, string>>({});
+   260→  const [submittingAssign, setSubmittingAssign] = useState<Record<string, boolean>>({});
+   261→
+   262→  // Expanded feedback history per lead - shows all feedback logs instead of just last
+   263→  const [expandedFeedback, setExpandedFeedback] = useState<Record<string, boolean>>({});
+   264→  // Cached full call logs per lead (fetched on demand)
+   265→  const [fullCallLogs, setFullCallLogs] = useState<Record<string, Array<{ id: string; notes: string; callType?: string; createdAt: string; user: { name: string } }>>>({});
+   266→
+   267→  // Bulk select & assign
+   268→  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+   269→  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+   270→  const [bulkAssignTo, setBulkAssignTo] = useState("");
+   271→  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+   272→
+   273→  const doRefresh = () => setRefresh((r) => r + 1);
+   274→
+   275→  // Toggle expanded feedback history for a lead - fetches all call logs on first expand
+   276→  const toggleFeedbackHistory = async (leadId: string) => {
+   277→    const isExpanded = expandedFeedback[leadId];
+   278→    if (isExpanded) {
+   279→      setExpandedFeedback({ ...expandedFeedback, [leadId]: false });
+   280→      return;
+   281→    }
+   282→    // Need to fetch full call logs if not cached
+   283→    if (!fullCallLogs[leadId]) {
+   284→      try {
+   285→        const res = await fetch(`/api/leads/${leadId}/call-logs`);
+   286→        if (res.ok) {
+   287→          const data = await res.json();
+   288→          // data is an array of call logs (most recent first)
+   289→          setFullCallLogs({
+   290→            ...fullCallLogs,
+   291→            [leadId]: Array.isArray(data) ? data : (data.callLogs || []),
+   292→          });
+   293→        }
+   294→      } catch (err) {
+   295→        console.error("Error fetching call logs:", err);
+   296→      }
+   297→    }
+   298→    setExpandedFeedback({ ...expandedFeedback, [leadId]: true });
+   299→  };
+   300→
+   301→  // Fetch leads
+   302→  useEffect(() => {
+   303→    let cancelled = false;
+   304→    (async () => {
+   305→      setLoading(true);
+   306→      const params = new URLSearchParams();
+   307→      if (debouncedSearch) params.set("search", debouncedSearch);
+   308→      if (statusFilter !== "all") params.set("status", statusFilter);
+   309→      if (leadStatusFilter !== "all") params.set("leadStatus", leadStatusFilter);
+   310→      if (sourceFilter !== "all") params.set("source", sourceFilter);
+   311→      if (userFilter !== "all" && isAdminRole(user?.role || "")) params.set("owner", userFilter);
+   312→      if (dateFrom) params.set("dateFrom", dateFrom);
+   313→      if (dateTo) params.set("dateTo", dateTo);
+   314→      if (myLeadsFilter) params.set("myLeads", "true");
+   315→      if (freshLeadsFilter) params.set("fresh", "true");
+   316→      if (pendingFollowUpsFilter) params.set("pendingFollowUps", "true");
+   317→      if (todayFollowUpsFilter) {
+   318→        params.set("todayFollowUps", "true");
+   319→        if (followUpDate) params.set("followUpDate", followUpDate);
+   320→      }
+   321→
+   322→      const res = await fetch(`/api/leads?${params.toString()}`);
+   323→      if (!cancelled && res.ok) {
+   324→        const data = await res.json();
+   325→        let leadsData: Lead[] = data.leads || [];
+   326→        // When "My Leads" filter is active, sort so fresh/unacted leads are at top
+   327→        // and acted-upon leads sink to bottom
+   328→        if (myLeadsFilter) {
+   329→          leadsData = leadsData.sort((a, b) => {
+   330→            const aActed = a.callLogs && a.callLogs.length > 0 ? 1 : 0;
+   331→            const bActed = b.callLogs && b.callLogs.length > 0 ? 1 : 0;
+   332→            // Fresh leads (not acted upon) come first
+   333→            if (aActed !== bActed) return aActed - bActed;
+   334→            // Within same group, newer leads first
+   335→            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+   336→          });
+   337→        }
+   338→        setLeads(leadsData);
+   339→        setTotal(data.total || 0);
+   340→        // Extract counts from the same response (no extra API calls needed)
+   341→        if (data.myLeadsCount !== undefined) setMyLeadsCount(data.myLeadsCount);
+   342→        if (data.freshLeadsCount !== undefined) setFreshLeadsCount(data.freshLeadsCount);
+   343→      }
+   344→      if (!cancelled) setLoading(false);
+   345→    })();
+   346→    return () => { cancelled = true; };
+   347→  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, pendingFollowUpsFilter, todayFollowUpsFilter, followUpDate, refresh, user?.role]);
+   348→
+   349→  // Fetch users, projects, and lead sources - parallel for speed (properties lazy-loaded on dialog open)
+   350→  useEffect(() => {
+   351→    let cancelled = false;
+   352→    (async () => {
+   353→      try {
+   354→        const [uRes, pRes, srcRes] = await Promise.all([
+   355→          fetch("/api/users"),
+   356→          fetch("/api/projects"),
+   357→          fetch("/api/lead-sources"),
+   358→        ]);
+   359→        if (!cancelled && uRes.ok) {
+   360→          const userData = await uRes.json();
+   361→          if (isAdminRole(user?.role || "")) {
+   362→            setUsers(userData);
+   363→          } else {
+   364→            setUsers(userData.filter((u: UserItem) => u.isActive));
+   365→          }
+   366→        }
+   367→        if (!cancelled && pRes.ok) {
+   368→          setProjects(await pRes.json());
+   369→        }
+   370→        if (!cancelled && srcRes.ok) {
+   371→          const srcData = await srcRes.json();
+   372→          if (Array.isArray(srcData)) {
+   373→            const dbSources = srcData.map((s: { name: string }) => s.name);
+   374→            setSources(dbSources);
+   375→          }
+   376→        } else if (!cancelled) {
+   377→          console.error("Failed to fetch lead sources:", srcRes.status);
+   378→        }
+   379→      } catch (err) {
+   380→        console.error("Error fetching lead sources:", err);
+   381→      }
+   382→    })();
+   383→    return () => { cancelled = true; };
+   384→  }, [user?.role, refresh]);
+   385→
+   386→  // Lazy-load properties only when create dialog opens
+   387→  useEffect(() => {
+   388→    if (!createOpen || properties.length > 0) return;
+   389→    let cancelled = false;
+   390→    (async () => {
+   391→      const propRes = await fetch("/api/properties");
+   392→      if (!cancelled && propRes.ok) {
+   393→        const propData = await propRes.json();
+   394→        setProperties(propData.properties || []);
+   395→      }
+   396→    })();
+   397→    return () => { cancelled = true; };
+   398→  }, [createOpen, properties.length]);
+   399→
+   400→  const handleCreateLead = async () => {
+   401→    const body: Record<string, string> = {
+   402→      name: createForm.name,
+   403→      phone: createForm.phone,
+   404→      email: createForm.email,
+   405→      source: createForm.source,
+   406→      budget: createForm.budget,
+   407→      notes: createForm.notes,
+   408→      projectId: createForm.projectId,
+   409→      assignTo: createForm.assignTo,
+   410→    };
+   411→
+   412→    const res = await fetch("/api/leads", {
+   413→      method: "POST",
+   414→      headers: { "Content-Type": "application/json" },
+   415→      body: JSON.stringify(body),
+   416→    });
+   417→
+   418→    if (res.ok) {
+   419→      const lead = await res.json();
+   420→      // If property selected, link it to the lead
+   421→      if (createForm.propertyId && lead.id) {
+   422→        await fetch(`/api/leads/${lead.id}/properties`, {
+   423→          method: "POST",
+   424→          headers: { "Content-Type": "application/json" },
+   425→          body: JSON.stringify({ propertyId: createForm.propertyId }),
+   426→        });
+   427→      }
+   428→      setCreateOpen(false);
+   429→      setCreateForm({
+   430→        name: "",
+   431→        phone: "",
+   432→        email: "",
+   433→        source: "",
+   434→        budget: "",
+   435→        notes: "",
+   436→        projectId: "",
+   437→        propertyId: "",
+   438→        assignTo: "",
+   439→      });
+   440→      doRefresh();
+   441→    }
+   442→  };
+   443→
+   444→  const handleFeedback = async () => {
+   445→    if (!feedbackLead) return;
+   446→
+   447→    const res = await fetch(`/api/leads/${feedbackLead.id}/call-logs`, {
+   448→      method: "POST",
+   449→      headers: { "Content-Type": "application/json" },
+   450→      body: JSON.stringify({
+   451→        notes: feedbackForm.notes,
+   452→        callType: feedbackForm.callType,
+   453→        callDate: feedbackForm.callDate,
+   454→        assignTo: feedbackForm.assignTo || undefined,
+   455→      }),
+   456→    });
+   457→
+   458→    if (res.ok) {
+   459→      // If follow-up date set, schedule it
+   460→      if (feedbackForm.followUpDate) {
+   461→        await fetch(`/api/leads/${feedbackLead.id}/follow-ups`, {
+   462→          method: "POST",
+   463→          headers: { "Content-Type": "application/json" },
+   464→          body: JSON.stringify({
+   465→            scheduledAt: feedbackForm.followUpDate,
+   466→            notes: `Follow-up after feedback: ${feedbackForm.notes.substring(0, 100)}`,
+   467→          }),
+   468→        });
+   469→      }
+   470→
+   471→      // If lead status selected, update it
+   472→      if (feedbackForm.leadStatus) {
+   473→        await fetch(`/api/leads/${feedbackLead.id}`, {
+   474→          method: "PUT",
+   475→          headers: { "Content-Type": "application/json" },
+   476→          body: JSON.stringify({ leadStatus: feedbackForm.leadStatus }),
+   477→        });
+   478→      }
+   479→
+   480→      // If drop lead selected
+   481→      if (feedbackForm.dropLead) {
+   482→        await fetch(`/api/leads/${feedbackLead.id}`, {
+   483→          method: "PUT",
+   484→          headers: { "Content-Type": "application/json" },
+   485→          body: JSON.stringify({
+   486→            pipelineStatus: "Lost",
+   487→            lostReason: "Dropped after feedback",
+   488→          }),
+   489→        });
+   490→      }
+   491→
+   492→      setFeedbackOpen(false);
+   493→      setFeedbackLead(null);
+   494→      setFeedbackForm({
+   495→        notes: "",
+   496→        callType: "Feedback",
+   497→        callDate: new Date().toISOString().slice(0, 16),
+   498→        assignTo: "",
+   499→        followUpDate: "",
+   500→        dropLead: false,
+   501→        leadStatus: "",
+   502→      });
+   503→      doRefresh();
+   504→    }
+   505→  };
+   506→
+   507→  const handleAssign = async () => {
+   508→    if (!assignLead || !assignTo) return;
+   509→
+   510→    const res = await fetch(`/api/leads/${assignLead.id}/assign`, {
+   511→      method: "POST",
+   512→      headers: { "Content-Type": "application/json" },
+   513→      body: JSON.stringify({ toUserId: assignTo, reason: assignReason }),
+   514→    });
+   515→
+   516→    if (res.ok) {
+   517→      setAssignOpen(false);
+   518→      setAssignLead(null);
+   519→      setAssignTo("");
+   520→      setAssignReason("");
+   521→      doRefresh();
+   522→    }
+   523→  };
+   524→
+   525→  const handleDelete = async (id: string) => {
+   526→    const res = await fetch(`/api/leads/${id}`, { method: "DELETE" });
+   527→    if (res.ok) {
+   528→      setDeleteId(null);
+   529→      doRefresh();
+   530→    }
+   531→  };
+   532→
+   533→  // Inline feedback submit
+   534→  const handleInlineFeedback = async (leadId: string) => {
+   535→    const notes = inlineFeedback[leadId];
+   536→    if (!notes?.trim()) return;
+   537→
+   538→    setSubmittingFeedback((prev) => ({ ...prev, [leadId]: true }));
+   539→    const res = await fetch(`/api/leads/${leadId}/call-logs`, {
+   540→      method: "POST",
+   541→      headers: { "Content-Type": "application/json" },
+   542→      body: JSON.stringify({ notes: notes.trim(), callType: "Feedback" }),
+   543→    });
+   544→    if (res.ok) {
+   545→      setInlineFeedback((prev) => ({ ...prev, [leadId]: "" }));
+   546→      doRefresh();
+   547→    }
+   548→    setSubmittingFeedback((prev) => ({ ...prev, [leadId]: false }));
+   549→  };
+   550→
+   551→  // Inline assign submit
+   552→  const handleInlineAssign = async (leadId: string) => {
+   553→    const toUserId = inlineAssign[leadId];
+   554→    if (!toUserId) return;
+   555→
+   556→    setSubmittingAssign((prev) => ({ ...prev, [leadId]: true }));
+   557→    const res = await fetch(`/api/leads/${leadId}/assign`, {
+   558→      method: "POST",
+   559→      headers: { "Content-Type": "application/json" },
+   560→      body: JSON.stringify({ toUserId, reason: "Quick assign from lead list" }),
+   561→    });
+   562→    if (res.ok) {
+   563→      setInlineAssign((prev) => ({ ...prev, [leadId]: "" }));
+   564→      doRefresh();
+   565→    }
+   566→    setSubmittingAssign((prev) => ({ ...prev, [leadId]: false }));
+   567→  };
+   568→
+   569→  // Bulk assign handler
+   570→  const handleBulkAssign = async () => {
+   571→    if (!bulkAssignTo || selectedLeadIds.size === 0) return;
+   572→
+   573→    for (const leadId of selectedLeadIds) {
+   574→      await fetch(`/api/leads/${leadId}/assign`, {
+   575→        method: "POST",
+   576→        headers: { "Content-Type": "application/json" },
+   577→        body: JSON.stringify({ toUserId: bulkAssignTo, reason: "Bulk assignment" }),
+   578→      });
+   579→    }
+   580→    setBulkAssignOpen(false);
+   581→    setBulkAssignTo("");
+   582→    setSelectedLeadIds(new Set());
+   583→    doRefresh();
+   584→  };
+   585→
+   586→  // Toggle select lead
+   587→  const toggleSelectLead = (id: string) => {
+   588→    setSelectedLeadIds((prev) => {
+   589→      const next = new Set(prev);
+   590→      if (next.has(id)) next.delete(id);
+   591→      else next.add(id);
+   592→      return next;
+   593→    });
+   594→  };
+   595→
+   596→  // Select/deselect all
+   597→  const toggleSelectAll = () => {
+   598→    if (selectedLeadIds.size === leads.length) {
+   599→      setSelectedLeadIds(new Set());
+   600→    } else {
+   601→      setSelectedLeadIds(new Set(leads.map((l) => l.id)));
+   602→    }
+   603→  };
+   604→
+   605→  const canEdit = (lead: Lead) => {
+   606→    if (!user) return false;
+   607→    return user.role === "admin" || lead.currentOwnerId === user.id;
+   608→  };
+   609→
+   610→  const canViewOnly = (lead: Lead) => {
+   611→    if (!user) return false;
+   612→    if (user.role === "admin") return false;
+   613→    if (user.role === "telecalling") return false;
+   614→    return lead.primaryOwnerId === user.id && lead.currentOwnerId !== user.id;
+   615→  };
+   616→
+   617→  // Whether current user can assign this lead (admin always can, current owner can, primary owner can reassign)
+   618→  const canAssign = (lead: Lead) => {
+   619→    if (!user) return false;
+   620→    if (user.role === "admin") return true;
+   621→    if (lead.currentOwnerId === user.id) return true;
+   622→    // Primary owner who is not current owner can also assign
+   623→    if (lead.primaryOwnerId === user.id) return true;
+   624→    return false;
+   625→  };
+   626→
+   627→  // Filter users for assign dropdown based on role
+   628→  const getAssignableUsers = (excludeUserId?: string) => {
+   629→    return users.filter((u) => u.isActive && u.id !== excludeUserId && u.role !== "admin");
+   630→  };
+   631→
+   632→  // Open feedback dialog for a lead
+   633→  const openFeedbackDialog = (lead: Lead) => {
+   634→    setFeedbackLead(lead);
+   635→    setFeedbackForm({
+   636→      notes: "",
+   637→      callType: "Feedback",
+   638→      callDate: new Date().toISOString().slice(0, 16),
+   639→      assignTo: "",
+   640→      followUpDate: "",
+   641→      dropLead: false,
+   642→      leadStatus: "",
+   643→    });
+   644→    setFeedbackOpen(true);
+   645→  };
+   646→
+   647→  // Open assign dialog for a lead
+   648→  const openAssignDialog = (lead: Lead) => {
+   649→    setAssignLead(lead);
+   650→    setAssignTo("");
+   651→    setAssignReason("");
+   652→    setAssignOpen(true);
+   653→  };
+   654→
+   655→  return (
+   656→    <div className="space-y-4">
+   657→      {/* Filters Bar */}
+   658→      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+   659→        <div className="flex flex-1 items-center gap-2 flex-wrap">
+   660→          <div className="relative flex-1 sm:max-w-xs">
+   661→            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   662→            <Input
+   663→              placeholder="Search leads..."
+   664→              value={search}
+   665→              onChange={(e) => handleSearchChange(e.target.value)}
+   666→              className="pl-9 h-9"
+   667→            />
+   668→          </div>
+   669→          {/* User/Assignee filter - Admin only */}
+   670→          {isAdminRole(user?.role || "") && (
+   671→            <Select value={userFilter} onValueChange={setUserFilter}>
+   672→              <SelectTrigger className="w-[180px] h-9">
+   673→                <UsersRound className="mr-1 h-3 w-3" />
+   674→                <SelectValue placeholder="All Users" />
+   675→              </SelectTrigger>
+   676→              <SelectContent>
+   677→                <SelectItem value="all">All Users</SelectItem>
+   678→                {users.filter((u) => u.isActive && u.role !== "admin").map((u) => (
+   679→                  <SelectItem key={u.id} value={u.id}>
+   680→                    {u.name} ({u.role})
+   681→                  </SelectItem>
+   682→                ))}
+   683→              </SelectContent>
+   684→            </Select>
+   685→          )}
+   686→          <Select value={sourceFilter} onValueChange={setSourceFilter}>
+   687→            <SelectTrigger className="w-[140px] h-9">
+   688→              <SelectValue placeholder="Source" />
+   689→            </SelectTrigger>
+   690→            <SelectContent>
+   691→              <SelectItem value="all">All Sources</SelectItem>
+   692→              {sources.map((s) => (
+   693→                <SelectItem key={s} value={s}>
+   694→                  {s}
+   695→                </SelectItem>
+   696→              ))}
+   697→            </SelectContent>
+   698→          </Select>
+   699→          <Select value={leadStatusFilter} onValueChange={setLeadStatusFilter}>
+   700→            <SelectTrigger className="w-[160px] h-9">
+   701→              <Filter className="mr-1 h-3 w-3" />
+   702→              <SelectValue placeholder="Lead Status" />
+   703→            </SelectTrigger>
+   704→            <SelectContent>
+   705→              <SelectItem value="all">All Lead Status</SelectItem>
+   706→              {LEAD_STATUSES.map((s) => (
+   707→                <SelectItem key={s} value={s}>{s}</SelectItem>
+   708→              ))}
+   709→            </SelectContent>
+   710→          </Select>
+   711→          {/* Date filter with presets */}
+   712→          <div className="flex items-center gap-1">
+   713→            {DATE_PRESETS.map((preset) => (
+   714→              <Button
+   715→                key={preset.label}
+   716→                variant="outline"
+   717→                size="sm"
+   718→                className="h-9 text-xs px-2"
+   719→                onClick={() => handleDatePreset(preset.days)}
+   720→              >
+   721→                <Calendar className="mr-1 h-3 w-3" />
+   722→                {preset.label}
+   723→              </Button>
+   724→            ))}
+   725→          </div>
+   726→          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[130px]" placeholder="From" />
+   727→          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[130px]" placeholder="To" />
+   728→          {/* Clear all filters */}
+   729→          {(statusFilter !== "all" || leadStatusFilter !== "all" || sourceFilter !== "all" || userFilter !== "all" || dateFrom || dateTo || myLeadsFilter || freshLeadsFilter || pendingFollowUpsFilter || todayFollowUpsFilter) && (
+   730→            <Button
+   731→              variant="ghost"
+   732→              size="sm"
+   733→              className="h-9 text-muted-foreground hover:text-foreground"
+   734→              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSourceFilter("all"); setUserFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); setMyLeadsFilter(false); setFreshLeadsFilter(false); setPendingFollowUpsFilter(false); setTodayFollowUpsFilter(false); setFollowUpDate(""); }}
+   735→            >
+   736→              <RotateCcw className="mr-1 h-3 w-3" /> Clear
+   737→            </Button>
+   738→          )}
+   739→          {/* My Leads quick filter */}
+   740→          <Button
+   741→            variant={myLeadsFilter ? "default" : "outline"}
+   742→            size="sm"
+   743→            className={`h-9 ${myLeadsFilter ? "bg-brand hover:bg-brand-dark" : ""}`}
+   744→            onClick={() => {
+   745→              const newVal = !myLeadsFilter;
+   746→              setMyLeadsFilter(newVal);
+   747→              if (newVal) setFreshLeadsFilter(false);
+   748→            }}
+   749→          >
+   750→            <UsersRound className="mr-1 h-3 w-3" />
+   751→            My Leads
+   752→            <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">
+   753→              {myLeadsCount}
+   754→            </Badge>
+   755→          </Button>
+   756→          {/* Fresh Leads quick filter */}
+   757→          <Button
+   758→            variant={freshLeadsFilter ? "default" : "outline"}
+   759→            size="sm"
+   760→            className={`h-9 ${freshLeadsFilter ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}`}
+   761→            onClick={() => {
+   762→              const newVal = !freshLeadsFilter;
+   763→              setFreshLeadsFilter(newVal);
+   764→              if (newVal) setMyLeadsFilter(false);
+   765→            }}
+   766→          >
+   767→            <Sparkles className="mr-1 h-3 w-3" />
+   768→            Fresh
+   769→            <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">
+   770→              {freshLeadsCount}
+   771→            </Badge>
+   772→          </Button>
+   773→          {/* Follow Up quick filter - shows leads with follow-ups scheduled for selected date */}
+   774→          <Button
+   775→            variant={todayFollowUpsFilter ? "default" : "outline"}
+   776→            size="sm"
+   777→            className={`h-9 ${todayFollowUpsFilter ? "bg-red-500 hover:bg-red-600 text-white" : ""}`}
+   778→            onClick={() => {
+   779→              const newVal = !todayFollowUpsFilter;
+   780→              setTodayFollowUpsFilter(newVal);
+   781→              if (newVal) {
+   782→                // Default to today when first activated
+   783→                if (!followUpDate) setFollowUpDate(new Date().toISOString().split("T")[0]);
+   784→                setMyLeadsFilter(false);
+   785→                setFreshLeadsFilter(false);
+   786→                setPendingFollowUpsFilter(false);
+   787→              }
+   788→            }}
+   789→          >
+   790→            <CalendarClock className="mr-1 h-3 w-3" />
+   791→            Follow Up
+   792→          </Button>
+   793→          {/* Date picker for follow-up filter - only visible when Follow Up filter is active */}
+   794→          {todayFollowUpsFilter && (
+   795→            <Input
+   796→              type="date"
+   797→              value={followUpDate}
+   798→              onChange={(e) => setFollowUpDate(e.target.value)}
+   799→              className="h-9 w-[150px]"
+   800→            />
+   801→          )}
+   802→        </div>
+   803→
+   804→        <div className="flex items-center gap-2">
+   805→          <Button variant="outline" size="sm" onClick={doRefresh}>
+   806→            <RefreshCw className="mr-1 h-3 w-3" />
+   807→            Refresh
+   808→          </Button>
+   809→          {/* Import only for admin */}
+   810→          {isAdminRole(user?.role || "") && (
+   811→            <Button
+   812→              variant="outline"
+   813→              size="sm"
+   814→              onClick={() => setPage("lead-import")}
+   815→            >
+   816→              <Upload className="mr-1 h-3 w-3" />
+   817→              Import
+   818→            </Button>
+   819→          )}
+   820→
+   821→          {/* Bulk Assign button (admin only, when leads selected) */}
+   822→          {isAdminRole(user?.role || "") && selectedLeadIds.size > 0 && (
+   823→            <Button
+   824→              variant="outline"
+   825→              size="sm"
+   826→              className="text-brand border-brand hover:bg-brand hover:text-white"
+   827→              onClick={() => setBulkAssignOpen(true)}
+   828→            >
+   829→              <UsersRound className="mr-1 h-3 w-3" />
+   830→              Assign ({selectedLeadIds.size})
+   831→            </Button>
+   832→          )}
+   833→
+   834→          {/* Bulk Delete button (admin only, when leads selected) */}
+   835→          {isAdminRole(user?.role || "") && selectedLeadIds.size > 0 && (
+   836→            <Button
+   837→              variant="outline"
+   838→              size="sm"
+   839→              className="text-destructive border-destructive hover:bg-destructive hover:text-white"
+   840→              onClick={() => setBulkDeleteOpen(true)}
+   841→            >
+   842→              <Trash2 className="mr-1 h-3 w-3" />
+   843→              Delete ({selectedLeadIds.size})
+   844→            </Button>
+   845→          )}
+   846→
+   847→          {/* Create Lead Dialog */}
+   848→          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+   849→            <DialogTrigger asChild>
+   850→              <Button size="sm" className="bg-brand hover:bg-brand-dark">
+   851→                <Plus className="mr-1 h-3 w-3" />
+   852→                Add Lead
+   853→              </Button>
+   854→            </DialogTrigger>
+   855→            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+   856→              <DialogHeader>
+   857→                <DialogTitle>Create New Lead</DialogTitle>
+   858→              </DialogHeader>
+   859→              <div className="space-y-3">
+   860→                <div className="grid grid-cols-2 gap-3">
+   861→                  <div className="space-y-1">
+   862→                    <Label>Name *</Label>
+   863→                    <Input
+   864→                      value={createForm.name}
+   865→                      onChange={(e) =>
+   866→                        setCreateForm({ ...createForm, name: e.target.value })
+   867→                      }
+   868→                      placeholder="Lead name"
+   869→                    />
+   870→                  </div>
+   871→                  <div className="space-y-1">
+   872→                    <Label>Phone *</Label>
+   873→                    <Input
+   874→                      value={createForm.phone}
+   875→                      onChange={(e) =>
+   876→                        setCreateForm({ ...createForm, phone: e.target.value })
+   877→                      }
+   878→                      placeholder="Phone number"
+   879→                    />
+   880→                  </div>
+   881→                </div>
+   882→                <div className="grid grid-cols-2 gap-3">
+   883→                  <div className="space-y-1">
+   884→                    <Label>Email</Label>
+   885→                    <Input
+   886→                      value={createForm.email}
+   887→                      onChange={(e) =>
+   888→                        setCreateForm({ ...createForm, email: e.target.value })
+   889→                      }
+   890→                      placeholder="Email"
+   891→                    />
+   892→                  </div>
+   893→                  <div className="space-y-1">
+   894→                    <Label>Source</Label>
+   895→                    <Select
+   896→                      value={createForm.source}
+   897→                      onValueChange={(v) =>
+   898→                        setCreateForm({ ...createForm, source: v })
+   899→                      }
+   900→                    >
+   901→                      <SelectTrigger>
+   902→                        <SelectValue />
+   903→                      </SelectTrigger>
+   904→                      <SelectContent>
+   905→                        {sources.map((s) => (
+   906→                          <SelectItem key={s} value={s}>
+   907→                            {s}
+   908→                          </SelectItem>
+   909→                        ))}
+   910→                      </SelectContent>
+   911→                    </Select>
+   912→                  </div>
+   913→                </div>
+   914→                <div className="grid grid-cols-2 gap-3">
+   915→                  <div className="space-y-1">
+   916→                    <Label>Budget</Label>
+   917→                    <Input
+   918→                      value={createForm.budget}
+   919→                      onChange={(e) =>
+   920→                        setCreateForm({ ...createForm, budget: e.target.value })
+   921→                      }
+   922→                      placeholder="e.g. 50L - 1Cr"
+   923→                    />
+   924→                  </div>
+   925→                  <div className="space-y-1">
+   926→                    <Label>Project</Label>
+   927→                    <Select
+   928→                      value={createForm.projectId}
+   929→                      onValueChange={(v) =>
+   930→                        setCreateForm({ ...createForm, projectId: v, propertyId: "" })
+   931→                      }
+   932→                    >
+   933→                      <SelectTrigger>
+   934→                        <SelectValue placeholder="Select project" />
+   935→                      </SelectTrigger>
+   936→                      <SelectContent>
+   937→                        {projects.map((p) => (
+   938→                          <SelectItem key={p.id} value={p.id}>
+   939→                            {p.name}
+   940→                          </SelectItem>
+   941→                        ))}
+   942→                      </SelectContent>
+   943→                    </Select>
+   944→                  </div>
+   945→                </div>
+   946→                {/* Property dropdown - shows properties (filtered by selected project if any) */}
+   947→                <div className="space-y-1">
+   948→                  <Label>Property</Label>
+   949→                  <Select
+   950→                    value={createForm.propertyId}
+   951→                    onValueChange={(v) =>
+   952→                      setCreateForm({ ...createForm, propertyId: v })
+   953→                    }
+   954→                  >
+   955→                    <SelectTrigger>
+   956→                      <SelectValue placeholder="Select property" />
+   957→                    </SelectTrigger>
+   958→                    <SelectContent>
+   959→                      {properties
+   960→                        .filter((p) =>
+   961→                          !createForm.projectId || p.project?.id === createForm.projectId
+   962→                        )
+   963→                        .map((p) => (
+   964→                          <SelectItem key={p.id} value={p.id}>
+   965→                            {p.name} {p.project ? `(${p.project.name})` : ""} {p.price ? `- ₹${p.price.toLocaleString()}` : ""}
+   966→                          </SelectItem>
+   967→                        ))}
+   968→                    </SelectContent>
+   969→                  </Select>
+   970→                </div>
+   971→                {isAdminRole(user?.role || "") && users.length > 0 && (
+   972→                  <div className="space-y-1">
+   973→                    <Label>Assign To</Label>
+   974→                    <Select
+   975→                      value={createForm.assignTo}
+   976→                      onValueChange={(v) =>
+   977→                        setCreateForm({ ...createForm, assignTo: v })
+   978→                      }
+   979→                    >
+   980→                      <SelectTrigger>
+   981→                        <SelectValue placeholder="Assign to (optional)" />
+   982→                      </SelectTrigger>
+   983→                      <SelectContent>
+   984→                        {users
+   985→                          .filter((u) => u.isActive && u.role !== "admin")
+   986→                          .map((u) => (
+   987→                            <SelectItem key={u.id} value={u.id}>
+   988→                              {u.name} ({u.role})
+   989→                            </SelectItem>
+   990→                          ))}
+   991→                      </SelectContent>
+   992→                    </Select>
+   993→                  </div>
+   994→                )}
+   995→                <div className="space-y-1">
+   996→                  <Label>Notes</Label>
+   997→                  <Textarea
+   998→                    value={createForm.notes}
+   999→                    onChange={(e) =>
+  1000→                      setCreateForm({ ...createForm, notes: e.target.value })
+  1001→                    }
+  1002→                    placeholder="Additional notes"
+  1003→                    rows={2}
+  1004→                  />
+  1005→                </div>
+  1006→                <Button
+  1007→                  onClick={handleCreateLead}
+  1008→                  className="w-full bg-brand hover:bg-brand-dark"
+  1009→                  disabled={!createForm.name || !createForm.phone}
+  1010→                >
+  1011→                  Create Lead
+  1012→                </Button>
+  1013→              </div>
+  1014→            </DialogContent>
+  1015→          </Dialog>
+  1016→        </div>
+  1017→      </div>
+  1018→
+  1019→      {/* Today's Follow-ups Filter Banner */}
+  1020→      {todayFollowUpsFilter && (
+  1021→        <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40 px-4 py-2.5">
+  1022→          <div className="flex items-center gap-2 text-sm text-red-700 dark:text-red-300">
+  1023→            <CalendarClock className="h-4 w-4" />
+  1024→            <span className="font-medium">
+  1025→              Showing leads with follow-ups scheduled for{" "}
+  1026→              {followUpDate
+  1027→                ? new Date(followUpDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+  1028→                : "today"}
+  1029→              . As you complete calls, leads will disappear from this view.
+  1030→            </span>
+  1031→          </div>
+  1032→          <Button
+  1033→            variant="ghost"
+  1034→            size="sm"
+  1035→            className="h-8 text-red-700 hover:text-red-900 dark:text-red-300 dark:hover:text-red-100 hover:bg-red-100 dark:hover:bg-red-900/40"
+  1036→            onClick={() => { setTodayFollowUpsFilter(false); setFollowUpDate(""); }}
+  1037→          >
+  1038→            <XCircle className="mr-1 h-3.5 w-3.5" /> Clear
+  1039→          </Button>
+  1040→        </div>
+  1041→      )}
+  1042→
+  1043→      {/* Pending Follow-ups Filter Banner */}
+  1044→      {pendingFollowUpsFilter && (
+  1045→        <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40 px-4 py-2.5">
+  1046→          <div className="flex items-center gap-2 text-sm text-red-700 dark:text-red-300">
+  1047→            <AlertCircle className="h-4 w-4" />
+  1048→            <span className="font-medium">Showing only leads with pending follow-ups</span>
+  1049→          </div>
+  1050→          <Button
+  1051→            variant="ghost"
+  1052→            size="sm"
+  1053→            className="h-8 text-red-700 hover:text-red-900 dark:text-red-300 dark:hover:text-red-100 hover:bg-red-100 dark:hover:bg-red-900/40"
+  1054→            onClick={() => setPendingFollowUpsFilter(false)}
+  1055→          >
+  1056→            <XCircle className="mr-1 h-3.5 w-3.5" /> Clear
+  1057→          </Button>
+  1058→        </div>
+  1059→      )}
+  1060→
+  1061→      {/* Count */}
+  1062→      <div className="text-sm text-muted-foreground">
+  1063→        {total} lead{total !== 1 ? "s" : ""} found
+  1064→      </div>
+  1065→
+  1066→      {/* Lead List - Flat Line-by-Line Layout */}
+  1067→      {loading ? (
+  1068→        <div className="space-y-2">
+  1069→          {[...Array(6)].map((_, i) => (
+  1070→            <div key={i} className="h-24 animate-pulse rounded-lg bg-muted" />
+  1071→          ))}
+  1072→        </div>
+  1073→      ) : leads.length === 0 ? (
+  1074→        <div className="rounded-lg border border-border py-12 text-center">
+  1075→          <p className="text-lg font-medium text-muted-foreground">No leads found</p>
+  1076→          <p className="text-sm text-muted-foreground">
+  1077→            Create a new lead or adjust your filters
+  1078→          </p>
+  1079→        </div>
+  1080→      ) : (
+  1081→        <div className="rounded-lg border border-border overflow-hidden">
+  1082→          {/* Header row */}
+  1083→          <div className="hidden md:grid md:grid-cols-[auto_1fr_1fr_auto] gap-4 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border">
+  1084→            <div className="w-8">
+  1085→              {isAdminRole(user?.role || "") && (
+  1086→                <Checkbox
+  1087→                  checked={selectedLeadIds.size === leads.length && leads.length > 0}
+  1088→                  onCheckedChange={toggleSelectAll}
+  1089→                />
+  1090→              )}
+  1091→            </div>
+  1092→            <div>Lead Info</div>
+  1093→            <div>Details</div>
+  1094→            <div className="min-w-[340px]">Actions</div>
+  1095→          </div>
+  1096→
+  1097→          {/* Lead rows */}
+  1098→          {leads.map((lead, idx) => {
+  1099→            // In My Leads view, add a divider between fresh and acted-upon leads
+  1100→            const isFresh = !lead.callLogs || lead.callLogs.length === 0;
+  1101→            const prevLead = idx > 0 ? leads[idx - 1] : null;
+  1102→            const prevIsFresh = prevLead ? (!prevLead.callLogs || prevLead.callLogs.length === 0) : true;
+  1103→            const showDivider = myLeadsFilter && prevIsFresh && !isFresh;
+  1104→
+  1105→            return (
+  1106→            <div key={lead.id}>
+  1107→              {showDivider && (
+  1108→                <div className="flex items-center gap-3 px-4 py-2 bg-muted/30 border-b border-border">
+  1109→                  <div className="flex-1 h-px bg-border" />
+  1110→                  <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">Previously Contacted</span>
+  1111→                  <div className="flex-1 h-px bg-border" />
+  1112→                </div>
+  1113→              )}
+  1114→            <div
+  1115→              className={`border-b border-border last:border-b-0 px-4 py-3 transition-colors ${
+  1116→                selectedLeadIds.has(lead.id) ? "bg-brand/5" : "hover:bg-muted/30"
+  1117→              } ${myLeadsFilter && isFresh ? "border-l-2 border-l-emerald-500" : ""}`}
+  1118→            >
+  1119→              {/* Row 1: Main info */}
+  1120→              <div className="flex flex-col md:grid md:grid-cols-[auto_1fr_1fr_auto] gap-2 md:gap-4">
+  1121→                {/* Checkbox column (admin only) */}
+  1122→                <div className="hidden md:flex items-center w-8">
+  1123→                  {isAdminRole(user?.role || "") && (
+  1124→                    <Checkbox
+  1125→                      checked={selectedLeadIds.has(lead.id)}
+  1126→                      onCheckedChange={() => toggleSelectLead(lead.id)}
+  1127→                    />
+  1128→                  )}
+  1129→                </div>
+  1130→
+  1131→                {/* Left: Lead Info */}
+  1132→                <div className="min-w-0">
+  1133→                  <div className="flex items-center gap-2 flex-wrap">
+  1134→                    {/* Mobile checkbox for admin */}
+  1135→                    {isAdminRole(user?.role || "") && (
+  1136→                      <Checkbox
+  1137→                        checked={selectedLeadIds.has(lead.id)}
+  1138→                        onCheckedChange={() => toggleSelectLead(lead.id)}
+  1139→                        className="md:hidden"
+  1140→                      />
+  1141→                    )}
+  1142→                    <div className={`h-2 w-2 rounded-full shrink-0 ${dotColors[lead.pipelineStatus] || "bg-gray-400"}`} />
+  1143→                    <span className="font-semibold text-foreground text-sm truncate">
+  1144→                      {lead.name}
+  1145→                    </span>
+  1146→                    <Badge
+  1147→                      variant="secondary"
+  1148→                      className={`text-[10px] px-1.5 py-0 shrink-0 ${statusColors[lead.pipelineStatus] || ""}`}
+  1149→                    >
+  1150→                      {lead.pipelineStatus}
+  1151→                    </Badge>
+  1152→                    {myLeadsFilter && isFresh && (
+  1153→                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-emerald-500/50 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30">
+  1154→                        Fresh
+  1155→                      </Badge>
+  1156→                    )}
+  1157→                    {lead.leadStatus && lead.leadStatus !== "New" && (
+  1158→                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-brand/30 text-brand">
+  1159→                        {lead.leadStatus}
+  1160→                      </Badge>
+  1161→                    )}
+  1162→                    {lead.followUps && lead.followUps.length > 0 && (
+  1163→                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-amber-500/50 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 flex items-center gap-1">
+  1164→                        <CalendarClock className="h-3 w-3" />
+  1165→                        Follow-up {new Date(lead.followUps[0].scheduledAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+  1166→                      </Badge>
+  1167→                    )}
+  1168→                    {canViewOnly(lead) && (
+  1169→                      <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+  1170→                    )}
+  1171→                  </div>
+  1172→                  <div className="mt-0.5 text-xs text-muted-foreground">
+  1173→                    <span className="flex items-center gap-1 inline-flex">{lead.phone}<button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(lead.phone); }} className="inline-flex text-muted-foreground hover:text-brand transition-colors"><Copy className="h-3 w-3" /></button></span>
+  1174→                    {lead.email && ` · ${lead.email}`}
+  1175→                  </div>
+  1176→                </div>
+  1177→
+  1178→                {/* Middle: Details */}
+  1179→                <div className="min-w-0">
+  1180→                  <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+  1181→                    <span>Source: {lead.source}</span>
+  1182→                    {lead.project && <span>· {lead.project.name}</span>}
+  1183→                    {lead.budget && <span>· {lead.budget}</span>}
+  1184→                  </div>
+  1185→                  <div className="mt-0.5 flex items-center gap-2 text-xs">
+  1186→                    <span className="text-muted-foreground">
+  1187→                      Owner: <span className="text-foreground font-medium">{lead.currentOwner.name}</span>
+  1188→                    </span>
+  1189→                    {canViewOnly(lead) && (
+  1190→                      <span className="text-amber-600 dark:text-amber-400 font-medium">
+  1191→                        (View Only)
+  1192→                      </span>
+  1193→                    )}
+  1194→                  </div>
+  1195→                  {/* Last feedback (clickable to expand full history) */}
+  1196→                  {lead.callLogs.length > 0 && (
+  1197→                    <button
+  1198→                      type="button"
+  1199→                      onClick={(e) => {
+  1200→                        e.stopPropagation();
+  1201→                        toggleFeedbackHistory(lead.id);
+  1202→                      }}
+  1203→                      className="mt-1 text-xs text-muted-foreground hover:text-brand transition-colors text-left max-w-md truncate flex items-center gap-1"
+  1204→                      title="Click to view all feedback history"
+  1205→                    >
+  1206→                      <MessageSquare className="h-3 w-3 shrink-0" />
+  1207→                      <span className={expandedFeedback[lead.id] ? "font-medium" : ""}>
+  1208→                        {expandedFeedback[lead.id] ? `Hide feedback history (${lead.callLogs.length}+ logs)` : `Last: "${lead.callLogs[0].notes}"`}
+  1209→                      </span>
+  1210→                      {!expandedFeedback[lead.id] && <span className="text-[10px] text-brand">View all</span>}
+  1211→                    </button>
+  1212→                  )}
+  1213→                  {/* Expanded feedback history */}
+  1214→                  {expandedFeedback[lead.id] && (
+  1215→                    <div className="mt-2 w-full rounded-md border border-border bg-muted/30 p-2 max-h-60 overflow-y-auto">
+  1216→                      {fullCallLogs[lead.id] === undefined ? (
+  1217→                        <div className="text-xs text-muted-foreground flex items-center gap-2 py-1">
+  1218→                          <RefreshCw className="h-3 w-3 animate-spin" /> Loading feedback...
+  1219→                        </div>
+  1220→                      ) : fullCallLogs[lead.id].length === 0 ? (
+  1221→                        <div className="text-xs text-muted-foreground py-1">No feedback logs found.</div>
+  1222→                      ) : (
+  1223→                        <div className="space-y-1.5">
+  1224→                          {fullCallLogs[lead.id].map((log) => (
+  1225→                            <div key={log.id} className="text-xs border-b border-border last:border-b-0 pb-1.5 last:pb-0">
+  1226→                              <div className="flex items-center justify-between gap-2 mb-0.5">
+  1227→                                <span className="font-medium text-foreground">{log.user?.name || "Unknown"}</span>
+  1228→                                <div className="flex items-center gap-1.5">
+  1229→                                  {log.callType && (
+  1230→                                    <Badge variant="outline" className="text-[9px] px-1 py-0">{log.callType}</Badge>
+  1231→                                  )}
+  1232→                                  <span className="text-[10px] text-muted-foreground">
+  1233→                                    {new Date(log.createdAt).toLocaleString("en-IN", {
+  1234→                                      day: "2-digit",
+  1235→                                      month: "short",
+  1236→                                      hour: "2-digit",
+  1237→                                      minute: "2-digit",
+  1238→                                    })}
+  1239→                                  </span>
+  1240→                                </div>
+  1241→                              </div>
+  1242→                              <div className="text-muted-foreground whitespace-pre-wrap break-words">{log.notes}</div>
+  1243→                            </div>
+  1244→                          ))}
+  1245→                        </div>
+  1246→                      )}
+  1247→                    </div>
+  1248→                  )}
+  1249→                </div>
+  1250→
+  1251→                {/* Right: Inline Actions */}
+  1252→                <div className="flex items-center gap-1.5 min-w-0 md:min-w-[340px] flex-wrap">
+  1253→                  {/* Quick Feedback button - visible for all roles who can edit */}
+  1254→                  {canEdit(lead) && (
+  1255→                    <Button
+  1256→                      size="sm"
+  1257→                      variant="outline"
+  1258→                      className="h-7 text-xs px-2 shrink-0"
+  1259→                      onClick={() => openFeedbackDialog(lead)}
+  1260→                    >
+  1261→                      <MessageSquare className="mr-1 h-3 w-3" />
+  1262→                      Feedback
+  1263→                    </Button>
+  1264→                  )}
+  1265→
+  1266→                  {/* Follow-up button - visible for all roles who can edit */}
+  1267→                  {canEdit(lead) && (
+  1268→                    <Button
+  1269→                      size="sm"
+  1270→                      variant="outline"
+  1271→                      className="h-7 text-xs px-2 shrink-0"
+  1272→                      onClick={() => {
+  1273→                        setFeedbackLead(lead);
+  1274→                        setFeedbackForm({
+  1275→                          notes: "",
+  1276→                          callType: "Follow-up",
+  1277→                          callDate: new Date().toISOString().slice(0, 16),
+  1278→                          assignTo: "",
+  1279→                          followUpDate: "",
+  1280→                          dropLead: false,
+  1281→                          leadStatus: "",
+  1282→                        });
+  1283→                        setFeedbackOpen(true);
+  1284→                      }}
+  1285→                    >
+  1286→                      <CalendarClock className="mr-1 h-3 w-3" />
+  1287→                      Follow Up
+  1288→                    </Button>
+  1289→                  )}
+  1290→
+  1291→                  {/* Assign button - visible if user can assign this lead */}
+  1292→                  {canAssign(lead) && getAssignableUsers(lead.currentOwnerId).length > 0 && (
+  1293→                    <Button
+  1294→                      size="sm"
+  1295→                      variant="outline"
+  1296→                      className="h-7 text-xs px-2 shrink-0"
+  1297→                      onClick={() => openAssignDialog(lead)}
+  1298→                    >
+  1299→                      <UserPlus className="mr-1 h-3 w-3" />
+  1300→                      Assign
+  1301→                    </Button>
+  1302→                  )}
+  1303→
+  1304→                  {/* Update button */}
+  1305→                  <Button
+  1306→                    variant="outline"
+  1307→                    size="sm"
+  1308→                    className="h-7 text-xs px-2 gap-1 shrink-0 text-brand hover:text-brand-dark hover:bg-brand/10 border-brand/30"
+  1309→                    onClick={(e) => {
+  1310→                      e.stopPropagation();
+  1311→                      e.preventDefault();
+  1312→                      setSelectedLeadId(lead.id);
+  1313→                      setPage("lead-detail");
+  1314→                    }}
+  1315→                  >
+  1316→                    <Pencil className="h-3 w-3" /> Update
+  1317→                  </Button>
+  1318→
+  1319→                  <DropdownMenu>
+  1320→                    <DropdownMenuTrigger asChild>
+  1321→                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0">
+  1322→                        <MoreVertical className="h-3.5 w-3.5" />
+  1323→                      </Button>
+  1324→                    </DropdownMenuTrigger>
+  1325→                    <DropdownMenuContent align="end">
+  1326→                      <DropdownMenuItem
+  1327→                        onClick={() => {
+  1328→                          setSelectedLeadId(lead.id);
+  1329→                          setPage("lead-detail");
+  1330→                        }}
+  1331→                      >
+  1332→                        <Eye className="mr-2 h-3 w-3" /> View Details
+  1333→                      </DropdownMenuItem>
+  1334→                      {canEdit(lead) && (
+  1335→                        <>
+  1336→                          <DropdownMenuItem onClick={() => openFeedbackDialog(lead)}>
+  1337→                            <MessageSquare className="mr-2 h-3 w-3" /> Quick Feedback
+  1338→                          </DropdownMenuItem>
+  1339→                          <DropdownMenuItem
+  1340→                            onClick={() => {
+  1341→                              setFeedbackLead(lead);
+  1342→                              setFeedbackForm({
+  1343→                                notes: "",
+  1344→                                callType: "Follow-up",
+  1345→                                callDate: new Date().toISOString().slice(0, 16),
+  1346→                                assignTo: "",
+  1347→                                followUpDate: "",
+  1348→                                dropLead: false,
+  1349→                                leadStatus: "",
+  1350→                              });
+  1351→                              setFeedbackOpen(true);
+  1352→                            }}
+  1353→                          >
+  1354→                            <CalendarClock className="mr-2 h-3 w-3" /> Follow Up
+  1355→                          </DropdownMenuItem>
+  1356→                          {canAssign(lead) && (
+  1357→                            <DropdownMenuItem onClick={() => openAssignDialog(lead)}>
+  1358→                              <UserPlus className="mr-2 h-3 w-3" /> Assign Lead
+  1359→                            </DropdownMenuItem>
+  1360→                          )}
+  1361→                        </>
+  1362→                      )}
+  1363→                      {isAdminRole(user?.role || "") && (
+  1364→                        <DropdownMenuItem
+  1365→                          className="text-destructive"
+  1366→                          onClick={() => setDeleteId(lead.id)}
+  1367→                        >
+  1368→                          <Trash2 className="mr-2 h-3 w-3" /> Delete Lead
+  1369→                        </DropdownMenuItem>
+  1370→                      )}
+  1371→                    </DropdownMenuContent>
+  1372→                  </DropdownMenu>
+  1373→                </div>
+  1374→              </div>
+  1375→            </div>
+  1376→            </div>
+  1377→            );
+  1378→          })}
+  1379→        </div>
+  1380→      )}
+  1381→
+  1382→      {/* Quick Feedback Dialog */}
+  1383→      <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
+  1384→        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+  1385→          <DialogHeader>
+  1386→            <DialogTitle>
+  1387→              {feedbackForm.callType === "Follow-up" ? "Follow Up" : "Quick Feedback"} — {feedbackLead?.name}
+  1388→            </DialogTitle>
+  1389→          </DialogHeader>
+  1390→          <div className="space-y-3">
+  1391→            {feedbackLead?.callLogs && feedbackLead.callLogs.length > 0 && (
+  1392→              <div className="rounded-md bg-muted p-3">
+  1393→                <div className="text-xs font-medium text-muted-foreground mb-1">
+  1394→                  Last Feedback
+  1395→                </div>
+  1396→                <div className="text-sm text-foreground">
+  1397→                  {feedbackLead.callLogs[0].notes}
+  1398→                </div>
+  1399→                <div className="text-xs text-muted-foreground">
+  1400→                  by {feedbackLead.callLogs[0].user.name}
+  1401→                </div>
+  1402→              </div>
+  1403→            )}
+  1404→
+  1405→            <div className="space-y-1">
+  1406→              <Label>Date & Time</Label>
+  1407→              <Input
+  1408→                type="datetime-local"
+  1409→                value={feedbackForm.callDate}
+  1410→                onChange={(e) =>
+  1411→                  setFeedbackForm({ ...feedbackForm, callDate: e.target.value })
+  1412→                }
+  1413→              />
+  1414→            </div>
+  1415→
+  1416→            <div className="space-y-1">
+  1417→              <Label>Lead Status</Label>
+  1418→              <Select
+  1419→                value={feedbackForm.leadStatus}
+  1420→                onValueChange={(v) => setFeedbackForm({ ...feedbackForm, leadStatus: v })}
+  1421→              >
+  1422→                <SelectTrigger>
+  1423→                  <SelectValue placeholder="Select lead status..." />
+  1424→                </SelectTrigger>
+  1425→                <SelectContent>
+  1426→                  <SelectItem value="Not Connected">Not Connected</SelectItem>
+  1427→                  <SelectItem value="Site Visit Done">Site Visit Done</SelectItem>
+  1428→                  <SelectItem value="Prospect">Prospect</SelectItem>
+  1429→                  <SelectItem value="Not Interested">Not Interested</SelectItem>
+  1430→                  <SelectItem value="Site Visit Promised">Site Visit Promised</SelectItem>
+  1431→                  <SelectItem value="Booked">Booked</SelectItem>
+  1432→                </SelectContent>
+  1433→              </Select>
+  1434→            </div>
+  1435→
+  1436→            <div className="space-y-1">
+  1437→              <Label>Feedback Notes *</Label>
+  1438→              <Textarea
+  1439→                value={feedbackForm.notes}
+  1440→                onChange={(e) =>
+  1441→                  setFeedbackForm({ ...feedbackForm, notes: e.target.value })
+  1442→                }
+  1443→                placeholder="Enter feedback details..."
+  1444→                rows={3}
+  1445→              />
+  1446→            </div>
+  1447→
+  1448→            {/* Follow-up Date Option */}
+  1449→            <div className="space-y-1">
+  1450→              <Label>Schedule Follow-up Date (Optional)</Label>
+  1451→              <Input
+  1452→                type="datetime-local"
+  1453→                value={feedbackForm.followUpDate}
+  1454→                onChange={(e) =>
+  1455→                  setFeedbackForm({ ...feedbackForm, followUpDate: e.target.value })
+  1456→                }
+  1457→                placeholder="Select follow-up date & time"
+  1458→              />
+  1459→            </div>
+  1460→
+  1461→            {/* Drop Lead Option */}
+  1462→            <div className="flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800 p-3">
+  1463→              <Checkbox
+  1464→                id="dropLead"
+  1465→                checked={feedbackForm.dropLead}
+  1466→                onCheckedChange={(checked) =>
+  1467→                  setFeedbackForm({ ...feedbackForm, dropLead: !!checked })
+  1468→                }
+  1469→              />
+  1470→              <label htmlFor="dropLead" className="text-sm text-red-600 dark:text-red-400 cursor-pointer">
+  1471→                Drop this lead (mark as Lost)
+  1472→              </label>
+  1473→            </div>
+  1474→
+  1475→            {users.length > 0 && (
+  1476→              <div className="space-y-1">
+  1477→                <Label>Quick Assign To (Optional)</Label>
+  1478→                <Select
+  1479→                  value={feedbackForm.assignTo}
+  1480→                  onValueChange={(v) =>
+  1481→                    setFeedbackForm({ ...feedbackForm, assignTo: v })
+  1482→                  }
+  1483→                >
+  1484→                  <SelectTrigger>
+  1485→                    <SelectValue placeholder="Keep current owner" />
+  1486→                  </SelectTrigger>
+  1487→                  <SelectContent>
+  1488→                    {getAssignableUsers()
+  1489→                      .map((u) => (
+  1490→                        <SelectItem key={u.id} value={u.id}>
+  1491→                          {u.name} ({u.role})
+  1492→                        </SelectItem>
+  1493→                      ))}
+  1494→                  </SelectContent>
+  1495→                </Select>
+  1496→              </div>
+  1497→            )}
+  1498→
+  1499→            <Button
+  1500→              onClick={handleFeedback}
+  1501→              className="w-full bg-brand hover:bg-brand-dark"
+  1502→              disabled={!feedbackForm.notes}
+  1503→            >
+  1504→              Submit {feedbackForm.callType === "Follow-up" ? "Follow Up" : "Feedback"}
+  1505→            </Button>
+  1506→          </div>
+  1507→        </DialogContent>
+  1508→      </Dialog>
+  1509→
+  1510→      {/* Assign Dialog */}
+  1511→      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+  1512→        <DialogContent>
+  1513→          <DialogHeader>
+  1514→            <DialogTitle>Assign Lead — {assignLead?.name}</DialogTitle>
+  1515→          </DialogHeader>
+  1516→          <div className="space-y-3">
+  1517→            <div className="text-sm text-muted-foreground">
+  1518→              Current Owner: {assignLead?.currentOwner.name}
+  1519→            </div>
+  1520→            <div className="space-y-1">
+  1521→              <Label>Assign To *</Label>
+  1522→              <Select value={assignTo} onValueChange={setAssignTo}>
+  1523→                <SelectTrigger>
+  1524→                  <SelectValue placeholder="Select user to assign" />
+  1525→                </SelectTrigger>
+  1526→                <SelectContent>
+  1527→                  {assignLead && getAssignableUsers(assignLead.currentOwnerId).map((u) => (
+  1528→                    <SelectItem key={u.id} value={u.id}>
+  1529→                      {u.name} ({u.role})
+  1530→                    </SelectItem>
+  1531→                  ))}
+  1532→                </SelectContent>
+  1533→              </Select>
+  1534→            </div>
+  1535→            <div className="space-y-1">
+  1536→              <Label>Reason (Optional)</Label>
+  1537→              <Textarea
+  1538→                value={assignReason}
+  1539→                onChange={(e) => setAssignReason(e.target.value)}
+  1540→                placeholder="Reason for assignment"
+  1541→                rows={2}
+  1542→              />
+  1543→            </div>
+  1544→            <Button
+  1545→              onClick={handleAssign}
+  1546→              className="w-full bg-brand hover:bg-brand-dark"
+  1547→              disabled={!assignTo}
+  1548→            >
+  1549→              Assign Lead
+  1550→            </Button>
+  1551→          </div>
+  1552→        </DialogContent>
+  1553→      </Dialog>
+  1554→
+  1555→      {/* Bulk Assign Dialog */}
+  1556→      <Dialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen}>
+  1557→        <DialogContent>
+  1558→          <DialogHeader>
+  1559→            <DialogTitle>Bulk Assign — {selectedLeadIds.size} leads</DialogTitle>
+  1560→          </DialogHeader>
+  1561→          <div className="space-y-3">
+  1562→            <div className="space-y-1">
+  1563→              <Label>Assign All Selected Leads To *</Label>
+  1564→              <Select value={bulkAssignTo} onValueChange={setBulkAssignTo}>
+  1565→                <SelectTrigger>
+  1566→                  <SelectValue placeholder="Select user" />
+  1567→                </SelectTrigger>
+  1568→                <SelectContent>
+  1569→                  {users
+  1570→                    .filter((u) => u.isActive && u.role !== "admin")
+  1571→                    .map((u) => (
+  1572→                      <SelectItem key={u.id} value={u.id}>
+  1573→                        {u.name} ({u.role})
+  1574→                      </SelectItem>
+  1575→                    ))}
+  1576→                </SelectContent>
+  1577→              </Select>
+  1578→            </div>
+  1579→            <Button
+  1580→              onClick={handleBulkAssign}
+  1581→              className="w-full bg-brand hover:bg-brand-dark"
+  1582→              disabled={!bulkAssignTo}
+  1583→            >
+  1584→              Assign {selectedLeadIds.size} Leads
+  1585→            </Button>
+  1586→          </div>
+  1587→        </DialogContent>
+  1588→      </Dialog>
+  1589→
+  1590→      {/* Delete Confirm Dialog */}
+  1591→      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+  1592→        <DialogContent>
+  1593→          <DialogHeader>
+  1594→            <DialogTitle>Delete Lead</DialogTitle>
+  1595→          </DialogHeader>
+  1596→          <p className="text-sm text-muted-foreground">
+  1597→            Are you sure you want to delete this lead? This action cannot be undone.
+  1598→          </p>
+  1599→          <div className="flex gap-2 justify-end">
+  1600→            <Button variant="outline" onClick={() => setDeleteId(null)}>
+  1601→              Cancel
+  1602→            </Button>
+  1603→            <Button
+  1604→              variant="destructive"
+  1605→              onClick={() => deleteId && handleDelete(deleteId)}
+  1606→            >
+  1607→              Delete
+  1608→            </Button>
+  1609→          </div>
+  1610→        </DialogContent>
+  1611→      </Dialog>
+  1612→
+  1613→      {/* Bulk Delete Confirm Dialog */}
+  1614→      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+  1615→        <DialogContent>
+  1616→          <DialogHeader>
+  1617→            <DialogTitle>Bulk Delete — {selectedLeadIds.size} leads</DialogTitle>
+  1618→          </DialogHeader>
+  1619→          <p className="text-sm text-muted-foreground">
+  1620→            Are you sure you want to delete {selectedLeadIds.size} selected lead{selectedLeadIds.size !== 1 ? "s" : ""}? This action cannot be undone.
+  1621→          </p>
+  1622→          <div className="flex gap-2 justify-end">
+  1623→            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)}>
+  1624→              Cancel
+  1625→            </Button>
+  1626→            <Button
+  1627→              variant="destructive"
+  1628→              onClick={async () => {
+  1629→                for (const leadId of selectedLeadIds) {
+  1630→                  await fetch(`/api/leads/${leadId}`, { method: "DELETE" });
+  1631→                }
+  1632→                setBulkDeleteOpen(false);
+  1633→                setSelectedLeadIds(new Set());
+  1634→                doRefresh();
+  1635→              }}
+  1636→            >
+  1637→              Delete {selectedLeadIds.size} Lead{selectedLeadIds.size !== 1 ? "s" : ""}
+  1638→            </Button>
+  1639→          </div>
+  1640→        </DialogContent>
+  1641→      </Dialog>
+  1642→    </div>
+  1643→  );
+  1644→}
+  1645→

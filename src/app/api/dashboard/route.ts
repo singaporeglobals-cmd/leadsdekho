@@ -129,6 +129,7 @@ async function getAdminDashboard(combinedFilter: { createdAt?: { gte?: Date; lte
 }
 
 async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?: { gte?: Date; lte?: Date } }) {
+  // Use only currentOwnerId so reassigned leads disappear from the original creator's dashboard.
   const userWhere = { currentOwnerId: userId, ...dateFilter };
 
   const [
@@ -147,9 +148,10 @@ async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?:
       where: userWhere,
       _count: true,
     }),
+    // Count today's follow-ups on leads CURRENTLY owned by this user (regardless of who created the follow-up)
     db.followUp.count({
       where: {
-        userId,
+        lead: { currentOwnerId: userId },
         scheduledAt: {
           gte: new Date(new Date().setHours(0, 0, 0, 0)),
           lte: new Date(new Date().setHours(23, 59, 59, 999)),
@@ -159,13 +161,13 @@ async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?:
     }),
     db.followUp.count({
       where: {
-        userId,
+        lead: { currentOwnerId: userId },
         completed: false,
       },
     }),
     db.followUp.findMany({
       where: {
-        userId,
+        lead: { currentOwnerId: userId },
         completed: false,
       },
       include: { lead: { select: { id: true, name: true, phone: true } } },
@@ -201,7 +203,8 @@ async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?:
 }
 
 async function getSalesDashboard(userId: string, dateFilter: { createdAt?: { gte?: Date; lte?: Date } }) {
-  const userWhere = { OR: [{ currentOwnerId: userId }, { primaryOwnerId: userId }], ...dateFilter };
+  // Use only currentOwnerId so reassigned leads disappear from the original creator's dashboard.
+  const userWhere = { currentOwnerId: userId, ...dateFilter };
 
   const [
     myLeadsCount,
@@ -245,9 +248,10 @@ async function getSalesDashboard(userId: string, dateFilter: { createdAt?: { gte
         primaryOwner: { select: { name: true } },
       },
     }),
+    // Count today's follow-ups on leads CURRENTLY owned by this user (regardless of who created the follow-up)
     db.followUp.count({
       where: {
-        userId,
+        lead: { currentOwnerId: userId },
         scheduledAt: {
           gte: new Date(new Date().setHours(0, 0, 0, 0)),
           lte: new Date(new Date().setHours(23, 59, 59, 999)),
@@ -257,13 +261,13 @@ async function getSalesDashboard(userId: string, dateFilter: { createdAt?: { gte
     }),
     db.followUp.count({
       where: {
-        userId,
+        lead: { currentOwnerId: userId },
         completed: false,
       },
     }),
     db.followUp.findMany({
       where: {
-        userId,
+        lead: { currentOwnerId: userId },
         completed: false,
       },
       include: { lead: { select: { id: true, name: true, phone: true } } },
@@ -272,7 +276,7 @@ async function getSalesDashboard(userId: string, dateFilter: { createdAt?: { gte
     }),
     db.lead.count({
       where: {
-        OR: [{ currentOwnerId: userId }, { primaryOwnerId: userId }],
+        currentOwnerId: userId,
         leadStatus: "Booked",
         ...dateFilter,
       },
