@@ -299,6 +299,9 @@ export function LeadList() {
   };
 
   // Fetch leads
+  // The badge counts (My Leads count, Fresh count) only need to be fetched ONCE per session
+  // and refreshed when a lead is added/removed. They don't need to refetch on every filter change.
+  const [badgesFetched, setBadgesFetched] = useState(false);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -317,6 +320,10 @@ export function LeadList() {
       if (todayFollowUpsFilter) {
         params.set("todayFollowUps", "true");
         if (followUpDate) params.set("followUpDate", followUpDate);
+      }
+      // Only request badge counts on first load or after explicit refresh
+      if (!badgesFetched || refresh > 0) {
+        params.set("includeBadgeCounts", "true");
       }
 
       const res = await fetch(`/api/leads?${params.toString()}`);
@@ -340,11 +347,12 @@ export function LeadList() {
         // Extract counts from the same response (no extra API calls needed)
         if (data.myLeadsCount !== undefined) setMyLeadsCount(data.myLeadsCount);
         if (data.freshLeadsCount !== undefined) setFreshLeadsCount(data.freshLeadsCount);
+        if (!cancelled) setBadgesFetched(true);
       }
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, pendingFollowUpsFilter, todayFollowUpsFilter, followUpDate, refresh, user?.role]);
+  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, pendingFollowUpsFilter, todayFollowUpsFilter, followUpDate, refresh, user?.role, badgesFetched]);
 
   // Fetch users, projects, and lead sources - parallel for speed (properties lazy-loaded on dialog open)
   useEffect(() => {

@@ -124,10 +124,13 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Determine if we should include counts (default: true for efficiency)
+  // Counts are optional - the client can request them via includeCounts=true (default)
+  // but we skip the My Leads / Fresh Leads counts unless explicitly requested with includeBadgeCounts=true
+  // to avoid 2 extra count queries on every pagination / filter change.
   const includeCounts = searchParams.get("includeCounts") !== "false";
+  const includeBadgeCounts = searchParams.get("includeBadgeCounts") === "true";
 
-  // Build the count queries for My Leads and Fresh Leads (only when requested)
+  // Build the count queries for My Leads and Fresh Leads
   // Use only currentOwnerId so that reassigned leads disappear from the original creator's counts.
   const myLeadsWhere = {
     currentOwnerId: user.id,
@@ -142,7 +145,7 @@ export async function GET(req: NextRequest) {
   const countPromises: Promise<number>[] = [
     db.lead.count({ where }), // total for current filter
   ];
-  if (includeCounts) {
+  if (includeBadgeCounts) {
     countPromises.push(
       db.lead.count({ where: myLeadsWhere }),
       db.lead.count({ where: freshLeadsWhere })
@@ -152,15 +155,49 @@ export async function GET(req: NextRequest) {
   const [leads, ...counts] = await Promise.all([
     db.lead.findMany({
       where,
-      include: {
+      // Use select (not include) to ONLY fetch fields the UI needs - reduces payload & join overhead
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        source: true,
+        budget: true,
+        notes: true,
+        pipelineStatus: true,
+        leadStatus: true,
+        lostReason: true,
+        primaryOwnerId: true,
+        currentOwnerId: true,
+        projectId: true,
+        createdAt: true,
+        updatedAt: true,
         primaryOwner: { select: { id: true, name: true, email: true, role: true } },
         currentOwner: { select: { id: true, name: true, email: true, role: true } },
         project: { select: { id: true, name: true } },
-        callLogs: { orderBy: { createdAt: "desc" }, ...(allCallLogs ? {} : { take: 1 }), include: { user: { select: { name: true } } } },
+        // Only fetch the LATEST call log (for the "last feedback" badge) - we lazy-load full history on demand
+        callLogs: {
+          orderBy: { createdAt: "desc" },
+          take: allCallLogs ? undefined : 1,
+          select: {
+            id: true,
+            notes: true,
+            callType: true,
+            callDate: true,
+            createdAt: true,
+            user: { select: { id: true, name: true } },
+          },
+        },
+        // Only the next upcoming follow-up (for the date badge)
         followUps: {
           where: { completed: false },
           orderBy: { scheduledAt: "asc" },
           take: 1,
+          select: {
+            id: true,
+            scheduledAt: true,
+            notes: true,
+          },
         },
       },
       orderBy: { updatedAt: "desc" },
@@ -171,10 +208,14 @@ export async function GET(req: NextRequest) {
   ]);
 
   const total = counts[0];
-  const myLeadsCount = includeCounts ? counts[1] : undefined;
-  const freshLeadsCount = includeCounts ? counts[2] : undefined;
+  const myLeadsCount = includeBadgeCounts ? counts[1] : undefined;
+  const freshLeadsCount = includeBadgeCounts ? counts[2] : undefined;
 
-  return NextResponse.json({ leads, total, page, limit, myLeadsCount, freshLeadsCount });
+  // Set Cache-Control header so the browser can reuse the response for same-session navigations
+  // (60s stale-while-revalidate). Auth handled per-request via cookie so this is safe.
+  const res = NextResponse.json({ leads, total, page, limit, myLeadsCount, freshLeadsCount });
+  res.headers.set("Cache-Control", "private, max-age=0, stale-while-revalidate=60");
+  return res;
 }
 
 // POST /api/leads - Create a lead

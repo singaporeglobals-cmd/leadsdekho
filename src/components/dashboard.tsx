@@ -16,6 +16,7 @@ import {
   Clock,
   AlertCircle,
   Copy,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,11 +57,32 @@ function generateMonthOptions() {
 }
 
 export function AdminDashboard() {
-  const { setPage, setTodayFollowUpsFilter, setFollowUpDate } = useAppStore();
+  const { setPage, setTodayFollowUpsFilter, setFollowUpDate, user } = useAppStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState("all");
   const [assignFilter, setAssignFilter] = useState("all");
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimizeResult, setOptimizeResult] = useState<string | null>(null);
+
+  const applyOptimization = async () => {
+    if (!confirm("This will create database indexes to speed up the app. Continue?")) return;
+    setOptimizing(true);
+    setOptimizeResult(null);
+    try {
+      const res = await fetch("/api/admin/apply-indexes", { method: "POST" });
+      const d = await res.json();
+      if (res.ok) {
+        setOptimizeResult(`Done! Applied ${d.applied} indexes (${d.failed} failed). Reload the page to feel the speed.`);
+      } else {
+        setOptimizeResult(`Error: ${d.error || "Unknown"}`);
+      }
+    } catch (err: any) {
+      setOptimizeResult(`Error: ${err.message}`);
+    } finally {
+      setOptimizing(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -133,7 +155,7 @@ export function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Filters - Top Right */}
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-2 flex-wrap">
         <Select value={assignFilter} onValueChange={setAssignFilter}>
           <SelectTrigger className="w-[180px] h-9">
             <Users className="mr-1 h-3 w-3" />
@@ -161,6 +183,23 @@ export function AdminDashboard() {
             ))}
           </SelectContent>
         </Select>
+        {user?.role === "super_admin" && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 text-brand border-brand hover:bg-brand hover:text-white"
+            onClick={applyOptimization}
+            disabled={optimizing}
+          >
+            <Zap className="mr-1 h-3 w-3" />
+            {optimizing ? "Optimizing..." : "Optimize DB Speed"}
+          </Button>
+        )}
+        {optimizeResult && (
+          <div className="text-xs px-3 py-2 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 rounded border border-emerald-200 dark:border-emerald-800 max-w-md">
+            {optimizeResult}
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}

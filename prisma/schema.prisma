@@ -61,9 +61,12 @@ model Lead {
   @@index([pipelineStatus])
   @@index([source])
   @@index([currentOwnerId])
+  @@index([primaryOwnerId])
   @@index([projectId])
   @@index([createdAt])
   @@index([leadStatus])
+  @@index([currentOwnerId, pipelineStatus])
+  @@index([updatedAt])
 }
 
 model CallLog {
@@ -76,6 +79,9 @@ model CallLog {
   callDate    DateTime @default(now())
   callType    String   @default("Feedback")
   createdAt   DateTime @default(now())
+
+  @@index([leadId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model FollowUp {
@@ -89,6 +95,11 @@ model FollowUp {
   completed   Boolean  @default(false)
   completedAt DateTime?
   createdAt   DateTime @default(now())
+
+  @@index([leadId, scheduledAt])
+  @@index([userId, completed, scheduledAt])
+  @@index([completed, scheduledAt])
+  @@index([scheduledAt])
 }
 
 model SiteVisit {
@@ -103,6 +114,9 @@ model SiteVisit {
   feedback    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([userId, status, scheduledAt])
+  @@index([leadId])
 }
 
 model LeadAssignment {
@@ -115,6 +129,9 @@ model LeadAssignment {
   toUser      User     @relation("AssignedTo", fields: [toUserId], references: [id])
   reason      String?
   createdAt   DateTime @default(now())
+
+  @@index([leadId])
+  @@index([toUserId])
 }
 
 model TimelineEvent {
@@ -126,6 +143,8 @@ model TimelineEvent {
   eventType   String
   description String
   createdAt   DateTime @default(now())
+
+  @@index([leadId, createdAt(sort: Desc)])
 }
 
 model Project {

@@ -36,6 +36,12 @@ export async function GET(req: NextRequest) {
 }
 
 async function getAdminDashboard(combinedFilter: { createdAt?: { gte?: Date; lte?: Date }; currentOwnerId?: string }, dateFilter: { createdAt?: { gte?: Date; lte?: Date } }) {
+  // Compute today's follow-up window once
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
   const [
     totalLeads,
     leadsByStatus,
@@ -57,11 +63,18 @@ async function getAdminDashboard(combinedFilter: { createdAt?: { gte?: Date; lte
       where: combinedFilter,
       take: 10,
       orderBy: { createdAt: "desc" },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        source: true,
+        pipelineStatus: true,
+        createdAt: true,
         currentOwner: { select: { name: true } },
         primaryOwner: { select: { name: true } },
       },
     }),
+    // Slim teamMembers query - drop _count (was causing N+1-style joins); we'll compute counts separately only if needed
     db.user.findMany({
       where: { isActive: true },
       select: {
@@ -72,8 +85,6 @@ async function getAdminDashboard(combinedFilter: { createdAt?: { gte?: Date; lte
         _count: {
           select: {
             currentLeads: true,
-            primaryLeads: true,
-            callLogs: true,
           },
         },
       },
@@ -84,10 +95,7 @@ async function getAdminDashboard(combinedFilter: { createdAt?: { gte?: Date; lte
     }),
     db.followUp.count({
       where: {
-        scheduledAt: {
-          gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          lte: new Date(new Date().setHours(23, 59, 59, 999)),
-        },
+        scheduledAt: { gte: todayStart, lte: todayEnd },
         completed: false,
       },
     }),
