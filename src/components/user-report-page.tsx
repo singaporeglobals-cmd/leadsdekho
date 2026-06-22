@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import {
   Users, Phone, TrendingUp, CalendarCheck, MapPin, Building2,
-  AlertCircle, UserCheck, UserX, Clock, BarChart3,
+  AlertCircle, UserCheck, UserX, Clock, BarChart3, CalendarDays, Sparkles,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 
@@ -25,6 +25,8 @@ interface UserReportData {
   totalLeads: number;
   followUpLeads: number;
   freshLeadsToday: number;
+  totalFreshLeadsInRange: number;
+  freshLeadsByDate: Array<{ date: string; count: number }>;
   connectedLeads: number;
   notConnectedLeads: number;
   siteVisitArranged: number;
@@ -71,6 +73,21 @@ function getDefaultDates() {
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
   return { firstDay, lastDay };
+}
+
+function todayStr() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function formatDateLabel(dateStr: string) {
+  const d = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.getTime() === today.getTime()) return "Today";
+  if (d.getTime() === yesterday.getTime()) return "Yesterday";
+  return d.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
 }
 
 export function UserReportPage() {
@@ -140,31 +157,46 @@ export function UserReportPage() {
       {/* Filter Bar */}
       <Card className="border-brand/20">
         <CardContent className="p-4">
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-3">
+            {/* Quick Date Presets */}
             <div>
-              <Label className="text-xs font-medium text-muted-foreground">Select User</Label>
-              <Select value={selectedUser} onValueChange={setSelectedUser}>
-                <SelectTrigger className="w-52 h-9">
-                  <Users className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
-                  <SelectValue placeholder="Select user" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Users</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name} ({u.role})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Quick Date Range</Label>
+              <div className="flex flex-wrap gap-1.5">
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setFromDate(todayStr()); setToDate(todayStr()); }}>Today</Button>
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { const d = new Date(); d.setDate(d.getDate() - 1); const s = d.toISOString().split("T")[0]; setFromDate(s); setToDate(s); }}>Yesterday</Button>
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { const d = new Date(); d.setDate(d.getDate() - 2); setFromDate(d.toISOString().split("T")[0]); setToDate(todayStr()); }}>Last 3 Days</Button>
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { const d = new Date(); d.setDate(d.getDate() - 6); setFromDate(d.toISOString().split("T")[0]); setToDate(todayStr()); }}>Last 7 Days</Button>
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { const d = new Date(); d.setDate(d.getDate() - 29); setFromDate(d.toISOString().split("T")[0]); setToDate(todayStr()); }}>Last 30 Days</Button>
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { const d = new Date(); setFromDate(new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split("T")[0]); setToDate(new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split("T")[0]); }}>This Month</Button>
+              </div>
             </div>
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground">From Date</Label>
-              <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-40 h-9" />
-            </div>
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground">To Date</Label>
-              <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-40 h-9" />
+            {/* User + Custom Date Range */}
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground">Select User</Label>
+                <Select value={selectedUser} onValueChange={setSelectedUser}>
+                  <SelectTrigger className="w-52 h-9">
+                    <Users className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue placeholder="Select user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Users</SelectItem>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name} ({u.role})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground">From Date</Label>
+                <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-40 h-9" />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground">To Date</Label>
+                <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-40 h-9" />
+              </div>
             </div>
           </div>
         </CardContent>
@@ -211,20 +243,31 @@ export function UserReportPage() {
             </div>
           </div>
 
-          {/* Summary Cards */}
+          {/* Summary Cards - Row 1: Fresh leads prominent */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="border-l-4 border-l-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">Total Fresh Leads (in range)</p>
+                    <p className="mt-1 text-3xl font-bold text-emerald-700 dark:text-emerald-300">
+                      {data.totalFreshLeadsInRange ?? 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {fromDate} to {toDate}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-emerald-100 dark:bg-emerald-900 p-3">
+                    <Sparkles className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
             <MetricCard
               label="Total Leads"
               value={data.totalLeads}
               icon={Users}
               color="#dfb338"
-              onClick={() => navigateToLeads()}
-            />
-            <MetricCard
-              label="Follow-up Leads"
-              value={data.followUpLeads}
-              icon={Clock}
-              color="#8b5cf6"
               onClick={() => navigateToLeads()}
             />
             <MetricCard
@@ -235,15 +278,22 @@ export function UserReportPage() {
               onClick={() => navigateToLeads()}
             />
             <MetricCard
+              label="Follow-up Leads"
+              value={data.followUpLeads}
+              icon={Clock}
+              color="#8b5cf6"
+              onClick={() => navigateToLeads()}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard
               label="Connected"
               value={data.connectedLeads}
               icon={Phone}
               color="#3b82f6"
               onClick={() => navigateToLeads()}
             />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard
               label="Not Connected"
               value={data.notConnectedLeads}
@@ -265,14 +315,79 @@ export function UserReportPage() {
               color="#8b5cf6"
               onClick={() => navigateToLeads("Site Visit Done")}
             />
-            <MetricCard
-              label="Booking"
-              value={data.bookingCount}
-              icon={TrendingUp}
-              color="#22c55e"
-              onClick={() => navigateToLeads("Booked")}
-            />
           </div>
+
+          {/* Per-day Fresh Lead Breakdown */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-brand" /> Day-wise Fresh Lead Breakdown
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                How many fresh leads were assigned to this user each day in the selected range
+              </p>
+            </CardHeader>
+            <CardContent>
+              {(!data.freshLeadsByDate || data.freshLeadsByDate.length === 0) ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  <CalendarDays className="h-10 w-10 mx-auto opacity-30" />
+                  <p className="mt-2">No fresh leads found in this date range</p>
+                </div>
+              ) : (
+                <div className="space-y-1.5 max-h-[500px] overflow-y-auto">
+                  {/* Bar chart visualization + table */}
+                  {data.freshLeadsByDate.map((row) => {
+                    const maxCount = Math.max(...data.freshLeadsByDate.map((r) => r.count), 1);
+                    const barWidth = (row.count / maxCount) * 100;
+                    const isToday = row.date === todayStr();
+                    return (
+                      <div
+                        key={row.date}
+                        className={`flex items-center gap-3 p-2 rounded-lg ${isToday ? "bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800" : "hover:bg-muted/40"}`}
+                      >
+                        <div className="w-32 shrink-0">
+                          <div className="text-sm font-medium text-foreground">
+                            {formatDateLabel(row.date)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(row.date + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                          </div>
+                        </div>
+                        <div className="flex-1 h-8 bg-muted/30 rounded relative overflow-hidden">
+                          <div
+                            className={`h-full rounded transition-all ${isToday ? "bg-amber-500" : "bg-brand"}`}
+                            style={{ width: `${barWidth}%` }}
+                          />
+                        </div>
+                        <div className="w-16 shrink-0 text-right">
+                          <span className={`text-lg font-bold ${isToday ? "text-amber-600 dark:text-amber-400" : "text-foreground"}`}>
+                            {row.count}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-1">
+                            {row.count === 1 ? "lead" : "leads"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {/* Total row */}
+                  <div className="flex items-center gap-3 p-3 mt-2 rounded-lg bg-brand/10 border-t-2 border-brand/30">
+                    <div className="w-32 shrink-0">
+                      <div className="text-sm font-bold text-foreground">Total</div>
+                      <div className="text-xs text-muted-foreground">{data.freshLeadsByDate.length} days</div>
+                    </div>
+                    <div className="flex-1" />
+                    <div className="w-16 shrink-0 text-right">
+                      <span className="text-lg font-bold text-brand">
+                        {data.freshLeadsByDate.reduce((sum, r) => sum + r.count, 0)}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-1">leads</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Summary Table */}
           <Card>

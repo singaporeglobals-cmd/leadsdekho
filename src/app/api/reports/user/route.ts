@@ -27,10 +27,17 @@ export async function GET(req: NextRequest) {
 
   const userWhere = { currentOwnerId: userId, ...dateFilter };
 
+  // Compute today's window once
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
   const [
     totalLeads,
     followUpLeads,
     freshLeadsToday,
+    totalFreshLeadsInRange,
     connectedLeads,
     notConnectedLeads,
     siteVisitArranged,
@@ -48,10 +55,14 @@ export async function GET(req: NextRequest) {
     db.lead.count({
       where: {
         currentOwnerId: userId,
-        createdAt: {
-          gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          lte: new Date(new Date().setHours(23, 59, 59, 999)),
-        },
+        createdAt: { gte: todayStart, lte: todayEnd },
+      },
+    }),
+    // Total fresh leads (newly created) assigned to user in the date range
+    db.lead.count({
+      where: {
+        currentOwnerId: userId,
+        ...dateFilter,
       },
     }),
     db.lead.count({
@@ -91,10 +102,30 @@ export async function GET(req: NextRequest) {
     }),
   ]);
 
+  // Per-day fresh lead breakdown using raw SQL (Prisma doesn't support DATE() grouping directly)
+  // We count leads grouped by the calendar date they were created (their "fresh" date).
+  let freshLeadsByDate: Array<{ date: string; count: number }> = [];
+  if (from && to) {
+    const rows = (await db.$queryRaw`
+      SELECT
+        TO_CHAR(DATE("createdAt"), 'YYYY-MM-DD') AS date,
+        COUNT(*)::int AS count
+      FROM "Lead"
+      WHERE "currentOwnerId" = ${userId}
+        AND "createdAt" >= ${new Date(from + "T00:00:00.000Z")}
+        AND "createdAt" <= ${new Date(to + "T23:59:59.999Z")}
+      GROUP BY DATE("createdAt")
+      ORDER BY date DESC
+    `) as Array<{ date: string; count: number }>;
+    freshLeadsByDate = rows;
+  }
+
   return NextResponse.json({
     totalLeads,
     followUpLeads,
     freshLeadsToday,
+    totalFreshLeadsInRange,
+    freshLeadsByDate,
     connectedLeads,
     notConnectedLeads,
     siteVisitArranged,
