@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
 // POST /api/admin/apply-indexes
-// One-time use: applies performance indexes to the database.
-// Restricted to admin only. Can be deleted after use.
+// One-time use: applies performance indexes + creates the Booking table.
+// Restricted to admin only.
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -12,6 +12,75 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 
+  const results: Array<{ sql: string; status: string; error?: string }> = [];
+
+  // ------------------------------------------------------------------
+  // 1. Create the Booking table (idempotent — uses IF NOT EXISTS)
+  // ------------------------------------------------------------------
+  const schemaStatements = [
+    `CREATE TABLE IF NOT EXISTS "Booking" (
+      "id" TEXT NOT NULL,
+      "leadId" TEXT,
+      "userId" TEXT NOT NULL,
+      "customerName" TEXT NOT NULL,
+      "customerPhone" TEXT NOT NULL,
+      "customerEmail" TEXT,
+      "projectId" TEXT,
+      "propertyName" TEXT,
+      "unitNumber" TEXT,
+      "bookingAmount" DOUBLE PRECISION,
+      "totalValue" DOUBLE PRECISION,
+      "paymentMode" TEXT,
+      "bookingDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "notes" TEXT,
+      "status" TEXT NOT NULL DEFAULT 'Confirmed',
+      "images" JSONB NOT NULL DEFAULT '[]'::jsonb,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL,
+      CONSTRAINT "Booking_pkey" PRIMARY KEY ("id")
+    )`,
+    // Foreign keys (use DO block so they are only added if not present)
+    `DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'Booking_leadId_fkey'
+      ) THEN
+        ALTER TABLE "Booking"
+          ADD CONSTRAINT "Booking_leadId_fkey"
+          FOREIGN KEY ("leadId") REFERENCES "Lead"("id")
+          ON DELETE SET NULL ON UPDATE CASCADE;
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'Booking_userId_fkey'
+      ) THEN
+        ALTER TABLE "Booking"
+          ADD CONSTRAINT "Booking_userId_fkey"
+          FOREIGN KEY ("userId") REFERENCES "User"("id")
+          ON DELETE RESTRICT ON UPDATE CASCADE;
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'Booking_projectId_fkey'
+      ) THEN
+        ALTER TABLE "Booking"
+          ADD CONSTRAINT "Booking_projectId_fkey"
+          FOREIGN KEY ("projectId") REFERENCES "Project"("id")
+          ON DELETE SET NULL ON UPDATE CASCADE;
+      END IF;
+    END $$;`,
+  ];
+
+  for (const sql of schemaStatements) {
+    try {
+      await db.$executeRawUnsafe(sql);
+      results.push({ sql: sql.substring(0, 80) + "...", status: "ok" });
+    } catch (err: any) {
+      results.push({ sql: sql.substring(0, 80) + "...", status: "error", error: err.message });
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // 2. Apply performance indexes (existing + Booking indexes)
+  // ------------------------------------------------------------------
   const indexes = [
     `CREATE INDEX IF NOT EXISTS "Lead_currentOwnerId_idx" ON "Lead" ("currentOwnerId")`,
     `CREATE INDEX IF NOT EXISTS "Lead_primaryOwnerId_idx" ON "Lead" ("primaryOwnerId")`,
@@ -33,9 +102,14 @@ export async function POST(req: NextRequest) {
     `CREATE INDEX IF NOT EXISTS "LeadAssignment_leadId_idx" ON "LeadAssignment" ("leadId")`,
     `CREATE INDEX IF NOT EXISTS "LeadAssignment_toUserId_idx" ON "LeadAssignment" ("toUserId")`,
     `CREATE INDEX IF NOT EXISTS "TimelineEvent_leadId_createdAt_idx" ON "TimelineEvent" ("leadId", "createdAt" DESC)`,
+    // Booking indexes
+    `CREATE INDEX IF NOT EXISTS "Booking_userId_createdAt_idx" ON "Booking" ("userId", "createdAt" DESC)`,
+    `CREATE INDEX IF NOT EXISTS "Booking_projectId_idx" ON "Booking" ("projectId")`,
+    `CREATE INDEX IF NOT EXISTS "Booking_leadId_idx" ON "Booking" ("leadId")`,
+    `CREATE INDEX IF NOT EXISTS "Booking_status_idx" ON "Booking" ("status")`,
+    `CREATE INDEX IF NOT EXISTS "Booking_createdAt_idx" ON "Booking" ("createdAt")`,
   ];
 
-  const results: Array<{ sql: string; status: string; error?: string }> = [];
   for (const sql of indexes) {
     try {
       await db.$executeRawUnsafe(sql);
@@ -45,7 +119,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Update query planner statistics
+  // ------------------------------------------------------------------
+  // 3. Update query planner statistics
+  // ------------------------------------------------------------------
   try {
     await db.$executeRawUnsafe(`ANALYZE "Lead"`);
     await db.$executeRawUnsafe(`ANALYZE "CallLog"`);
@@ -55,6 +131,7 @@ export async function POST(req: NextRequest) {
     await db.$executeRawUnsafe(`ANALYZE "TimelineEvent"`);
     await db.$executeRawUnsafe(`ANALYZE "User"`);
     await db.$executeRawUnsafe(`ANALYZE "Project"`);
+    await db.$executeRawUnsafe(`ANALYZE "Booking"`);
   } catch (err: any) {
     // ignore analyze errors
   }

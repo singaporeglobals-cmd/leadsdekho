@@ -26,6 +26,7 @@ model User {
   assignedFrom  LeadAssignment[] @relation("AssignedFrom")
   assignedTo    LeadAssignment[] @relation("AssignedTo")
   timeline      TimelineEvent[]
+  bookings      Booking[]
 }
 
 model Lead {
@@ -54,6 +55,7 @@ model Lead {
   assignments     LeadAssignment[]
   timeline        TimelineEvent[]
   leadProperties  LeadProperty[]
+  bookings        Booking[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -154,6 +156,7 @@ model Project {
   description String?
   leads       Lead[]
   properties  Property[]
+  bookings    Booking[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -204,4 +207,51 @@ model ContactSubmission {
   message     String?
   source      String   @default("landing_page")
   createdAt   DateTime @default(now())
+}
+
+model Booking {
+  id              String   @id @default(cuid())
+
+  // Link to lead (optional - booking can be standalone)
+  leadId          String?
+  lead            Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  // User who created the booking
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+
+  // Customer details (captured at booking time)
+  customerName    String
+  customerPhone   String
+  customerEmail   String?
+
+  // Project / property info
+  projectId       String?
+  project         Project? @relation(fields: [projectId], references: [id])
+  propertyName    String?
+  unitNumber      String?
+
+  // Booking financials
+  bookingAmount   Float?
+  totalValue      Float?
+  paymentMode     String?
+
+  // Booking date (when the customer booked)
+  bookingDate     DateTime @default(now())
+
+  // Notes / status
+  notes           String?
+  status          String   @default("Confirmed")
+
+  // Images stored as JSON array: [{ name, dataUrl, type, size }]
+  images          Json     @default("[]")
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([projectId])
+  @@index([leadId])
+  @@index([status])
+  @@index([createdAt])
 }

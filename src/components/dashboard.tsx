@@ -66,14 +66,14 @@ export function AdminDashboard() {
   const [optimizeResult, setOptimizeResult] = useState<string | null>(null);
 
   const applyOptimization = async () => {
-    if (!confirm("This will create database indexes to speed up the app. Continue?")) return;
+    if (!confirm("This will apply database updates: create the Booking table (if missing) and add performance indexes. Continue?")) return;
     setOptimizing(true);
     setOptimizeResult(null);
     try {
       const res = await fetch("/api/admin/apply-indexes", { method: "POST" });
       const d = await res.json();
       if (res.ok) {
-        setOptimizeResult(`Done! Applied ${d.applied} indexes (${d.failed} failed). Reload the page to feel the speed.`);
+        setOptimizeResult(`Done! Applied ${d.applied} updates (${d.failed} failed). Booking feature is now ready.`);
       } else {
         setOptimizeResult(`Error: ${d.error || "Unknown"}`);
       }
@@ -192,7 +192,7 @@ export function AdminDashboard() {
             disabled={optimizing}
           >
             <Zap className="mr-1 h-3 w-3" />
-            {optimizing ? "Optimizing..." : "Optimize DB Speed"}
+            {optimizing ? "Applying..." : "Apply DB Updates"}
           </Button>
         )}
         {optimizeResult && (
@@ -275,7 +275,10 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card
+          className="border-l-4 border-l-emerald-500 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setPage("bookings")}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -819,7 +822,10 @@ export function SalesDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card
+          className="border-l-4 border-l-emerald-500 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setPage("bookings")}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
