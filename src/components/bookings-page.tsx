@@ -778,10 +778,10 @@ export function BookingsPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Label htmlFor="project">Project</Label>
-                <Select value={fProjectId} onValueChange={setFProjectId}>
+                <Select value={fProjectId || "__none__"} onValueChange={(v) => setFProjectId(v === "__none__" ? "" : v)}>
                   <SelectTrigger id="project"><SelectValue placeholder="Select project (optional)" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">— None —</SelectItem>
+                    <SelectItem value="__none__">— None —</SelectItem>
                     {projects.map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
@@ -808,10 +808,10 @@ export function BookingsPage() {
               </div>
               <div>
                 <Label htmlFor="paymentMode">Payment Mode</Label>
-                <Select value={fPaymentMode} onValueChange={setFPaymentMode}>
+                <Select value={fPaymentMode || "__none__"} onValueChange={(v) => setFPaymentMode(v === "__none__" ? "" : v)}>
                   <SelectTrigger id="paymentMode"><SelectValue placeholder="Select mode" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">— None —</SelectItem>
+                    <SelectItem value="__none__">— None —</SelectItem>
                     {PAYMENT_MODE_OPTIONS.map((m) => (
                       <SelectItem key={m} value={m}>{m}</SelectItem>
                     ))}
