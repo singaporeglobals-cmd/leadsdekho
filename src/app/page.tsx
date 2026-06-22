@@ -22,6 +22,7 @@ import { UserReportPage } from "@/components/user-report-page";
 import { UserManagement } from "@/components/user-management";
 import { LeadSourceManagement } from "@/components/lead-source-management";
 import { EnquiryManagement } from "@/components/enquiry-management";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function Home() {
   const { currentPage, isAuthenticated, isLoading, checkAuth } = useAppStore();
@@ -45,9 +46,17 @@ export default function Home() {
   if (!isAuthenticated) {
     switch (currentPage) {
       case "login":
-        return <LoginPage />;
+        return (
+          <ErrorBoundary>
+            <LoginPage />
+          </ErrorBoundary>
+        );
       default:
-        return <LandingPage />;
+        return (
+          <ErrorBoundary>
+            <LandingPage />
+          </ErrorBoundary>
+        );
     }
   }
 
@@ -90,5 +99,9 @@ export default function Home() {
     }
   };
 
-  return <AppLayout>{renderPage()}</AppLayout>;
+  return (
+    <ErrorBoundary>
+      <AppLayout>{renderPage()}</AppLayout>
+    </ErrorBoundary>
+  );
 }
