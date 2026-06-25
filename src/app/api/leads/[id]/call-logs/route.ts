@@ -29,7 +29,7 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const { notes, callType, callDate, assignTo } = await req.json();
+  const { notes, callType, callDate, assignTo, leadStatus, subStage } = await req.json();
 
   if (!notes) {
     return NextResponse.json({ error: "Notes are required" }, { status: 400 });
@@ -49,10 +49,24 @@ export async function POST(
       userId: user.id,
       notes,
       callType: callType || "Feedback",
+      subStage: subStage || null,
       callDate: callDate ? new Date(callDate) : new Date(),
     },
     include: { user: { select: { id: true, name: true } } },
   });
+
+  // If leadStatus / subStage provided, update the lead too (so the new status
+  // sticks on the lead, not just on this call log entry)
+  if (leadStatus || subStage !== undefined) {
+    const leadUpdate: Record<string, unknown> = {};
+    if (leadStatus) leadUpdate.leadStatus = leadStatus;
+    if (subStage !== undefined) leadUpdate.subStage = subStage || null;
+    // Auto-clear subStage if leadStatus changed to a non-sub-stage value
+    if (leadStatus && leadStatus !== "Not Interested" && leadStatus !== "Not Connected") {
+      leadUpdate.subStage = null;
+    }
+    await db.lead.update({ where: { id }, data: leadUpdate });
+  }
 
   // Auto-update pipeline status from "New" to "Contacted" when feedback is given
   if (lead.pipelineStatus === "New") {

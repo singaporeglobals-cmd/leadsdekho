@@ -39,6 +39,7 @@ model Lead {
   notes           String?
   pipelineStatus  String   @default("New")
   leadStatus     String?  @default("New")
+  subStage       String?
   lostReason      String?
 
   primaryOwnerId  String
@@ -67,6 +68,7 @@ model Lead {
   @@index([projectId])
   @@index([createdAt])
   @@index([leadStatus])
+  @@index([leadStatus, subStage])
   @@index([currentOwnerId, pipelineStatus])
   @@index([updatedAt])
 }
@@ -80,10 +82,12 @@ model CallLog {
   notes       String
   callDate    DateTime @default(now())
   callType    String   @default("Feedback")
+  subStage    String?
   createdAt   DateTime @default(now())
 
   @@index([leadId, createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, callDate])
 }
 
 model FollowUp {

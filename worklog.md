@@ -142,3 +142,36 @@ Stage Summary:
 - Date picker lets users see tomorrow's / day-after's follow-ups
 - When user gives feedback on a lead, that lead's pending follow-ups auto-complete, so the lead disappears from the Follow Up filter view on refresh
 - Clicking "Last: ..." feedback text on a lead row expands to show entire feedback history inline (no page navigation needed)
+
+---
+Task ID: 9
+Agent: Main Agent
+Task: Add sub-stage filter to Lead list (appears when "Not Interested" or "Not Connected" lead status is selected) — admin & user both dashboards
+
+Work Log:
+- Audited existing code: found that sub-stage feature was ALREADY implemented in lead-detail.tsx (CallLogForm) and lead-list.tsx feedback dialog (chips UI)
+- Found that prisma schema already has `subStage String?` field on Lead model and CallLog model
+- Found that `/api/leads` route already supports `?subStage=` query param filtering (line 26, 59)
+- Found centralized sub-stage definitions in `/src/lib/lead-sub-stages.ts` (NOT_INTERESTED_SUB_STAGES, NOT_CONNECTED_SUB_STAGES, getSubStagesForStatus helper)
+- The ONLY missing piece: top filter bar in lead-list.tsx did NOT have a sub-stage filter dropdown
+- Added `subStageFilter` state ("all" default) to lead-list.tsx
+- Imported `getSubStagesForStatus` from `@/lib/lead-sub-stages`
+- Modified Lead Status onValueChange handler to reset `subStageFilter` to "all" on every status change (so sub-stage filter doesn't linger when user switches to a non-sub-stage status)
+- Added `subStage` URL param to fetch leads API call (`?subStage=...`)
+- Added `subStageFilter` to useEffect dependency array so list refreshes when sub-stage filter changes
+- Added conditional sub-stage Select dropdown right after Lead Status dropdown — only visible when `leadStatusFilter === "Not Interested" || "Not Connected"`. Dropdown options come from `getSubStagesForStatus(leadStatusFilter)` so the right sub-stages show for the right status.
+- Added `subStageFilter !== "all"` to Clear button condition + reset list (so Clear button also clears sub-stage filter)
+- Added `subStage: string | null` field to Lead TypeScript interface (was missing)
+- Added sub-stage chip rendering inside lead row's leadStatus badge — when a lead has a subStage set, it now shows inline next to the leadStatus text (e.g. "Not Interested · Budget Issue")
+- Built successfully with `npx next build`
+- Deployed to Vercel production with `npx vercel@54.14.5 --prod --token ...`
+
+Stage Summary:
+- Lead filter bar now shows an additional "Sub-stage" dropdown ONLY when "Not Interested" or "Not Connected" is selected as Lead Status — both admin and user dashboards (since both use the same lead-list.tsx component)
+- The dropdown options are dynamic: Not Interested → [No Requirement, Location Mismatch, Budget Issue, Flat Size Issue, Want Land, Want Bungalow, Invalid No, ISD No]; Not Connected → [Switch Off, Incoming Call Not Available, Disconnected, Ringing, Out of Network Service]
+- Switching Lead Status to something else auto-clears the sub-stage filter
+- Clear button also clears the sub-stage filter
+- Each lead row now shows the sub-stage inline within its leadStatus badge for quick visual scanning
+- Backend `/api/leads?subStage=...` already supported filtering — no API changes needed
+- Deployed to https://leadsdekho.in
+

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useAppStore, isAdminRole } from "@/lib/store";
+import { getSubStagesForStatus } from "@/lib/lead-sub-stages";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -132,6 +133,7 @@ interface Lead {
   notes: string | null;
   pipelineStatus: string;
   leadStatus: string | null;
+  subStage: string | null;
   lostReason: string | null;
   primaryOwnerId: string;
   currentOwnerId: string;
@@ -188,6 +190,7 @@ export function LeadList() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [leadStatusFilter, setLeadStatusFilter] = useState("all");
+  const [subStageFilter, setSubStageFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
   const [userFilter, setUserFilter] = useState("all");
@@ -234,7 +237,16 @@ export function LeadList() {
   // Feedback dialog (for dropdown menu + direct button)
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackLead, setFeedbackLead] = useState<Lead | null>(null);
-  const [feedbackForm, setFeedbackForm] = useState({
+  const [feedbackForm, setFeedbackForm] = useState<{
+    notes: string;
+    callType: string;
+    callDate: string;
+    assignTo: string;
+    followUpDate: string;
+    dropLead: boolean;
+    leadStatus: string;
+    subStage: string;
+  }>({
     notes: "",
     callType: "Feedback",
     callDate: new Date().toISOString().slice(0, 16),
@@ -242,6 +254,7 @@ export function LeadList() {
     followUpDate: "",
     dropLead: false,
     leadStatus: "",
+    subStage: "",
   });
 
   // Assign dialog (for dropdown menu + direct button)
@@ -312,6 +325,7 @@ export function LeadList() {
       if (debouncedSearch) params.set("search", debouncedSearch);
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (leadStatusFilter !== "all") params.set("leadStatus", leadStatusFilter);
+      if (subStageFilter !== "all") params.set("subStage", subStageFilter);
       if (sourceFilter !== "all") params.set("source", sourceFilter);
       if (projectFilter !== "all") params.set("project", projectFilter);
       if (userFilter !== "all" && isAdminRole(user?.role || "")) params.set("owner", userFilter);
@@ -355,7 +369,7 @@ export function LeadList() {
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, projectFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, pendingFollowUpsFilter, todayFollowUpsFilter, followUpDate, refresh, user?.role, badgesFetched]);
+  }, [debouncedSearch, statusFilter, leadStatusFilter, subStageFilter, sourceFilter, projectFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, pendingFollowUpsFilter, todayFollowUpsFilter, followUpDate, refresh, user?.role, badgesFetched]);
 
   // Fetch users, projects, and lead sources - parallel for speed (properties lazy-loaded on dialog open)
   useEffect(() => {
@@ -455,6 +469,8 @@ export function LeadList() {
   const handleFeedback = async () => {
     if (!feedbackLead) return;
 
+    // Send notes + callType + leadStatus + subStage in ONE call-log POST.
+    // Backend will: 1) create the CallLog with subStage, 2) update Lead's leadStatus + subStage.
     const res = await fetch(`/api/leads/${feedbackLead.id}/call-logs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -463,6 +479,8 @@ export function LeadList() {
         callType: feedbackForm.callType,
         callDate: feedbackForm.callDate,
         assignTo: feedbackForm.assignTo || undefined,
+        leadStatus: feedbackForm.leadStatus || undefined,
+        subStage: feedbackForm.subStage || undefined,
       }),
     });
 
@@ -476,15 +494,6 @@ export function LeadList() {
             scheduledAt: feedbackForm.followUpDate,
             notes: `Follow-up after feedback: ${feedbackForm.notes.substring(0, 100)}`,
           }),
-        });
-      }
-
-      // If lead status selected, update it
-      if (feedbackForm.leadStatus) {
-        await fetch(`/api/leads/${feedbackLead.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ leadStatus: feedbackForm.leadStatus }),
         });
       }
 
@@ -510,6 +519,7 @@ export function LeadList() {
         followUpDate: "",
         dropLead: false,
         leadStatus: "",
+        subStage: "",
       });
       doRefresh();
     }
@@ -650,7 +660,8 @@ export function LeadList() {
       assignTo: "",
       followUpDate: "",
       dropLead: false,
-      leadStatus: "",
+      leadStatus: (lead as any).leadStatus || "",
+      subStage: (lead as any).subStage || "",
     });
     setFeedbackOpen(true);
   };
@@ -721,7 +732,14 @@ export function LeadList() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={leadStatusFilter} onValueChange={setLeadStatusFilter}>
+          <Select
+            value={leadStatusFilter}
+            onValueChange={(v) => {
+              setLeadStatusFilter(v);
+              // Reset sub-stage filter whenever lead status changes
+              setSubStageFilter("all");
+            }}
+          >
             <SelectTrigger className="w-[160px] h-9">
               <Filter className="mr-1 h-3 w-3" />
               <SelectValue placeholder="Lead Status" />
@@ -733,6 +751,21 @@ export function LeadList() {
               ))}
             </SelectContent>
           </Select>
+          {/* Sub-stage filter — only shown when Lead Status is "Not Interested" or "Not Connected" */}
+          {(leadStatusFilter === "Not Interested" || leadStatusFilter === "Not Connected") && (
+            <Select value={subStageFilter} onValueChange={setSubStageFilter}>
+              <SelectTrigger className="w-[180px] h-9">
+                <Filter className="mr-1 h-3 w-3" />
+                <SelectValue placeholder="Sub-stage" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sub-stages</SelectItem>
+                {getSubStagesForStatus(leadStatusFilter).map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           {/* Date filter with presets */}
           <div className="flex items-center gap-1">
             {DATE_PRESETS.map((preset) => (
@@ -751,12 +784,12 @@ export function LeadList() {
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[130px]" placeholder="From" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[130px]" placeholder="To" />
           {/* Clear all filters */}
-          {(statusFilter !== "all" || leadStatusFilter !== "all" || sourceFilter !== "all" || projectFilter !== "all" || userFilter !== "all" || dateFrom || dateTo || myLeadsFilter || freshLeadsFilter || pendingFollowUpsFilter || todayFollowUpsFilter) && (
+          {(statusFilter !== "all" || leadStatusFilter !== "all" || subStageFilter !== "all" || sourceFilter !== "all" || projectFilter !== "all" || userFilter !== "all" || dateFrom || dateTo || myLeadsFilter || freshLeadsFilter || pendingFollowUpsFilter || todayFollowUpsFilter) && (
             <Button
               variant="ghost"
               size="sm"
               className="h-9 text-muted-foreground hover:text-foreground"
-              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSourceFilter("all"); setProjectFilter("all"); setUserFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); setMyLeadsFilter(false); setFreshLeadsFilter(false); setPendingFollowUpsFilter(false); setTodayFollowUpsFilter(false); setFollowUpDate(""); }}
+              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSubStageFilter("all"); setSourceFilter("all"); setProjectFilter("all"); setUserFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); setMyLeadsFilter(false); setFreshLeadsFilter(false); setPendingFollowUpsFilter(false); setTodayFollowUpsFilter(false); setFollowUpDate(""); }}
             >
               <RotateCcw className="mr-1 h-3 w-3" /> Clear
             </Button>
@@ -1182,6 +1215,11 @@ export function LeadList() {
                     {lead.leadStatus && lead.leadStatus !== "New" && (
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-brand/30 text-brand">
                         {lead.leadStatus}
+                        {lead.subStage && (
+                          <span className="ml-1 px-1 py-0 rounded bg-brand/10 text-[9px]">
+                            {lead.subStage}
+                          </span>
+                        )}
                       </Badge>
                     )}
                     {lead.followUps && lead.followUps.length > 0 && (
@@ -1303,7 +1341,8 @@ export function LeadList() {
                           assignTo: "",
                           followUpDate: "",
                           dropLead: false,
-                          leadStatus: "",
+                          leadStatus: (lead as any).leadStatus || "",
+                          subStage: (lead as any).subStage || "",
                         });
                         setFeedbackOpen(true);
                       }}
@@ -1371,7 +1410,8 @@ export function LeadList() {
                                 assignTo: "",
                                 followUpDate: "",
                                 dropLead: false,
-                                leadStatus: "",
+                                leadStatus: (lead as any).leadStatus || "",
+                                subStage: (lead as any).subStage || "",
                               });
                               setFeedbackOpen(true);
                             }}
@@ -1441,13 +1481,23 @@ export function LeadList() {
             <div className="space-y-1">
               <Label>Lead Status</Label>
               <Select
-                value={feedbackForm.leadStatus}
-                onValueChange={(v) => setFeedbackForm({ ...feedbackForm, leadStatus: v })}
+                value={feedbackForm.leadStatus || "__none__"}
+                onValueChange={(v) => {
+                  const newStatus = v === "__none__" ? "" : v;
+                  // Auto-clear subStage when status changes to a non-sub-stage value
+                  const needsClear = newStatus !== "Not Interested" && newStatus !== "Not Connected";
+                  setFeedbackForm({
+                    ...feedbackForm,
+                    leadStatus: newStatus,
+                    subStage: needsClear ? "" : feedbackForm.subStage,
+                  });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select lead status..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">— None —</SelectItem>
                   <SelectItem value="Not Connected">Not Connected</SelectItem>
                   <SelectItem value="Site Visit Done">Site Visit Done</SelectItem>
                   <SelectItem value="Prospect">Prospect</SelectItem>
@@ -1457,6 +1507,66 @@ export function LeadList() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Sub-stage chips: only shown when leadStatus is Not Interested or Not Connected */}
+            {(feedbackForm.leadStatus === "Not Interested" || feedbackForm.leadStatus === "Not Connected") && (
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">
+                  Sub-stage for &quot;{feedbackForm.leadStatus}&quot; <span className="text-red-500">*</span>
+                </Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {(feedbackForm.leadStatus === "Not Interested"
+                    ? [
+                      "No Requirement",
+                      "Location Mismatch",
+                      "Budget Issue",
+                      "Flat Size Issue",
+                      "Want Land",
+                      "Want Bungalow",
+                      "Invalid No",
+                      "ISD No",
+                    ]
+                    : [
+                      "Switch Off",
+                      "Incoming Call Not Available",
+                      "Disconnected",
+                      "Ringing",
+                      "Out of Network Service",
+                    ]
+                  ).map((s) => {
+                    const selected = feedbackForm.subStage === s;
+                    const color =
+                      feedbackForm.leadStatus === "Not Interested"
+                        ? (selected
+                          ? "bg-rose-600 text-white border-rose-600"
+                          : "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800")
+                        : (selected
+                          ? "bg-red-600 text-white border-red-600"
+                          : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800");
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() =>
+                          setFeedbackForm({
+                            ...feedbackForm,
+                            subStage: selected ? "" : s,
+                          })
+                        }
+                        className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${color}`}
+                      >
+                        {s}
+                      </button>
+                    );
+                  })}
+                </div>
+                {feedbackForm.subStage && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Selected: <span className="font-semibold text-foreground">{feedbackForm.subStage}</span>
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1">
               <Label>Feedback Notes *</Label>
@@ -1524,10 +1634,18 @@ export function LeadList() {
             <Button
               onClick={handleFeedback}
               className="w-full bg-brand hover:bg-brand-dark"
-              disabled={!feedbackForm.notes}
+              disabled={
+                !feedbackForm.notes ||
+                ((feedbackForm.leadStatus === "Not Interested" || feedbackForm.leadStatus === "Not Connected") && !feedbackForm.subStage)
+              }
             >
               Submit {feedbackForm.callType === "Follow-up" ? "Follow Up" : "Feedback"}
             </Button>
+            {(feedbackForm.leadStatus === "Not Interested" || feedbackForm.leadStatus === "Not Connected") && !feedbackForm.subStage && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center">
+                Please pick a sub-stage above to enable Submit.
+              </p>
+            )}
           </div>
         </DialogContent>
       </Dialog>

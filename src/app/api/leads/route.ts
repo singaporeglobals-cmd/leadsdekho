@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
   const dateFrom = searchParams.get("dateFrom") || searchParams.get("from");
   const dateTo = searchParams.get("dateTo") || searchParams.get("to");
   const projectId = searchParams.get("project");
+  const subStage = searchParams.get("subStage");
   const allCallLogs = searchParams.get("allCallLogs") === "true";
 
   const where: Record<string, unknown> = {};
@@ -55,6 +56,7 @@ export async function GET(req: NextRequest) {
 
   if (status && !fresh) where.pipelineStatus = status;
   if (leadStatus) where.leadStatus = leadStatus;
+  if (subStage) where.subStage = subStage;
   if (source) where.source = source;
   if (ownerFilter) where.currentOwnerId = ownerFilter;
   if (projectId) where.projectId = projectId;
@@ -166,6 +168,7 @@ export async function GET(req: NextRequest) {
         notes: true,
         pipelineStatus: true,
         leadStatus: true,
+        subStage: true,
         lostReason: true,
         primaryOwnerId: true,
         currentOwnerId: true,
@@ -183,6 +186,7 @@ export async function GET(req: NextRequest) {
             id: true,
             notes: true,
             callType: true,
+            subStage: true,
             callDate: true,
             createdAt: true,
             user: { select: { id: true, name: true } },

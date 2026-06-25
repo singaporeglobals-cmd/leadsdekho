@@ -271,22 +271,23 @@ export function LeadDetail() {
     }
   };
 
-  const handleLogCall = async (notes: string, callType: string, followUpDate?: string, dropLead?: boolean, leadStatus?: string) => {
+  const handleLogCall = async (notes: string, callType: string, followUpDate?: string, dropLead?: boolean, leadStatus?: string, subStage?: string) => {
     if (!lead) return;
+    // Send notes, callType, leadStatus AND subStage together.
+    // The /api/leads/[id]/call-logs route will:
+    //   1. create the CallLog with subStage
+    //   2. update the Lead's leadStatus + subStage in the same transaction
     const res = await fetch(`/api/leads/${lead.id}/call-logs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notes, callType }),
+      body: JSON.stringify({
+        notes,
+        callType,
+        leadStatus: leadStatus || undefined,
+        subStage: subStage || undefined,
+      }),
     });
     if (res.ok) {
-      // If lead status selected, update it
-      if (leadStatus) {
-        await fetch(`/api/leads/${lead.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ leadStatus }),
-        });
-      }
       // If follow-up date set, schedule it
       if (followUpDate) {
         await fetch(`/api/leads/${lead.id}/follow-ups`, {
@@ -573,6 +574,11 @@ export function LeadDetail() {
                       {(lead as Record<string, unknown>).leadStatus && (lead as Record<string, unknown>).leadStatus !== "New"
                         ? (lead as Record<string, unknown>).leadStatus as string
                         : "—"}
+                      {(lead as Record<string, unknown>).subStage && (
+                        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground">
+                          {(lead as Record<string, unknown>).subStage as string}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div>
@@ -930,7 +936,12 @@ export function LeadDetail() {
           <DialogHeader>
             <DialogTitle>Log Call</DialogTitle>
           </DialogHeader>
-          <CallLogForm onSubmit={handleLogCall} currentStatus={lead?.pipelineStatus} />
+          <CallLogForm
+            onSubmit={handleLogCall}
+            currentStatus={lead?.pipelineStatus}
+            currentLeadStatus={lead?.leadStatus}
+            currentSubStage={(lead as any)?.subStage}
+          />
         </DialogContent>
       </Dialog>
 
@@ -1021,15 +1032,20 @@ export function LeadDetail() {
 function CallLogForm({
   onSubmit,
   currentStatus,
+  currentLeadStatus,
+  currentSubStage,
 }: {
-  onSubmit: (notes: string, callType: string, followUpDate?: string, dropLead?: boolean, leadStatus?: string) => void;
+  onSubmit: (notes: string, callType: string, followUpDate?: string, dropLead?: boolean, leadStatus?: string, subStage?: string) => void;
   currentStatus?: string;
+  currentLeadStatus?: string | null;
+  currentSubStage?: string | null;
 }) {
   const [notes, setNotes] = useState("");
   const [callType] = useState("Feedback");
   const [followUpDate, setFollowUpDate] = useState("");
   const [dropLead, setDropLead] = useState(false);
-  const [leadStatus, setLeadStatus] = useState(currentStatus || "");
+  const [leadStatus, setLeadStatus] = useState(currentLeadStatus || "");
+  const [subStage, setSubStage] = useState<string>(currentSubStage || "");
 
   const LEAD_STATUS_OPTIONS = [
     "Not Connected",
@@ -1039,6 +1055,39 @@ function CallLogForm({
     "Site Visit Promised",
     "Booked",
   ];
+
+  // Sub-stage definitions (kept in sync with /src/lib/lead-sub-stages.ts)
+  const NOT_INTERESTED_SUB_STAGES = [
+    "No Requirement",
+    "Location Mismatch",
+    "Budget Issue",
+    "Flat Size Issue",
+    "Want Land",
+    "Want Bungalow",
+    "Invalid No",
+    "ISD No",
+  ];
+  const NOT_CONNECTED_SUB_STAGES = [
+    "Switch Off",
+    "Incoming Call Not Available",
+    "Disconnected",
+    "Ringing",
+    "Out of Network Service",
+  ];
+
+  // Determine which sub-stages to show based on selected leadStatus
+  const visibleSubStages =
+    leadStatus === "Not Interested" ? NOT_INTERESTED_SUB_STAGES
+    : leadStatus === "Not Connected" ? NOT_CONNECTED_SUB_STAGES
+    : [];
+
+  // When user changes leadStatus, auto-clear subStage if the new status doesn't support sub-stages
+  const handleStatusChange = (newStatus: string) => {
+    setLeadStatus(newStatus);
+    if (newStatus !== "Not Interested" && newStatus !== "Not Connected") {
+      setSubStage("");
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -1073,24 +1122,75 @@ function CallLogForm({
       </div>
       <div className="space-y-1">
         <Label>Lead Status</Label>
-        <Select value={leadStatus} onValueChange={setLeadStatus}>
+        <Select value={leadStatus || "__none__"} onValueChange={handleStatusChange}>
           <SelectTrigger>
             <SelectValue placeholder="Select lead status..." />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="__none__">— None —</SelectItem>
             {LEAD_STATUS_OPTIONS.map((s) => (
               <SelectItem key={s} value={s}>{s}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
+
+      {/* Sub-stage chips: only shown when leadStatus is Not Interested or Not Connected */}
+      {visibleSubStages.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-xs font-medium text-muted-foreground">
+            Sub-stage for &quot;{leadStatus}&quot; <span className="text-red-500">*</span>
+          </Label>
+          <div className="flex flex-wrap gap-1.5">
+            {visibleSubStages.map((s) => {
+              const selected = subStage === s;
+              const color =
+                leadStatus === "Not Interested"
+                  ? (selected
+                    ? "bg-rose-600 text-white border-rose-600"
+                    : "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800")
+                  : (selected
+                    ? "bg-red-600 text-white border-red-600"
+                    : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800");
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSubStage(selected ? "" : s)}
+                  className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${color}`}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+          {subStage && (
+            <p className="text-[11px] text-muted-foreground">
+              Selected: <span className="font-semibold text-foreground">{subStage}</span>
+              <button
+                type="button"
+                onClick={() => setSubStage("")}
+                className="ml-2 text-xs text-red-600 hover:underline"
+              >
+                Clear
+              </button>
+            </p>
+          )}
+        </div>
+      )}
+
       <Button
-        onClick={() => onSubmit(notes, callType, followUpDate || undefined, dropLead, leadStatus || undefined)}
+        onClick={() => onSubmit(notes, callType, followUpDate || undefined, dropLead, leadStatus || undefined, subStage || undefined)}
         className="w-full bg-brand hover:bg-brand-dark"
-        disabled={!notes}
+        disabled={!notes || (visibleSubStages.length > 0 && !subStage)}
       >
         Log Call
       </Button>
+      {visibleSubStages.length > 0 && !subStage && (
+        <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center">
+          Please pick a sub-stage above to enable Log Call.
+        </p>
+      )}
     </div>
   );
 }

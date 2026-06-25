@@ -79,6 +79,22 @@ export async function POST(req: NextRequest) {
   }
 
   // ------------------------------------------------------------------
+  // 1b. Add subStage columns to Lead and CallLog (idempotent)
+  // ------------------------------------------------------------------
+  const subStageStatements = [
+    `ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "subStage" TEXT`,
+    `ALTER TABLE "CallLog" ADD COLUMN IF NOT EXISTS "subStage" TEXT`,
+  ];
+  for (const sql of subStageStatements) {
+    try {
+      await db.$executeRawUnsafe(sql);
+      results.push({ sql, status: "ok" });
+    } catch (err: any) {
+      results.push({ sql, status: "error", error: err.message });
+    }
+  }
+
+  // ------------------------------------------------------------------
   // 2. Apply performance indexes (existing + Booking indexes)
   // ------------------------------------------------------------------
   const indexes = [
@@ -89,10 +105,12 @@ export async function POST(req: NextRequest) {
     `CREATE INDEX IF NOT EXISTS "Lead_projectId_idx" ON "Lead" ("projectId")`,
     `CREATE INDEX IF NOT EXISTS "Lead_createdAt_idx" ON "Lead" ("createdAt")`,
     `CREATE INDEX IF NOT EXISTS "Lead_leadStatus_idx" ON "Lead" ("leadStatus")`,
+    `CREATE INDEX IF NOT EXISTS "Lead_leadStatus_subStage_idx" ON "Lead" ("leadStatus", "subStage")`,
     `CREATE INDEX IF NOT EXISTS "Lead_currentOwnerId_pipelineStatus_idx" ON "Lead" ("currentOwnerId", "pipelineStatus")`,
     `CREATE INDEX IF NOT EXISTS "Lead_updatedAt_idx" ON "Lead" ("updatedAt")`,
     `CREATE INDEX IF NOT EXISTS "CallLog_leadId_createdAt_idx" ON "CallLog" ("leadId", "createdAt" DESC)`,
     `CREATE INDEX IF NOT EXISTS "CallLog_userId_createdAt_idx" ON "CallLog" ("userId", "createdAt" DESC)`,
+    `CREATE INDEX IF NOT EXISTS "CallLog_userId_callDate_idx" ON "CallLog" ("userId", "callDate")`,
     `CREATE INDEX IF NOT EXISTS "FollowUp_leadId_scheduledAt_idx" ON "FollowUp" ("leadId", "scheduledAt")`,
     `CREATE INDEX IF NOT EXISTS "FollowUp_userId_completed_scheduledAt_idx" ON "FollowUp" ("userId", "completed", "scheduledAt")`,
     `CREATE INDEX IF NOT EXISTS "FollowUp_completed_scheduledAt_idx" ON "FollowUp" ("completed", "scheduledAt")`,

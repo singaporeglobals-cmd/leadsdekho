@@ -76,7 +76,7 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const { name, phone, email, source, budget, notes, pipelineStatus, lostReason, projectId, leadStatus } = body;
+  const { name, phone, email, source, budget, notes, pipelineStatus, lostReason, projectId, leadStatus, subStage } = body;
 
   const updateData: Record<string, unknown> = {};
   if (name !== undefined) updateData.name = name;
@@ -88,6 +88,14 @@ export async function PUT(
   if (projectId !== undefined) updateData.projectId = projectId || null;
   if (lostReason !== undefined) updateData.lostReason = lostReason || null;
   if (leadStatus !== undefined) updateData.leadStatus = leadStatus;
+  // subStage: persist when explicitly provided. Pass null to clear.
+  // Auto-clear when the new leadStatus doesn't support sub-stages.
+  if (subStage !== undefined) {
+    updateData.subStage = subStage || null;
+  } else if (leadStatus !== undefined && leadStatus !== "Not Interested" && leadStatus !== "Not Connected") {
+    // Lead status changed to something without sub-stages — clear any stale subStage
+    updateData.subStage = null;
+  }
 
   if (pipelineStatus !== undefined && pipelineStatus !== lead.pipelineStatus) {
     updateData.pipelineStatus = pipelineStatus;

@@ -1,0 +1,1276 @@
+     1→"use client";
+     2→
+     3→import { useEffect, useState } from "react";
+     4→import { useAppStore } from "@/lib/store";
+     5→import { Button } from "@/components/ui/button";
+     6→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+     7→import { Badge } from "@/components/ui/badge";
+     8→import { Input } from "@/components/ui/input";
+     9→import { Label } from "@/components/ui/label";
+    10→import { Textarea } from "@/components/ui/textarea";
+    11→import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+    12→import { Separator } from "@/components/ui/separator";
+    13→import {
+    14→  Select,
+    15→  SelectContent,
+    16→  SelectItem,
+    17→  SelectTrigger,
+    18→  SelectValue,
+    19→} from "@/components/ui/select";
+    20→import {
+    21→  Dialog,
+    22→  DialogContent,
+    23→  DialogHeader,
+    24→  DialogTitle,
+    25→} from "@/components/ui/dialog";
+    26→import {
+    27→  ArrowLeft,
+    28→  Phone,
+    29→  Calendar,
+    30→  MapPin,
+    31→  Clock,
+    32→  User,
+    33→  MessageSquare,
+    34→  Lock,
+    35→  Edit,
+    36→  Save,
+    37→  X,
+    38→  Plus,
+    39→  CheckCircle2,
+    40→  XCircle,
+    41→  Building2,
+    42→  Trash2,
+    43→} from "lucide-react";
+    44→
+    45→const PIPELINE_STAGES = [
+    46→  "New",
+    47→  "Contacted",
+    48→  "Qualified",
+    49→  "Visit Scheduled",
+    50→  "Visited",
+    51→  "Negotiation",
+    52→  "Won",
+    53→  "Lost",
+    54→];
+    55→
+    56→const statusColors: Record<string, string> = {
+    57→  New: "bg-slate-500 text-white",
+    58→  Contacted: "bg-blue-500 text-white",
+    59→  Qualified: "bg-cyan-500 text-white",
+    60→  "Visit Scheduled": "bg-amber-500 text-white",
+    61→  Visited: "bg-purple-500 text-white",
+    62→  Negotiation: "bg-orange-500 text-white",
+    63→  Won: "bg-emerald-500 text-white",
+    64→  Lost: "bg-red-500 text-white",
+    65→};
+    66→
+    67→interface LeadProperty {
+    68→  id: string;
+    69→  property: {
+    70→    id: string;
+    71→    name: string;
+    72→    type: string;
+    73→    status: string;
+    74→    price: number | null;
+    75→    location: string | null;
+    76→    size: string | null;
+    77→  };
+    78→  createdAt: string;
+    79→}
+    80→
+    81→interface LeadDetail {
+    82→  id: string;
+    83→  name: string;
+    84→  phone: string;
+    85→  email: string | null;
+    86→  source: string;
+    87→  budget: string | null;
+    88→  notes: string | null;
+    89→  pipelineStatus: string;
+    90→  lostReason: string | null;
+    91→  primaryOwnerId: string;
+    92→  currentOwnerId: string;
+    93→  primaryOwner: { id: string; name: string; email: string; role: string };
+    94→  currentOwner: { id: string; name: string; email: string; role: string };
+    95→  project: { id: string; name: string } | null;
+    96→  leadProperties: LeadProperty[];
+    97→  callLogs: Array<{
+    98→    id: string;
+    99→    notes: string;
+   100→    callType: string;
+   101→    callDate: string;
+   102→    createdAt: string;
+   103→    user: { id: string; name: string };
+   104→  }>;
+   105→  followUps: Array<{
+   106→    id: string;
+   107→    scheduledAt: string;
+   108→    notes: string;
+   109→    completed: boolean;
+   110→    completedAt: string | null;
+   111→    user: { id: string; name: string };
+   112→  }>;
+   113→  siteVisits: Array<{
+   114→    id: string;
+   115→    scheduledAt: string;
+   116→    notes: string;
+   117→    status: string;
+   118→    feedback: string | null;
+   119→    user: { id: string; name: string };
+   120→  }>;
+   121→  assignments: Array<{
+   122→    id: string;
+   123→    fromUser: { name: string };
+   124→    toUser: { name: string };
+   125→    reason: string | null;
+   126→    createdAt: string;
+   127→  }>;
+   128→  timeline: Array<{
+   129→    id: string;
+   130→    eventType: string;
+   131→    description: string;
+   132→    createdAt: string;
+   133→    user: { name: string } | null;
+   134→  }>;
+   135→  createdAt: string;
+   136→  updatedAt: string;
+   137→}
+   138→
+   139→export function LeadDetail() {
+   140→  const { user, selectedLeadId, setPage } = useAppStore();
+   141→  const [lead, setLead] = useState<LeadDetail | null>(null);
+   142→  const [loading, setLoading] = useState(true);
+   143→  const [editing, setEditing] = useState(false);
+   144→  const [editForm, setEditForm] = useState<Record<string, string>>({});
+   145→
+   146→  // Dialogs
+   147→  const [callLogOpen, setCallLogOpen] = useState(false);
+   148→  const [followUpOpen, setFollowUpOpen] = useState(false);
+   149→  const [siteVisitOpen, setSiteVisitOpen] = useState(false);
+   150→  const [lostReasonOpen, setLostReasonOpen] = useState(false);
+   151→  const [lostReason, setLostReason] = useState("");
+   152→
+   153→  // Projects
+   154→  const [addProjectOpen, setAddProjectOpen] = useState(false);
+   155→  const [availableProjects, setAvailableProjects] = useState<Array<{
+   156→    id: string;
+   157→    name: string;
+   158→    location?: string | null;
+   159→  }>>([]);
+   160→  const [selectedProjectId, setSelectedProjectId] = useState("");
+   161→
+   162→  const [users, setUsers] = useState<Array<{ id: string; name: string; role: string }>>([]);
+   163→  const [sources, setSources] = useState<string[]>([]);
+   164→
+   165→  const fetchLead = async () => {
+   166→    if (!selectedLeadId) return;
+   167→    setLoading(true);
+   168→    const res = await fetch(`/api/leads/${selectedLeadId}`);
+   169→    if (res.ok) {
+   170→      const data = await res.json();
+   171→      setLead(data);
+   172→      setEditForm({
+   173→        name: data.name,
+   174→        phone: data.phone,
+   175→        email: data.email || "",
+   176→        source: data.source,
+   177→        budget: data.budget || "",
+   178→        notes: data.notes || "",
+   179→        pipelineStatus: data.pipelineStatus,
+   180→      });
+   181→    }
+   182→    setLoading(false);
+   183→  };
+   184→
+   185→  useEffect(() => {
+   186→    let cancelled = false;
+   187→    (async () => {
+   188→      if (!selectedLeadId) {
+   189→        setLoading(false);
+   190→        return;
+   191→      }
+   192→      setLoading(true);
+   193→      const res = await fetch(`/api/leads/${selectedLeadId}`);
+   194→      if (!cancelled && res.ok) {
+   195→        const data = await res.json();
+   196→        setLead(data);
+   197→        setEditForm({
+   198→          name: data.name,
+   199→          phone: data.phone,
+   200→          email: data.email || "",
+   201→          source: data.source,
+   202→          budget: data.budget || "",
+   203→          notes: data.notes || "",
+   204→          pipelineStatus: data.pipelineStatus,
+   205→        });
+   206→      }
+   207→      if (!cancelled) setLoading(false);
+   208→
+   209→      const uRes = await fetch("/api/users");
+   210→      if (!cancelled && uRes.ok) setUsers(await uRes.json());
+   211→
+   212→      // Fetch lead sources for the dropdown
+   213→      const srcRes = await fetch("/api/lead-sources");
+   214→      if (!cancelled && srcRes.ok) {
+   215→        const srcData = await srcRes.json();
+   216→        if (Array.isArray(srcData)) {
+   217→          setSources(srcData.map((s: { name: string }) => s.name));
+   218→        }
+   219→      }
+   220→    })();
+   221→    return () => { cancelled = true; };
+   222→  }, [selectedLeadId]);
+   223→
+   224→  const canEdit =
+   225→    user?.role === "admin" || user?.role === "super_admin" || lead?.currentOwnerId === user?.id;
+   226→
+   227→  const isViewOnly =
+   228→    lead &&
+   229→    user?.role === "sales" &&
+   230→    lead.primaryOwnerId === user.id &&
+   231→    lead.currentOwnerId !== user.id;
+   232→
+   233→  const handleSaveEdit = async () => {
+   234→    if (!lead) return;
+   235→    const res = await fetch(`/api/leads/${lead.id}`, {
+   236→      method: "PUT",
+   237→      headers: { "Content-Type": "application/json" },
+   238→      body: JSON.stringify(editForm),
+   239→    });
+   240→    if (res.ok) {
+   241→      setEditing(false);
+   242→      fetchLead();
+   243→    }
+   244→  };
+   245→
+   246→  const handleStatusChange = async (status: string) => {
+   247→    if (!lead || !canEdit) return;
+   248→    if (status === "Lost") {
+   249→      setLostReasonOpen(true);
+   250→      return;
+   251→    }
+   252→    const res = await fetch(`/api/leads/${lead.id}`, {
+   253→      method: "PUT",
+   254→      headers: { "Content-Type": "application/json" },
+   255→      body: JSON.stringify({ pipelineStatus: status }),
+   256→    });
+   257→    if (res.ok) fetchLead();
+   258→  };
+   259→
+   260→  const handleMarkLost = async () => {
+   261→    if (!lead) return;
+   262→    const res = await fetch(`/api/leads/${lead.id}`, {
+   263→      method: "PUT",
+   264→      headers: { "Content-Type": "application/json" },
+   265→      body: JSON.stringify({ pipelineStatus: "Lost", lostReason }),
+   266→    });
+   267→    if (res.ok) {
+   268→      setLostReasonOpen(false);
+   269→      setLostReason("");
+   270→      fetchLead();
+   271→    }
+   272→  };
+   273→
+   274→  const handleLogCall = async (notes: string, callType: string, followUpDate?: string, dropLead?: boolean, leadStatus?: string, subStage?: string) => {
+   275→    if (!lead) return;
+   276→    // Send notes, callType, leadStatus AND subStage together.
+   277→    // The /api/leads/[id]/call-logs route will:
+   278→    //   1. create the CallLog with subStage
+   279→    //   2. update the Lead's leadStatus + subStage in the same transaction
+   280→    const res = await fetch(`/api/leads/${lead.id}/call-logs`, {
+   281→      method: "POST",
+   282→      headers: { "Content-Type": "application/json" },
+   283→      body: JSON.stringify({
+   284→        notes,
+   285→        callType,
+   286→        leadStatus: leadStatus || undefined,
+   287→        subStage: subStage || undefined,
+   288→      }),
+   289→    });
+   290→    if (res.ok) {
+   291→      // If follow-up date set, schedule it
+   292→      if (followUpDate) {
+   293→        await fetch(`/api/leads/${lead.id}/follow-ups`, {
+   294→          method: "POST",
+   295→          headers: { "Content-Type": "application/json" },
+   296→          body: JSON.stringify({
+   297→            scheduledAt: followUpDate,
+   298→            notes: `Follow-up after call: ${notes.substring(0, 100)}`,
+   299→          }),
+   300→        });
+   301→      }
+   302→
+   303→      // If drop lead selected
+   304→      if (dropLead) {
+   305→        await fetch(`/api/leads/${lead.id}`, {
+   306→          method: "PUT",
+   307→          headers: { "Content-Type": "application/json" },
+   308→          body: JSON.stringify({
+   309→            pipelineStatus: "Lost",
+   310→            lostReason: "Dropped after feedback",
+   311→          }),
+   312→        });
+   313→      }
+   314→
+   315→      setCallLogOpen(false);
+   316→      fetchLead();
+   317→    }
+   318→  };
+   319→
+   320→  const handleScheduleFollowUp = async (
+   321→    scheduledAt: string,
+   322→    notes: string
+   323→  ) => {
+   324→    if (!lead) return;
+   325→    const res = await fetch(`/api/leads/${lead.id}/follow-ups`, {
+   326→      method: "POST",
+   327→      headers: { "Content-Type": "application/json" },
+   328→      body: JSON.stringify({ scheduledAt, notes }),
+   329→    });
+   330→    if (res.ok) {
+   331→      setFollowUpOpen(false);
+   332→      fetchLead();
+   333→    }
+   334→  };
+   335→
+   336→  const handleScheduleSiteVisit = async (
+   337→    scheduledAt: string,
+   338→    notes: string
+   339→  ) => {
+   340→    if (!lead) return;
+   341→    const res = await fetch(`/api/leads/${lead.id}/site-visits`, {
+   342→      method: "POST",
+   343→      headers: { "Content-Type": "application/json" },
+   344→      body: JSON.stringify({ scheduledAt, notes }),
+   345→    });
+   346→    if (res.ok) {
+   347→      setSiteVisitOpen(false);
+   348→      fetchLead();
+   349→    }
+   350→  };
+   351→
+   352→  // Project management
+   353→  const handleAddProject = async () => {
+   354→    if (!lead || !selectedProjectId) return;
+   355→    const res = await fetch(`/api/leads/${lead.id}`, {
+   356→      method: "PUT",
+   357→      headers: { "Content-Type": "application/json" },
+   358→      body: JSON.stringify({ projectId: selectedProjectId }),
+   359→    });
+   360→    if (res.ok) {
+   361→      setAddProjectOpen(false);
+   362→      setSelectedProjectId("");
+   363→      fetchLead();
+   364→    }
+   365→  };
+   366→
+   367→  const handleRemoveProject = async () => {
+   368→    if (!lead) return;
+   369→    const res = await fetch(`/api/leads/${lead.id}`, {
+   370→      method: "PUT",
+   371→      headers: { "Content-Type": "application/json" },
+   372→      body: JSON.stringify({ projectId: null }),
+   373→    });
+   374→    if (res.ok) {
+   375→      fetchLead();
+   376→    }
+   377→  };
+   378→
+   379→  const fetchAvailableProjects = async () => {
+   380→    const res = await fetch("/api/projects");
+   381→    if (res.ok) {
+   382→      const data = await res.json();
+   383→      setAvailableProjects(data);
+   384→    }
+   385→  };
+   386→
+   387→  if (loading) {
+   388→    return (
+   389→      <div className="space-y-4">
+   390→        <div className="h-10 w-32 animate-pulse rounded bg-muted" />
+   391→        <div className="h-48 animate-pulse rounded-lg bg-muted" />
+   392→      </div>
+   393→    );
+   394→  }
+   395→
+   396→  if (!lead) {
+   397→    return (
+   398→      <div className="text-center py-12">
+   399→        <p className="text-muted-foreground">Lead not found</p>
+   400→        <Button variant="outline" className="mt-4" onClick={() => setPage("leads")}>
+   401→          Back to Leads
+   402→        </Button>
+   403→      </div>
+   404→    );
+   405→  }
+   406→
+   407→  return (
+   408→    <div className="space-y-4">
+   409→      {/* Header */}
+   410→      <div className="flex items-center gap-3">
+   411→        <Button
+   412→          variant="ghost"
+   413→          size="sm"
+   414→          onClick={() => setPage("leads")}
+   415→        >
+   416→          <ArrowLeft className="mr-1 h-4 w-4" /> Back
+   417→        </Button>
+   418→        <div className="flex-1">
+   419→          <h2 className="text-xl font-bold text-foreground">{lead.name}</h2>
+   420→          <p className="text-sm text-muted-foreground">{lead.phone}</p>
+   421→        </div>
+   422→        {canEdit && !editing && (
+   423→          <Button
+   424→            variant="outline"
+   425→            size="sm"
+   426→            onClick={() => setEditing(true)}
+   427→          >
+   428→            <Edit className="mr-1 h-3 w-3" /> Edit
+   429→          </Button>
+   430→        )}
+   431→        {editing && (
+   432→          <div className="flex gap-2">
+   433→            <Button size="sm" onClick={handleSaveEdit} className="bg-brand hover:bg-brand-dark">
+   434→              <Save className="mr-1 h-3 w-3" /> Save
+   435→            </Button>
+   436→            <Button
+   437→              variant="outline"
+   438→              size="sm"
+   439→              onClick={() => setEditing(false)}
+   440→            >
+   441→              <X className="mr-1 h-3 w-3" /> Cancel
+   442→            </Button>
+   443→          </div>
+   444→        )}
+   445→      </div>
+   446→
+   447→      {/* View-only banner */}
+   448→      {isViewOnly && (
+   449→        <div className="flex items-center gap-2 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-3">
+   450→          <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+   451→          <span className="text-sm text-amber-700 dark:text-amber-300">
+   452→            Read-only — This lead is now with {lead.currentOwner.name}
+   453→          </span>
+   454→        </div>
+   455→      )}
+   456→
+   457→      {/* Pipeline Status Bar */}
+   458→      <Card>
+   459→        <CardContent className="p-4">
+   460→          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+   461→            {PIPELINE_STAGES.map((stage) => (
+   462→              <button
+   463→                key={stage}
+   464→                onClick={() => canEdit && handleStatusChange(stage)}
+   465→                disabled={!canEdit}
+   466→                className={`flex items-center gap-1 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+   467→                  lead.pipelineStatus === stage
+   468→                    ? `${statusColors[stage]} ring-2 ring-offset-1 ring-brand`
+   469→                    : "bg-muted text-muted-foreground hover:bg-accent"
+   470→                } ${!canEdit ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+   471→              >
+   472→                {stage}
+   473→              </button>
+   474→            ))}
+   475→          </div>
+   476→          {lead.lostReason && (
+   477→            <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+   478→              Lost Reason: {lead.lostReason}
+   479→            </div>
+   480→          )}
+   481→        </CardContent>
+   482→      </Card>
+   483→
+   484→      <div className="grid gap-4 lg:grid-cols-3">
+   485→        {/* Lead Info */}
+   486→        <div className="lg:col-span-2 space-y-4">
+   487→          <Card>
+   488→            <CardHeader className="pb-3">
+   489→              <CardTitle className="text-base">Lead Information</CardTitle>
+   490→            </CardHeader>
+   491→            <CardContent>
+   492→              {editing ? (
+   493→                <div className="grid gap-3 sm:grid-cols-2">
+   494→                  <div className="space-y-1">
+   495→                    <Label>Name</Label>
+   496→                    <Input
+   497→                      value={editForm.name}
+   498→                      onChange={(e) =>
+   499→                        setEditForm({ ...editForm, name: e.target.value })
+   500→                      }
+   501→                    />
+   502→                  </div>
+   503→                  <div className="space-y-1">
+   504→                    <Label>Phone</Label>
+   505→                    <Input
+   506→                      value={editForm.phone}
+   507→                      onChange={(e) =>
+   508→                        setEditForm({ ...editForm, phone: e.target.value })
+   509→                      }
+   510→                    />
+   511→                  </div>
+   512→                  <div className="space-y-1">
+   513→                    <Label>Email</Label>
+   514→                    <Input
+   515→                      value={editForm.email}
+   516→                      onChange={(e) =>
+   517→                        setEditForm({ ...editForm, email: e.target.value })
+   518→                      }
+   519→                    />
+   520→                  </div>
+   521→                  <div className="space-y-1">
+   522→                    <Label>Budget</Label>
+   523→                    <Input
+   524→                      value={editForm.budget}
+   525→                      onChange={(e) =>
+   526→                        setEditForm({ ...editForm, budget: e.target.value })
+   527→                      }
+   528→                    />
+   529→                  </div>
+   530→                  <div className="space-y-1">
+   531→                    <Label>Source</Label>
+   532→                    <Select
+   533→                      value={editForm.source}
+   534→                      onValueChange={(v) =>
+   535→                        setEditForm({ ...editForm, source: v })
+   536→                      }
+   537→                    >
+   538→                      <SelectTrigger>
+   539→                        <SelectValue />
+   540→                      </SelectTrigger>
+   541→                      <SelectContent>
+   542→                        {sources.map((s) => (
+   543→                          <SelectItem key={s} value={s}>
+   544→                            {s}
+   545→                          </SelectItem>
+   546→                        ))}
+   547→                      </SelectContent>
+   548→                    </Select>
+   549→                  </div>
+   550→                  <div className="sm:col-span-2 space-y-1">
+   551→                    <Label>Notes</Label>
+   552→                    <Textarea
+   553→                      value={editForm.notes}
+   554→                      onChange={(e) =>
+   555→                        setEditForm({ ...editForm, notes: e.target.value })
+   556→                      }
+   557→                      rows={3}
+   558→                    />
+   559→                  </div>
+   560→                </div>
+   561→              ) : (
+   562→                <div className="grid gap-3 sm:grid-cols-2">
+   563→                  <div>
+   564→                    <div className="text-xs text-muted-foreground">Email</div>
+   565→                    <div className="text-sm text-foreground">{lead.email || "—"}</div>
+   566→                  </div>
+   567→                  <div>
+   568→                    <div className="text-xs text-muted-foreground">Source</div>
+   569→                    <div className="text-sm text-foreground">{lead.source}</div>
+   570→                  </div>
+   571→                  <div>
+   572→                    <div className="text-xs text-muted-foreground">Lead Status</div>
+   573→                    <div className="text-sm text-foreground">
+   574→                      {(lead as Record<string, unknown>).leadStatus && (lead as Record<string, unknown>).leadStatus !== "New"
+   575→                        ? (lead as Record<string, unknown>).leadStatus as string
+   576→                        : "—"}
+   577→                      {(lead as Record<string, unknown>).subStage && (
+   578→                        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground">
+   579→                          {(lead as Record<string, unknown>).subStage as string}
+   580→                        </span>
+   581→                      )}
+   582→                    </div>
+   583→                  </div>
+   584→                  <div>
+   585→                    <div className="text-xs text-muted-foreground">Budget</div>
+   586→                    <div className="text-sm text-foreground">{lead.budget || "—"}</div>
+   587→                  </div>
+   588→                  <div>
+   589→                    <div className="text-xs text-muted-foreground">Project</div>
+   590→                    <div className="text-sm text-foreground">
+   591→                      {lead.project?.name || "—"}
+   592→                    </div>
+   593→                  </div>
+   594→                  <div className="sm:col-span-2">
+   595→                    <div className="text-xs text-muted-foreground">Notes</div>
+   596→                    <div className="text-sm text-foreground">{lead.notes || "—"}</div>
+   597→                  </div>
+   598→                </div>
+   599→              )}
+   600→            </CardContent>
+   601→          </Card>
+   602→
+   603→          {/* Project */}
+   604→          <Card>
+   605→            <CardHeader className="flex flex-row items-center justify-between pb-3">
+   606→              <CardTitle className="text-base flex items-center gap-2">
+   607→                <Building2 className="h-4 w-4" />
+   608→                Project
+   609→              </CardTitle>
+   610→              <Button
+   611→                variant="outline"
+   612→                size="sm"
+   613→                onClick={() => {
+   614→                  fetchAvailableProjects();
+   615→                  setAddProjectOpen(true);
+   616→                }}
+   617→              >
+   618→                <Plus className="mr-1 h-3 w-3" /> {lead.project ? "Change Project" : "Set Project"}
+   619→              </Button>
+   620→            </CardHeader>
+   621→            <CardContent>
+   622→              {lead.project ? (
+   623→                <div className="flex items-center justify-between rounded-lg border border-border p-3">
+   624→                  <div className="flex-1 min-w-0">
+   625→                    <div className="flex items-center gap-2">
+   626→                      <span className="font-medium text-foreground text-sm">
+   627→                        {lead.project.name}
+   628→                      </span>
+   629→                    </div>
+   630→                  </div>
+   631→                  {canEdit && (
+   632→                    <Button
+   633→                      variant="ghost"
+   634→                      size="sm"
+   635→                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+   636→                      onClick={handleRemoveProject}
+   637→                    >
+   638→                      <Trash2 className="h-3.5 w-3.5" />
+   639→                    </Button>
+   640→                  )}
+   641→                </div>
+   642→              ) : (
+   643→                <p className="text-sm text-muted-foreground">
+   644→                  No project assigned to this lead.
+   645→                </p>
+   646→              )}
+   647→            </CardContent>
+   648→          </Card>
+   649→
+   650→          {/* Actions */}
+   651→          {canEdit && (
+   652→            <div className="flex flex-wrap gap-2">
+   653→              <Button
+   654→                variant="outline"
+   655→                size="sm"
+   656→                onClick={() => setCallLogOpen(true)}
+   657→              >
+   658→                <Phone className="mr-1 h-3 w-3" /> Log Call
+   659→              </Button>
+   660→              <Button
+   661→                variant="outline"
+   662→                size="sm"
+   663→                onClick={() => setFollowUpOpen(true)}
+   664→              >
+   665→                <Calendar className="mr-1 h-3 w-3" /> Schedule Follow-up
+   666→              </Button>
+   667→              <Button
+   668→                variant="outline"
+   669→                size="sm"
+   670→                onClick={() => setSiteVisitOpen(true)}
+   671→              >
+   672→                <MapPin className="mr-1 h-3 w-3" /> Schedule Visit
+   673→              </Button>
+   674→              <Button
+   675→                variant="outline"
+   676→                size="sm"
+   677→                className="text-destructive hover:text-destructive"
+   678→                onClick={() => setLostReasonOpen(true)}
+   679→              >
+   680→                <XCircle className="mr-1 h-3 w-3" /> Mark Lost
+   681→              </Button>
+   682→            </div>
+   683→          )}
+   684→
+   685→          {/* Tabs for Call Logs, Follow-ups, Site Visits, Timeline */}
+   686→          <Tabs defaultValue="timeline">
+   687→            <TabsList>
+   688→              <TabsTrigger value="timeline">Timeline</TabsTrigger>
+   689→              <TabsTrigger value="calls">
+   690→                Calls ({lead.callLogs.length})
+   691→              </TabsTrigger>
+   692→              <TabsTrigger value="followups">
+   693→                Follow-ups ({lead.followUps.length})
+   694→              </TabsTrigger>
+   695→              <TabsTrigger value="visits">
+   696→                Visits ({lead.siteVisits.length})
+   697→              </TabsTrigger>
+   698→            </TabsList>
+   699→            <TabsContent value="timeline" className="mt-3">
+   700→              <Card>
+   701→                <CardContent className="p-4">
+   702→                  {lead.timeline.length === 0 ? (
+   703→                    <p className="text-sm text-muted-foreground">
+   704→                      No timeline events yet
+   705→                    </p>
+   706→                  ) : (
+   707→                    <div className="space-y-3 max-h-96 overflow-y-auto">
+   708→                      {lead.timeline.map((event) => (
+   709→                        <div
+   710→                          key={event.id}
+   711→                          className="flex gap-3 border-l-2 border-border pl-3"
+   712→                        >
+   713→                          <div>
+   714→                            <div className="text-sm font-medium text-foreground">
+   715→                              {event.description}
+   716→                            </div>
+   717→                            <div className="text-xs text-muted-foreground">
+   718→                              {event.user?.name || "System"} ·{" "}
+   719→                              {new Date(event.createdAt).toLocaleString()}
+   720→                            </div>
+   721→                          </div>
+   722→                        </div>
+   723→                      ))}
+   724→                    </div>
+   725→                  )}
+   726→                </CardContent>
+   727→              </Card>
+   728→            </TabsContent>
+   729→            <TabsContent value="calls" className="mt-3">
+   730→              <Card>
+   731→                <CardContent className="p-4">
+   732→                  {lead.callLogs.length === 0 ? (
+   733→                    <p className="text-sm text-muted-foreground">No calls logged</p>
+   734→                  ) : (
+   735→                    <div className="space-y-3 max-h-96 overflow-y-auto">
+   736→                      {lead.callLogs.map((log) => (
+   737→                        <div
+   738→                          key={log.id}
+   739→                          className="rounded-lg border border-border p-3"
+   740→                        >
+   741→                          <div className="flex items-center justify-between">
+   742→                            <Badge variant="outline">{log.callType}</Badge>
+   743→                            <span className="text-xs text-muted-foreground">
+   744→                              {new Date(log.callDate).toLocaleString()}
+   745→                            </span>
+   746→                          </div>
+   747→                          <div className="mt-1 text-sm text-foreground">
+   748→                            {log.notes}
+   749→                          </div>
+   750→                          <div className="mt-1 text-xs text-muted-foreground">
+   751→                            by {log.user.name}
+   752→                          </div>
+   753→                        </div>
+   754→                      ))}
+   755→                    </div>
+   756→                  )}
+   757→                </CardContent>
+   758→              </Card>
+   759→            </TabsContent>
+   760→            <TabsContent value="followups" className="mt-3">
+   761→              <Card>
+   762→                <CardContent className="p-4">
+   763→                  {lead.followUps.length === 0 ? (
+   764→                    <p className="text-sm text-muted-foreground">
+   765→                      No follow-ups scheduled
+   766→                    </p>
+   767→                  ) : (
+   768→                    <div className="space-y-3 max-h-96 overflow-y-auto">
+   769→                      {lead.followUps.map((fu) => (
+   770→                        <div
+   771→                          key={fu.id}
+   772→                          className="flex items-start justify-between rounded-lg border border-border p-3"
+   773→                        >
+   774→                          <div>
+   775→                            <div className="text-sm text-foreground">
+   776→                              {fu.notes}
+   777→                            </div>
+   778→                            <div className="text-xs text-muted-foreground">
+   779→                              {new Date(fu.scheduledAt).toLocaleString()} · by{" "}
+   780→                              {fu.user.name}
+   781→                            </div>
+   782→                          </div>
+   783→                          {fu.completed ? (
+   784→                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+   785→                              <CheckCircle2 className="mr-1 h-3 w-3" /> Done
+   786→                            </Badge>
+   787→                          ) : (
+   788→                            <Badge variant="outline">Pending</Badge>
+   789→                          )}
+   790→                        </div>
+   791→                      ))}
+   792→                    </div>
+   793→                  )}
+   794→                </CardContent>
+   795→              </Card>
+   796→            </TabsContent>
+   797→            <TabsContent value="visits" className="mt-3">
+   798→              <Card>
+   799→                <CardContent className="p-4">
+   800→                  {lead.siteVisits.length === 0 ? (
+   801→                    <p className="text-sm text-muted-foreground">
+   802→                      No site visits scheduled
+   803→                    </p>
+   804→                  ) : (
+   805→                    <div className="space-y-3 max-h-96 overflow-y-auto">
+   806→                      {lead.siteVisits.map((visit) => (
+   807→                        <div
+   808→                          key={visit.id}
+   809→                          className="rounded-lg border border-border p-3"
+   810→                        >
+   811→                          <div className="flex items-center justify-between">
+   812→                            <Badge
+   813→                              variant="secondary"
+   814→                              className={
+   815→                                visit.status === "Completed"
+   816→                                  ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+   817→                                  : visit.status === "Cancelled"
+   818→                                    ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+   819→                                    : visit.status === "No Show"
+   820→                                      ? "bg-muted text-muted-foreground"
+   821→                                      : "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+   822→                              }
+   823→                            >
+   824→                              {visit.status}
+   825→                            </Badge>
+   826→                            <span className="text-xs text-muted-foreground">
+   827→                              {new Date(visit.scheduledAt).toLocaleString()}
+   828→                            </span>
+   829→                          </div>
+   830→                          <div className="mt-1 text-sm text-foreground">
+   831→                            {visit.notes}
+   832→                          </div>
+   833→                          {visit.feedback && (
+   834→                            <div className="mt-1 text-sm text-muted-foreground">
+   835→                              Feedback: {visit.feedback}
+   836→                            </div>
+   837→                          )}
+   838→                        </div>
+   839→                      ))}
+   840→                    </div>
+   841→                  )}
+   842→                </CardContent>
+   843→              </Card>
+   844→            </TabsContent>
+   845→          </Tabs>
+   846→        </div>
+   847→
+   848→        {/* Sidebar */}
+   849→        <div className="space-y-4">
+   850→          {/* Owner Info */}
+   851→          <Card>
+   852→            <CardHeader className="pb-3">
+   853→              <CardTitle className="text-base">Ownership</CardTitle>
+   854→            </CardHeader>
+   855→            <CardContent className="space-y-3">
+   856→              <div>
+   857→                <div className="text-xs text-muted-foreground">Primary Owner</div>
+   858→                <div className="flex items-center gap-2 mt-1">
+   859→                  <User className="h-4 w-4 text-muted-foreground" />
+   860→                  <span className="text-sm font-medium text-foreground">
+   861→                    {lead.primaryOwner.name}
+   862→                  </span>
+   863→                  <Badge variant="outline" className="text-[10px]">
+   864→                    {lead.primaryOwner.role}
+   865→                  </Badge>
+   866→                </div>
+   867→              </div>
+   868→              <Separator />
+   869→              <div>
+   870→                <div className="text-xs text-muted-foreground">Current Owner</div>
+   871→                <div className="flex items-center gap-2 mt-1">
+   872→                  <User className="h-4 w-4 text-brand" />
+   873→                  <span className="text-sm font-medium text-foreground">
+   874→                    {lead.currentOwner.name}
+   875→                  </span>
+   876→                  <Badge variant="outline" className="text-[10px]">
+   877→                    {lead.currentOwner.role}
+   878→                  </Badge>
+   879→                </div>
+   880→              </div>
+   881→            </CardContent>
+   882→          </Card>
+   883→
+   884→          {/* Assignment History */}
+   885→          {lead.assignments.length > 0 && (
+   886→            <Card>
+   887→              <CardHeader className="pb-3">
+   888→                <CardTitle className="text-base">
+   889→                  Assignment History
+   890→                </CardTitle>
+   891→              </CardHeader>
+   892→              <CardContent>
+   893→                <div className="space-y-2 max-h-48 overflow-y-auto">
+   894→                  {lead.assignments.map((a) => (
+   895→                    <div
+   896→                      key={a.id}
+   897→                      className="text-xs text-foreground border-l-2 border-border pl-2"
+   898→                    >
+   899→                      <div>
+   900→                        {a.fromUser.name} → {a.toUser.name}
+   901→                      </div>
+   902→                      {a.reason && (
+   903→                        <div className="text-muted-foreground">{a.reason}</div>
+   904→                      )}
+   905→                      <div className="text-muted-foreground">
+   906→                        {new Date(a.createdAt).toLocaleString()}
+   907→                      </div>
+   908→                    </div>
+   909→                  ))}
+   910→                </div>
+   911→              </CardContent>
+   912→            </Card>
+   913→          )}
+   914→
+   915→          {/* Dates */}
+   916→          <Card>
+   917→            <CardContent className="p-4 space-y-2">
+   918→              <div className="flex items-center gap-2 text-sm">
+   919→                <Clock className="h-4 w-4 text-muted-foreground" />
+   920→                <span className="text-muted-foreground">Created:</span>
+   921→                <span className="text-foreground">{new Date(lead.createdAt).toLocaleDateString()}</span>
+   922→              </div>
+   923→              <div className="flex items-center gap-2 text-sm">
+   924→                <Clock className="h-4 w-4 text-muted-foreground" />
+   925→                <span className="text-muted-foreground">Updated:</span>
+   926→                <span className="text-foreground">{new Date(lead.updatedAt).toLocaleDateString()}</span>
+   927→              </div>
+   928→            </CardContent>
+   929→          </Card>
+   930→        </div>
+   931→      </div>
+   932→
+   933→      {/* Log Call Dialog */}
+   934→      <Dialog open={callLogOpen} onOpenChange={setCallLogOpen}>
+   935→        <DialogContent>
+   936→          <DialogHeader>
+   937→            <DialogTitle>Log Call</DialogTitle>
+   938→          </DialogHeader>
+   939→          <CallLogForm
+   940→            onSubmit={handleLogCall}
+   941→            currentStatus={lead?.pipelineStatus}
+   942→            currentLeadStatus={lead?.leadStatus}
+   943→            currentSubStage={(lead as any)?.subStage}
+   944→          />
+   945→        </DialogContent>
+   946→      </Dialog>
+   947→
+   948→      {/* Follow-up Dialog */}
+   949→      <Dialog open={followUpOpen} onOpenChange={setFollowUpOpen}>
+   950→        <DialogContent>
+   951→          <DialogHeader>
+   952→            <DialogTitle>Schedule Follow-up</DialogTitle>
+   953→          </DialogHeader>
+   954→          <FollowUpForm onSubmit={handleScheduleFollowUp} />
+   955→        </DialogContent>
+   956→      </Dialog>
+   957→
+   958→      {/* Site Visit Dialog */}
+   959→      <Dialog open={siteVisitOpen} onOpenChange={setSiteVisitOpen}>
+   960→        <DialogContent>
+   961→          <DialogHeader>
+   962→            <DialogTitle>Schedule Site Visit</DialogTitle>
+   963→          </DialogHeader>
+   964→          <SiteVisitForm onSubmit={handleScheduleSiteVisit} />
+   965→        </DialogContent>
+   966→      </Dialog>
+   967→
+   968→      {/* Lost Reason Dialog */}
+   969→      <Dialog open={lostReasonOpen} onOpenChange={setLostReasonOpen}>
+   970→        <DialogContent>
+   971→          <DialogHeader>
+   972→            <DialogTitle>Mark Lead as Lost</DialogTitle>
+   973→          </DialogHeader>
+   974→          <div className="space-y-3">
+   975→            <div className="space-y-1">
+   976→              <Label>Reason for losing this lead *</Label>
+   977→              <Textarea
+   978→                value={lostReason}
+   979→                onChange={(e) => setLostReason(e.target.value)}
+   980→                placeholder="Enter reason..."
+   981→                rows={3}
+   982→              />
+   983→            </div>
+   984→            <Button
+   985→              onClick={handleMarkLost}
+   986→              className="w-full bg-destructive hover:bg-destructive/90"
+   987→              disabled={!lostReason}
+   988→            >
+   989→              Mark as Lost
+   990→            </Button>
+   991→          </div>
+   992→        </DialogContent>
+   993→      </Dialog>
+   994→
+   995→      {/* Set Project Dialog */}
+   996→      <Dialog open={addProjectOpen} onOpenChange={setAddProjectOpen}>
+   997→        <DialogContent>
+   998→          <DialogHeader>
+   999→            <DialogTitle>Set Project</DialogTitle>
+  1000→          </DialogHeader>
+  1001→          <div className="space-y-3">
+  1002→            <div className="space-y-1">
+  1003→              <Label>Select Project</Label>
+  1004→              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+  1005→                <SelectTrigger>
+  1006→                  <SelectValue placeholder="Choose a project..." />
+  1007→                </SelectTrigger>
+  1008→                <SelectContent>
+  1009→                  {availableProjects.map((p) => (
+  1010→                    <SelectItem key={p.id} value={p.id}>
+  1011→                      {p.name} {p.location ? `- ${p.location}` : ""}
+  1012→                    </SelectItem>
+  1013→                  ))}
+  1014→                </SelectContent>
+  1015→              </Select>
+  1016→            </div>
+  1017→            <Button
+  1018→              onClick={handleAddProject}
+  1019→              className="w-full bg-brand hover:bg-brand-dark"
+  1020→              disabled={!selectedProjectId}
+  1021→            >
+  1022→              Set Project
+  1023→            </Button>
+  1024→          </div>
+  1025→        </DialogContent>
+  1026→      </Dialog>
+  1027→    </div>
+  1028→  );
+  1029→}
+  1030→
+  1031→// Sub-forms
+  1032→function CallLogForm({
+  1033→  onSubmit,
+  1034→  currentStatus,
+  1035→  currentLeadStatus,
+  1036→  currentSubStage,
+  1037→}: {
+  1038→  onSubmit: (notes: string, callType: string, followUpDate?: string, dropLead?: boolean, leadStatus?: string, subStage?: string) => void;
+  1039→  currentStatus?: string;
+  1040→  currentLeadStatus?: string | null;
+  1041→  currentSubStage?: string | null;
+  1042→}) {
+  1043→  const [notes, setNotes] = useState("");
+  1044→  const [callType] = useState("Feedback");
+  1045→  const [followUpDate, setFollowUpDate] = useState("");
+  1046→  const [dropLead, setDropLead] = useState(false);
+  1047→  const [leadStatus, setLeadStatus] = useState(currentLeadStatus || "");
+  1048→  const [subStage, setSubStage] = useState<string>(currentSubStage || "");
+  1049→
+  1050→  const LEAD_STATUS_OPTIONS = [
+  1051→    "Not Connected",
+  1052→    "Site Visit Done",
+  1053→    "Prospect",
+  1054→    "Not Interested",
+  1055→    "Site Visit Promised",
+  1056→    "Booked",
+  1057→  ];
+  1058→
+  1059→  // Sub-stage definitions (kept in sync with /src/lib/lead-sub-stages.ts)
+  1060→  const NOT_INTERESTED_SUB_STAGES = [
+  1061→    "No Requirement",
+  1062→    "Location Mismatch",
+  1063→    "Budget Issue",
+  1064→    "Flat Size Issue",
+  1065→    "Want Land",
+  1066→    "Want Bungalow",
+  1067→    "Invalid No",
+  1068→    "ISD No",
+  1069→  ];
+  1070→  const NOT_CONNECTED_SUB_STAGES = [
+  1071→    "Switch Off",
+  1072→    "Incoming Call Not Available",
+  1073→    "Disconnected",
+  1074→    "Ringing",
+  1075→    "Out of Network Service",
+  1076→  ];
+  1077→
+  1078→  // Determine which sub-stages to show based on selected leadStatus
+  1079→  const visibleSubStages =
+  1080→    leadStatus === "Not Interested" ? NOT_INTERESTED_SUB_STAGES
+  1081→    : leadStatus === "Not Connected" ? NOT_CONNECTED_SUB_STAGES
+  1082→    : [];
+  1083→
+  1084→  // When user changes leadStatus, auto-clear subStage if the new status doesn't support sub-stages
+  1085→  const handleStatusChange = (newStatus: string) => {
+  1086→    setLeadStatus(newStatus);
+  1087→    if (newStatus !== "Not Interested" && newStatus !== "Not Connected") {
+  1088→      setSubStage("");
+  1089→    }
+  1090→  };
+  1091→
+  1092→  return (
+  1093→    <div className="space-y-3">
+  1094→      <div className="space-y-1">
+  1095→        <Label>Notes *</Label>
+  1096→        <Textarea
+  1097→          value={notes}
+  1098→          onChange={(e) => setNotes(e.target.value)}
+  1099→          rows={3}
+  1100→        />
+  1101→      </div>
+  1102→      <div className="space-y-1">
+  1103→        <Label>Schedule Follow-up Date (Optional)</Label>
+  1104→        <Input
+  1105→          type="datetime-local"
+  1106→          value={followUpDate}
+  1107→          onChange={(e) => setFollowUpDate(e.target.value)}
+  1108→          placeholder="Select follow-up date & time"
+  1109→        />
+  1110→      </div>
+  1111→      <div className="flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800 p-3">
+  1112→        <input
+  1113→          type="checkbox"
+  1114→          id="dropLeadDetail"
+  1115→          checked={dropLead}
+  1116→          onChange={(e) => setDropLead(e.target.checked)}
+  1117→          className="rounded border-gray-300"
+  1118→        />
+  1119→        <label htmlFor="dropLeadDetail" className="text-sm text-red-600 dark:text-red-400 cursor-pointer">
+  1120→          Drop this lead (mark as Lost)
+  1121→        </label>
+  1122→      </div>
+  1123→      <div className="space-y-1">
+  1124→        <Label>Lead Status</Label>
+  1125→        <Select value={leadStatus || "__none__"} onValueChange={handleStatusChange}>
+  1126→          <SelectTrigger>
+  1127→            <SelectValue placeholder="Select lead status..." />
+  1128→          </SelectTrigger>
+  1129→          <SelectContent>
+  1130→            <SelectItem value="__none__">— None —</SelectItem>
+  1131→            {LEAD_STATUS_OPTIONS.map((s) => (
+  1132→              <SelectItem key={s} value={s}>{s}</SelectItem>
+  1133→            ))}
+  1134→          </SelectContent>
+  1135→        </Select>
+  1136→      </div>
+  1137→
+  1138→      {/* Sub-stage chips: only shown when leadStatus is Not Interested or Not Connected */}
+  1139→      {visibleSubStages.length > 0 && (
+  1140→        <div className="space-y-2">
+  1141→          <Label className="text-xs font-medium text-muted-foreground">
+  1142→            Sub-stage for &quot;{leadStatus}&quot; <span className="text-red-500">*</span>
+  1143→          </Label>
+  1144→          <div className="flex flex-wrap gap-1.5">
+  1145→            {visibleSubStages.map((s) => {
+  1146→              const selected = subStage === s;
+  1147→              const color =
+  1148→                leadStatus === "Not Interested"
+  1149→                  ? (selected
+  1150→                    ? "bg-rose-600 text-white border-rose-600"
+  1151→                    : "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800")
+  1152→                  : (selected
+  1153→                    ? "bg-red-600 text-white border-red-600"
+  1154→                    : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800");
+  1155→              return (
+  1156→                <button
+  1157→                  key={s}
+  1158→                  type="button"
+  1159→                  onClick={() => setSubStage(selected ? "" : s)}
+  1160→                  className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${color}`}
+  1161→                >
+  1162→                  {s}
+  1163→                </button>
+  1164→              );
+  1165→            })}
+  1166→          </div>
+  1167→          {subStage && (
+  1168→            <p className="text-[11px] text-muted-foreground">
+  1169→              Selected: <span className="font-semibold text-foreground">{subStage}</span>
+  1170→              <button
+  1171→                type="button"
+  1172→                onClick={() => setSubStage("")}
+  1173→                className="ml-2 text-xs text-red-600 hover:underline"
+  1174→              >
+  1175→                Clear
+  1176→              </button>
+  1177→            </p>
+  1178→          )}
+  1179→        </div>
+  1180→      )}
+  1181→
+  1182→      <Button
+  1183→        onClick={() => onSubmit(notes, callType, followUpDate || undefined, dropLead, leadStatus || undefined, subStage || undefined)}
+  1184→        className="w-full bg-brand hover:bg-brand-dark"
+  1185→        disabled={!notes || (visibleSubStages.length > 0 && !subStage)}
+  1186→      >
+  1187→        Log Call
+  1188→      </Button>
+  1189→      {visibleSubStages.length > 0 && !subStage && (
+  1190→        <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center">
+  1191→          Please pick a sub-stage above to enable Log Call.
+  1192→        </p>
+  1193→      )}
+  1194→    </div>
+  1195→  );
+  1196→}
+  1197→
+  1198→function FollowUpForm({
+  1199→  onSubmit,
+  1200→}: {
+  1201→  onSubmit: (scheduledAt: string, notes: string) => void;
+  1202→}) {
+  1203→  const [scheduledAt, setScheduledAt] = useState(
+  1204→    new Date().toISOString().slice(0, 16)
+  1205→  );
+  1206→  const [notes, setNotes] = useState("");
+  1207→
+  1208→  return (
+  1209→    <div className="space-y-3">
+  1210→      <div className="space-y-1">
+  1211→        <Label>Scheduled Date & Time *</Label>
+  1212→        <Input
+  1213→          type="datetime-local"
+  1214→          value={scheduledAt}
+  1215→          onChange={(e) => setScheduledAt(e.target.value)}
+  1216→        />
+  1217→      </div>
+  1218→      <div className="space-y-1">
+  1219→        <Label>Notes *</Label>
+  1220→        <Textarea
+  1221→          value={notes}
+  1222→          onChange={(e) => setNotes(e.target.value)}
+  1223→          rows={3}
+  1224→        />
+  1225→      </div>
+  1226→      <Button
+  1227→        onClick={() => onSubmit(scheduledAt, notes)}
+  1228→        className="w-full bg-brand hover:bg-brand-dark"
+  1229→        disabled={!notes || !scheduledAt}
+  1230→      >
+  1231→        Schedule Follow-up
+  1232→      </Button>
+  1233→    </div>
+  1234→  );
+  1235→}
+  1236→
+  1237→function SiteVisitForm({
+  1238→  onSubmit,
+  1239→}: {
+  1240→  onSubmit: (scheduledAt: string, notes: string) => void;
+  1241→}) {
+  1242→  const [scheduledAt, setScheduledAt] = useState(
+  1243→    new Date(Date.now() + 86400000).toISOString().slice(0, 16)
+  1244→  );
+  1245→  const [notes, setNotes] = useState("");
+  1246→
+  1247→  return (
+  1248→    <div className="space-y-3">
+  1249→      <div className="space-y-1">
+  1250→        <Label>Scheduled Date & Time *</Label>
+  1251→        <Input
+  1252→          type="datetime-local"
+  1253→          value={scheduledAt}
+  1254→          onChange={(e) => setScheduledAt(e.target.value)}
+  1255→        />
+  1256→      </div>
+  1257→      <div className="space-y-1">
+  1258→        <Label>Notes</Label>
+  1259→        <Textarea
+  1260→          value={notes}
+  1261→          onChange={(e) => setNotes(e.target.value)}
+  1262→          rows={3}
+  1263→          placeholder="Visit details, location, etc."
+  1264→        />
+  1265→      </div>
+  1266→      <Button
+  1267→        onClick={() => onSubmit(scheduledAt, notes)}
+  1268→        className="w-full bg-brand hover:bg-brand-dark"
+  1269→        disabled={!scheduledAt}
+  1270→      >
+  1271→        Schedule Visit
+  1272→      </Button>
+  1273→    </div>
+  1274→  );
+  1275→}
+  1276→
