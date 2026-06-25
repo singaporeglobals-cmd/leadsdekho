@@ -1135,47 +1135,23 @@ function CallLogForm({
         </Select>
       </div>
 
-      {/* Sub-stage chips: only shown when leadStatus is Not Interested or Not Connected */}
+      {/* Sub-stage dropdown: only shown when leadStatus is Not Interested or Not Connected */}
       {visibleSubStages.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-1">
           <Label className="text-xs font-medium text-muted-foreground">
             Sub-stage for &quot;{leadStatus}&quot; <span className="text-red-500">*</span>
           </Label>
-          <div className="flex flex-wrap gap-1.5">
-            {visibleSubStages.map((s) => {
-              const selected = subStage === s;
-              const color =
-                leadStatus === "Not Interested"
-                  ? (selected
-                    ? "bg-rose-600 text-white border-rose-600"
-                    : "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800")
-                  : (selected
-                    ? "bg-red-600 text-white border-red-600"
-                    : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800");
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setSubStage(selected ? "" : s)}
-                  className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${color}`}
-                >
-                  {s}
-                </button>
-              );
-            })}
-          </div>
-          {subStage && (
-            <p className="text-[11px] text-muted-foreground">
-              Selected: <span className="font-semibold text-foreground">{subStage}</span>
-              <button
-                type="button"
-                onClick={() => setSubStage("")}
-                className="ml-2 text-xs text-red-600 hover:underline"
-              >
-                Clear
-              </button>
-            </p>
-          )}
+          <Select value={subStage || "__none__"} onValueChange={(v) => setSubStage(v === "__none__" ? "" : v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a sub-stage..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">— Select sub-stage —</SelectItem>
+              {visibleSubStages.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
 
@@ -1188,7 +1164,7 @@ function CallLogForm({
       </Button>
       {visibleSubStages.length > 0 && !subStage && (
         <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center">
-          Please pick a sub-stage above to enable Log Call.
+          Please select a sub-stage above to enable Log Call.
         </p>
       )}
     </div>

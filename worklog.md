@@ -194,3 +194,23 @@ Stage Summary:
 - New leads that get a subStage assigned during feedback will appear under their specific sub-stage filter
 - Deployed to https://leadsdekho.in
 
+
+---
+Task ID: 11
+Agent: Main Agent
+Task: Convert sub-stage chips to dropdown format + make sub-stage mandatory on both UI and API
+
+Work Log:
+- lead-detail.tsx CallLogForm: replaced the chip-style sub-stage picker (rose/red colored buttons) with a Select dropdown. Default value is "__none__" (placeholder "— Select sub-stage —"). The Log Call button remains disabled if leadStatus requires a sub-stage and none is selected.
+- lead-list.tsx feedback dialog: replaced the chip-style sub-stage picker with a Select dropdown, using the centralized `getSubStagesForStatus(leadStatus)` helper from `@/lib/lead-sub-stages` (removed the inline hardcoded NOT_INTERESTED / NOT_CONNECTED arrays).
+- lead-list.tsx: warning text updated from "Please pick a sub-stage above..." to "Please select a sub-stage above...".
+- API-level enforcement: added server-side validation in /api/leads/[id]/call-logs POST route. If leadStatus is "Not Interested" or "Not Connected" but no valid subStage is provided, the API returns HTTP 400 with error message: `Sub-stage is required for "<status>" status`. Uses the centralized `isValidSubStage` helper from `@/lib/lead-sub-stages.ts`. This prevents anyone from bypassing the UI (e.g. via direct API call) and leaving a Not Interested / Not Connected lead without a sub-stage.
+- Built successfully with `npx next build`.
+- Deployed to Vercel production.
+
+Stage Summary:
+- Sub-stage picker is now a dropdown (Select) in BOTH the lead detail page CallLogForm and the lead list feedback dialog.
+- Sub-stage is mandatory: Submit/Log Call buttons stay disabled until a sub-stage is picked when Lead Status is "Not Interested" or "Not Connected".
+- Backend now also rejects the API call with HTTP 400 if no valid sub-stage is sent — so the rule is enforced even if someone bypasses the UI.
+- Deployed to https://leadsdekho.in
+

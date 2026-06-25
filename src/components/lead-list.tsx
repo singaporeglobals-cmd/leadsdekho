@@ -1509,63 +1509,31 @@ export function LeadList() {
               </Select>
             </div>
 
-            {/* Sub-stage chips: only shown when leadStatus is Not Interested or Not Connected */}
+            {/* Sub-stage dropdown: only shown when leadStatus is Not Interested or Not Connected */}
             {(feedbackForm.leadStatus === "Not Interested" || feedbackForm.leadStatus === "Not Connected") && (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label className="text-xs font-medium text-muted-foreground">
                   Sub-stage for &quot;{feedbackForm.leadStatus}&quot; <span className="text-red-500">*</span>
                 </Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {(feedbackForm.leadStatus === "Not Interested"
-                    ? [
-                      "No Requirement",
-                      "Location Mismatch",
-                      "Budget Issue",
-                      "Flat Size Issue",
-                      "Want Land",
-                      "Want Bungalow",
-                      "Invalid No",
-                      "ISD No",
-                    ]
-                    : [
-                      "Switch Off",
-                      "Incoming Call Not Available",
-                      "Disconnected",
-                      "Ringing",
-                      "Out of Network Service",
-                    ]
-                  ).map((s) => {
-                    const selected = feedbackForm.subStage === s;
-                    const color =
-                      feedbackForm.leadStatus === "Not Interested"
-                        ? (selected
-                          ? "bg-rose-600 text-white border-rose-600"
-                          : "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800")
-                        : (selected
-                          ? "bg-red-600 text-white border-red-600"
-                          : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800");
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() =>
-                          setFeedbackForm({
-                            ...feedbackForm,
-                            subStage: selected ? "" : s,
-                          })
-                        }
-                        className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${color}`}
-                      >
-                        {s}
-                      </button>
-                    );
-                  })}
-                </div>
-                {feedbackForm.subStage && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Selected: <span className="font-semibold text-foreground">{feedbackForm.subStage}</span>
-                  </p>
-                )}
+                <Select
+                  value={feedbackForm.subStage || "__none__"}
+                  onValueChange={(v) =>
+                    setFeedbackForm({
+                      ...feedbackForm,
+                      subStage: v === "__none__" ? "" : v,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a sub-stage..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Select sub-stage —</SelectItem>
+                    {getSubStagesForStatus(feedbackForm.leadStatus).map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
@@ -1644,7 +1612,7 @@ export function LeadList() {
             </Button>
             {(feedbackForm.leadStatus === "Not Interested" || feedbackForm.leadStatus === "Not Connected") && !feedbackForm.subStage && (
               <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center">
-                Please pick a sub-stage above to enable Submit.
+                Please select a sub-stage above to enable Submit.
               </p>
             )}
           </div>

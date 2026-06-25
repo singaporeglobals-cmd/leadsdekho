@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { isValidSubStage } from "@/lib/lead-sub-stages";
 
 // GET /api/leads/[id]/call-logs
 export async function GET(
@@ -33,6 +34,17 @@ export async function POST(
 
   if (!notes) {
     return NextResponse.json({ error: "Notes are required" }, { status: 400 });
+  }
+
+  // Sub-stage validation: if leadStatus is Not Interested or Not Connected,
+  // a valid subStage must be provided. This is mandatory.
+  if (leadStatus === "Not Interested" || leadStatus === "Not Connected") {
+    if (!subStage || !isValidSubStage(leadStatus, subStage)) {
+      return NextResponse.json(
+        { error: `Sub-stage is required for "${leadStatus}" status` },
+        { status: 400 }
+      );
+    }
   }
 
   const lead = await db.lead.findUnique({ where: { id } });
