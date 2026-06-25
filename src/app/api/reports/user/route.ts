@@ -43,6 +43,8 @@ export async function GET(req: NextRequest) {
     siteVisitArranged,
     visitDone,
     bookingCount,
+    totalCalls,
+    lostLeads,
   ] = await Promise.all([
     db.lead.count({ where: userWhere }),
     db.lead.count({
@@ -100,6 +102,24 @@ export async function GET(req: NextRequest) {
         ...dateFilter,
       },
     }),
+    // Overall Call Report: total calls made by this user in the date range
+    db.callLog.count({
+      where: {
+        userId,
+        callDate: {
+          ...(from ? { gte: new Date(from + "T00:00:00.000Z") } : {}),
+          ...(to ? { lte: new Date(to + "T23:59:59.999Z") } : {}),
+        },
+      },
+    }),
+    // Lost leads (pipelineStatus = "Lost") — only truly lost, not "Not Connected"
+    db.lead.count({
+      where: {
+        currentOwnerId: userId,
+        pipelineStatus: "Lost",
+        ...dateFilter,
+      },
+    }),
   ]);
 
   // Per-day fresh lead breakdown using raw SQL (Prisma doesn't support DATE() grouping directly)
@@ -131,5 +151,7 @@ export async function GET(req: NextRequest) {
     siteVisitArranged,
     visitDone,
     bookingCount,
+    totalCalls,
+    lostLeads,
   });
 }
