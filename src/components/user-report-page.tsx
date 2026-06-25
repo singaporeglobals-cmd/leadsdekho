@@ -21,6 +21,14 @@ interface UserOption {
   role: string;
 }
 
+interface CallReport {
+  total: number;
+  connected: number;
+  notConnected: number;
+  siteVisitPromised: number;
+  lostLead: number;
+}
+
 interface UserReportData {
   totalLeads: number;
   followUpLeads: number;
@@ -32,8 +40,7 @@ interface UserReportData {
   siteVisitArranged: number;
   visitDone: number;
   bookingCount: number;
-  totalCalls?: number;
-  lostLeads?: number;
+  callReport?: CallReport;
 }
 
 function MetricCard({
@@ -398,79 +405,99 @@ export function UserReportPage() {
                 <Phone className="h-4 w-4 text-brand" /> Overall Call Report
               </CardTitle>
               <p className="text-xs text-muted-foreground">
-                Calls made by this user between {fromDate} and {toDate}
+                Each call made by this user between {fromDate} and {toDate}, grouped by the lead&apos;s current status. The 4 tiles below are mutually exclusive and add up to Total Calls.
               </p>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                {/* Total Calls */}
-                <div className="flex flex-col items-start p-4 rounded-lg border border-brand/20 bg-brand/5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Phone className="h-4 w-4 text-brand" />
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Calls</p>
-                  </div>
-                  <p className="text-3xl font-bold text-brand">{data.totalCalls ?? 0}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">All calls (fresh + follow-up)</p>
-                </div>
-                {/* Connected */}
-                <div className="flex flex-col items-start p-4 rounded-lg border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Phone className="h-4 w-4 text-blue-600" />
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Connected</p>
-                  </div>
-                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{data.connectedLeads ?? 0}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">Leads that picked up</p>
-                </div>
-                {/* Not Connected */}
-                <div className="flex flex-col items-start p-4 rounded-lg border border-red-200 bg-red-50/50 dark:bg-red-950/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <UserX className="h-4 w-4 text-red-600" />
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Not Connected</p>
-                  </div>
-                  <p className="text-3xl font-bold text-red-600 dark:text-red-400">{data.notConnectedLeads ?? 0}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">Calls that didn&apos;t connect</p>
-                </div>
-                {/* Site Visit Promised */}
-                <div className="flex flex-col items-start p-4 rounded-lg border border-orange-200 bg-orange-50/50 dark:bg-orange-950/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="h-4 w-4 text-orange-600" />
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Site Visit Promised</p>
-                  </div>
-                  <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{data.siteVisitArranged ?? 0}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">Visits promised on call</p>
-                </div>
-                {/* Lost Lead */}
-                <div className="flex flex-col items-start p-4 rounded-lg border border-rose-200 bg-rose-50/50 dark:bg-rose-950/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle className="h-4 w-4 text-rose-600" />
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Lost Lead</p>
-                  </div>
-                  <p className="text-3xl font-bold text-rose-600 dark:text-rose-400">{data.lostLeads ?? 0}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">Truly lost only (not &quot;Not Connected&quot;)</p>
-                </div>
-              </div>
+              {(() => {
+                const cr = data.callReport ?? { total: 0, connected: 0, notConnected: 0, siteVisitPromised: 0, lostLead: 0 };
+                return (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                      {/* Total Calls */}
+                      <div className="flex flex-col items-start p-4 rounded-lg border-2 border-brand/40 bg-brand/5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Phone className="h-4 w-4 text-brand" />
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Calls</p>
+                        </div>
+                        <p className="text-3xl font-bold text-brand">{cr.total}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">All calls (fresh + follow-up)</p>
+                      </div>
+                      {/* Connected */}
+                      <div className="flex flex-col items-start p-4 rounded-lg border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Phone className="h-4 w-4 text-blue-600" />
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Connected</p>
+                        </div>
+                        <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{cr.connected}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">Prospect / Visit Done / Not Interested / Booked</p>
+                      </div>
+                      {/* Not Connected */}
+                      <div className="flex flex-col items-start p-4 rounded-lg border border-red-200 bg-red-50/50 dark:bg-red-950/20">
+                        <div className="flex items-center gap-2 mb-2">
+                          <UserX className="h-4 w-4 text-red-600" />
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Not Connected</p>
+                        </div>
+                        <p className="text-3xl font-bold text-red-600 dark:text-red-400">{cr.notConnected}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">Calls that didn&apos;t connect</p>
+                      </div>
+                      {/* Site Visit Promised */}
+                      <div className="flex flex-col items-start p-4 rounded-lg border border-orange-200 bg-orange-50/50 dark:bg-orange-950/20">
+                        <div className="flex items-center gap-2 mb-2">
+                          <MapPin className="h-4 w-4 text-orange-600" />
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Site Visit Promised</p>
+                        </div>
+                        <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{cr.siteVisitPromised}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">Visits promised on call</p>
+                      </div>
+                      {/* Lost Lead */}
+                      <div className="flex flex-col items-start p-4 rounded-lg border border-rose-200 bg-rose-50/50 dark:bg-rose-950/20">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertCircle className="h-4 w-4 text-rose-600" />
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Lost Lead</p>
+                        </div>
+                        <p className="text-3xl font-bold text-rose-600 dark:text-rose-400">{cr.lostLead}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">Truly lost only (not &quot;Not Connected&quot;)</p>
+                      </div>
+                    </div>
 
-              {/* Conversion summary */}
-              <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                  <span className="text-muted-foreground">Connection Rate</span>
-                  <span className="font-semibold">
-                    {(data.totalCalls ?? 0) > 0 ? Math.round(((data.connectedLeads ?? 0) / (data.totalCalls ?? 0)) * 100) : 0}%
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                  <span className="text-muted-foreground">Visit Promise Rate</span>
-                  <span className="font-semibold">
-                    {(data.totalCalls ?? 0) > 0 ? Math.round(((data.siteVisitArranged ?? 0) / (data.totalCalls ?? 0)) * 100) : 0}%
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                  <span className="text-muted-foreground">Loss Rate (of total leads)</span>
-                  <span className="font-semibold">
-                    {data.totalLeads > 0 ? Math.round(((data.lostLeads ?? 0) / data.totalLeads) * 100) : 0}%
-                  </span>
-                </div>
-              </div>
+                    {/* Arithmetic check */}
+                    <div className="mt-3 flex items-center gap-2 text-xs">
+                      <span className="text-muted-foreground">Breakdown check:</span>
+                      <span className="font-mono font-semibold text-foreground">
+                        {cr.connected} + {cr.notConnected} + {cr.siteVisitPromised} + {cr.lostLead} = {cr.connected + cr.notConnected + cr.siteVisitPromised + cr.lostLead}
+                      </span>
+                      {cr.total === cr.connected + cr.notConnected + cr.siteVisitPromised + cr.lostLead ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">✓ matches Total ({cr.total})</span>
+                      ) : (
+                        <span className="text-amber-600 dark:text-amber-400 font-medium">⚠ differs from Total ({cr.total})</span>
+                      )}
+                    </div>
+
+                    {/* Conversion summary */}
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <span className="text-muted-foreground">Connection Rate</span>
+                        <span className="font-semibold">
+                          {cr.total > 0 ? Math.round(((cr.connected + cr.siteVisitPromised) / cr.total) * 100) : 0}%
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <span className="text-muted-foreground">Visit Promise Rate</span>
+                        <span className="font-semibold">
+                          {cr.total > 0 ? Math.round((cr.siteVisitPromised / cr.total) * 100) : 0}%
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <span className="text-muted-foreground">Loss Rate (of total calls)</span>
+                        <span className="font-semibold">
+                          {cr.total > 0 ? Math.round((cr.lostLead / cr.total) * 100) : 0}%
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </CardContent>
           </Card>
 

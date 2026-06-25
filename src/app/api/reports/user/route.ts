@@ -43,8 +43,6 @@ export async function GET(req: NextRequest) {
     siteVisitArranged,
     visitDone,
     bookingCount,
-    totalCalls,
-    lostLeads,
   ] = await Promise.all([
     db.lead.count({ where: userWhere }),
     db.lead.count({
@@ -102,25 +100,47 @@ export async function GET(req: NextRequest) {
         ...dateFilter,
       },
     }),
-    // Overall Call Report: total calls made by this user in the date range
-    db.callLog.count({
-      where: {
-        userId,
-        callDate: {
-          ...(from ? { gte: new Date(from + "T00:00:00.000Z") } : {}),
-          ...(to ? { lte: new Date(to + "T23:59:59.999Z") } : {}),
-        },
-      },
-    }),
-    // Lost leads (pipelineStatus = "Lost") — only truly lost, not "Not Connected"
-    db.lead.count({
-      where: {
-        currentOwnerId: userId,
-        pipelineStatus: "Lost",
-        ...dateFilter,
-      },
-    }),
   ]);
+
+  // Overall Call Report: group each CALL by the lead's current status.
+  // Categories are MUTUALLY EXCLUSIVE and sum to totalCalls:
+  //   1. lost            — pipelineStatus = 'Lost' (truly lost, NOT 'Not Connected')
+  //   2. not_connected   — leadStatus = 'Not Connected' (and not lost)
+  //   3. site_visit_promised — leadStatus = 'Site Visit Promised' (and not lost)
+  //   4. connected       — everything else (Prospect / Site Visit Done / Not Interested / Booked / null)
+  // This way: totalCalls = lost + notConnected + siteVisitPromised + connected
+  const callReport = {
+    total: 0,
+    connected: 0,
+    notConnected: 0,
+    siteVisitPromised: 0,
+    lostLead: 0,
+  };
+  if (from && to) {
+    const callRows = (await db.$queryRaw`
+      SELECT
+        CASE
+          WHEN l."pipelineStatus" = 'Lost' THEN 'lost'
+          WHEN l."leadStatus" = 'Not Connected' THEN 'not_connected'
+          WHEN l."leadStatus" = 'Site Visit Promised' THEN 'site_visit_promised'
+          ELSE 'connected'
+        END AS category,
+        COUNT(*)::int AS count
+      FROM "CallLog" c
+      JOIN "Lead" l ON c."leadId" = l."id"
+      WHERE c."userId" = ${userId}
+        AND c."callDate" >= ${new Date(from + "T00:00:00.000Z")}
+        AND c."callDate" <= ${new Date(to + "T23:59:59.999Z")}
+      GROUP BY category
+    `) as Array<{ category: string; count: number }>;
+    for (const row of callRows) {
+      if (row.category === "lost") callReport.lostLead = row.count;
+      else if (row.category === "not_connected") callReport.notConnected = row.count;
+      else if (row.category === "site_visit_promised") callReport.siteVisitPromised = row.count;
+      else if (row.category === "connected") callReport.connected = row.count;
+      callReport.total += row.count;
+    }
+  }
 
   // Per-day fresh lead breakdown using raw SQL (Prisma doesn't support DATE() grouping directly)
   // We count leads grouped by the calendar date they were created (their "fresh" date).
@@ -151,7 +171,6 @@ export async function GET(req: NextRequest) {
     siteVisitArranged,
     visitDone,
     bookingCount,
-    totalCalls,
-    lostLeads,
+    callReport,
   });
 }
