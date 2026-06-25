@@ -50,6 +50,7 @@ import {
   RotateCcw,
   AlertCircle,
   XCircle,
+  Building2,
 } from "lucide-react";
 
 const PIPELINE_STAGES = [
@@ -188,6 +189,7 @@ export function LeadList() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [leadStatusFilter, setLeadStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [projectFilter, setProjectFilter] = useState("all");
   const [userFilter, setUserFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -311,6 +313,7 @@ export function LeadList() {
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (leadStatusFilter !== "all") params.set("leadStatus", leadStatusFilter);
       if (sourceFilter !== "all") params.set("source", sourceFilter);
+      if (projectFilter !== "all") params.set("project", projectFilter);
       if (userFilter !== "all" && isAdminRole(user?.role || "")) params.set("owner", userFilter);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo) params.set("dateTo", dateTo);
@@ -352,7 +355,7 @@ export function LeadList() {
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, pendingFollowUpsFilter, todayFollowUpsFilter, followUpDate, refresh, user?.role, badgesFetched]);
+  }, [debouncedSearch, statusFilter, leadStatusFilter, sourceFilter, projectFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, pendingFollowUpsFilter, todayFollowUpsFilter, followUpDate, refresh, user?.role, badgesFetched]);
 
   // Fetch users, projects, and lead sources - parallel for speed (properties lazy-loaded on dialog open)
   useEffect(() => {
@@ -704,6 +707,20 @@ export function LeadList() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={projectFilter} onValueChange={setProjectFilter}>
+            <SelectTrigger className="w-[160px] h-9">
+              <Building2 className="mr-1 h-3 w-3" />
+              <SelectValue placeholder="Project" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Projects</SelectItem>
+              {projects.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={leadStatusFilter} onValueChange={setLeadStatusFilter}>
             <SelectTrigger className="w-[160px] h-9">
               <Filter className="mr-1 h-3 w-3" />
@@ -734,12 +751,12 @@ export function LeadList() {
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[130px]" placeholder="From" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[130px]" placeholder="To" />
           {/* Clear all filters */}
-          {(statusFilter !== "all" || leadStatusFilter !== "all" || sourceFilter !== "all" || userFilter !== "all" || dateFrom || dateTo || myLeadsFilter || freshLeadsFilter || pendingFollowUpsFilter || todayFollowUpsFilter) && (
+          {(statusFilter !== "all" || leadStatusFilter !== "all" || sourceFilter !== "all" || projectFilter !== "all" || userFilter !== "all" || dateFrom || dateTo || myLeadsFilter || freshLeadsFilter || pendingFollowUpsFilter || todayFollowUpsFilter) && (
             <Button
               variant="ghost"
               size="sm"
               className="h-9 text-muted-foreground hover:text-foreground"
-              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSourceFilter("all"); setUserFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); setMyLeadsFilter(false); setFreshLeadsFilter(false); setPendingFollowUpsFilter(false); setTodayFollowUpsFilter(false); setFollowUpDate(""); }}
+              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSourceFilter("all"); setProjectFilter("all"); setUserFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); setMyLeadsFilter(false); setFreshLeadsFilter(false); setPendingFollowUpsFilter(false); setTodayFollowUpsFilter(false); setFollowUpDate(""); }}
             >
               <RotateCcw className="mr-1 h-3 w-3" /> Clear
             </Button>
