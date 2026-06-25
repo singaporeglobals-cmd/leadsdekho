@@ -175,3 +175,22 @@ Stage Summary:
 - Backend `/api/leads?subStage=...` already supported filtering — no API changes needed
 - Deployed to https://leadsdekho.in
 
+
+---
+Task ID: 10
+Agent: Main Agent
+Task: User reported "no leads showing" after sub-stage filter deploy — add Uncategorized option + null subStage API support
+
+Work Log:
+- Diagnosed: existing leads in DB that were marked "Not Interested" / "Not Connected" BEFORE the sub-stage feature existed have `subStage = null`. When user filters by Lead Status = Not Interested + a specific sub-stage (e.g. "Budget Issue"), zero leads match because no lead has that exact subStage set yet.
+- Updated /api/leads GET route: subStage query param now accepts the sentinel value `"none"` to filter leads where subStage IS NULL. Any other non-empty value filters by exact subStage match (existing behavior).
+- Updated lead-list.tsx sub-stage Select dropdown: added a new "— Uncategorized —" option (value="none") at the top of the sub-stage list. Selecting it shows leads whose leadStatus matches but subStage is null (i.e., leads that were marked Not Interested/Not Connected before sub-stages were introduced, or leads where sub-stage wasn't picked).
+- Built successfully with `npx next build`
+- Deployed to Vercel production
+
+Stage Summary:
+- Old leads with leadStatus but no subStage can now be found via the "— Uncategorized —" filter option
+- "All Sub-stages" still shows all leads matching the leadStatus (no subStage filter applied)
+- New leads that get a subStage assigned during feedback will appear under their specific sub-stage filter
+- Deployed to https://leadsdekho.in
+

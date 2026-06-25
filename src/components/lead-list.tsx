@@ -760,6 +760,7 @@ export function LeadList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Sub-stages</SelectItem>
+                <SelectItem value="none">— Uncategorized —</SelectItem>
                 {getSubStagesForStatus(leadStatusFilter).map((s) => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}

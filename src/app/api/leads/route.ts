@@ -23,6 +23,8 @@ export async function GET(req: NextRequest) {
   const dateFrom = searchParams.get("dateFrom") || searchParams.get("from");
   const dateTo = searchParams.get("dateTo") || searchParams.get("to");
   const projectId = searchParams.get("project");
+  // subStage can be: null (no filter), "none" (leads with subStage=null),
+  // or any specific sub-stage value
   const subStage = searchParams.get("subStage");
   const allCallLogs = searchParams.get("allCallLogs") === "true";
 
@@ -56,7 +58,14 @@ export async function GET(req: NextRequest) {
 
   if (status && !fresh) where.pipelineStatus = status;
   if (leadStatus) where.leadStatus = leadStatus;
-  if (subStage) where.subStage = subStage;
+  if (subStage) {
+    if (subStage === "none") {
+      // Leads whose leadStatus matches but no subStage has been picked yet
+      where.subStage = null;
+    } else {
+      where.subStage = subStage;
+    }
+  }
   if (source) where.source = source;
   if (ownerFilter) where.currentOwnerId = ownerFilter;
   if (projectId) where.projectId = projectId;
