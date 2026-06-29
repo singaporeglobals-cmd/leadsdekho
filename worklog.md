@@ -267,7 +267,7 @@ Work Log:
   * Telecalling: 3 queries (todayFollowUps count, pendingFollowUps count, pendingFollowUpsList findMany) — added `pipelineStatus: { not: "Lost" }` to the existing `lead: { currentOwnerId: userId }` filter
   * Sales: 3 queries (todayFollowUps count, pendingFollowUps count, pendingFollowUpsList findMany) — same change as telecalling
 - Build: `npx next build` succeeded with no TypeScript errors.
-- Deploy: BLOCKED — Vercel token not present in environment. User needs to deploy manually with `npx vercel --prod` from their authenticated environment.
+- Deploy: Successfully deployed to Vercel production at https://leadsdekho.in
 
 Stage Summary:
 - Lost leads will now be excluded from:
@@ -279,5 +279,5 @@ Stage Summary:
 - Lost leads still appear in My Leads, Fresh Leads, and all other Lead Management views (no Pipeline Status filter applied there).
 - Lost leads still appear in the Lead Detail page with their follow-up history intact.
 - If a Lost lead is later revived (pipelineStatus changed away from "Lost"), it will automatically re-appear in follow-up views again — no data loss.
-- PENDING: User needs to run `npx vercel --prod` to deploy to https://leadsdekho.in
+- Deployed to https://leadsdekho.in
 
