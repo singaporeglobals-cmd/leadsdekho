@@ -8,13 +8,23 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const status = searchParams.get("status");
-  const leadStatus = searchParams.get("leadStatus");
-  const source = searchParams.get("source");
+  // Multi-value filters: comma-separated values. e.g. ?leadStatus=Not Connected,Not Interested
+  // Empty / missing means "no filter".
+  const splitList = (v: string | null): string[] =>
+    v ? v.split(",").map((s) => s.trim()).filter(Boolean) : [];
+
+  const statusList = splitList(searchParams.get("status"));
+  const leadStatusList = splitList(searchParams.get("leadStatus"));
+  const sourceList = splitList(searchParams.get("source"));
+  const projectList = splitList(searchParams.get("project"));
+  const ownerList = splitList(searchParams.get("owner"));
+  // subStage can be: empty (no filter), or a list of sub-stage values.
+  // The special value "__none__" matches leads where subStage IS NULL.
+  const subStageList = splitList(searchParams.get("subStage"));
+
   const search = searchParams.get("search");
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "50");
-  const ownerFilter = searchParams.get("owner");
   const myLeads = searchParams.get("myLeads") === "true";
   const fresh = searchParams.get("fresh") === "true";
   const pendingFollowUps = searchParams.get("pendingFollowUps") === "true";
@@ -22,10 +32,6 @@ export async function GET(req: NextRequest) {
   const followUpDate = searchParams.get("followUpDate"); // YYYY-MM-DD
   const dateFrom = searchParams.get("dateFrom") || searchParams.get("from");
   const dateTo = searchParams.get("dateTo") || searchParams.get("to");
-  const projectId = searchParams.get("project");
-  // subStage can be: null (no filter), "none" (leads with subStage=null),
-  // or any specific sub-stage value
-  const subStage = searchParams.get("subStage");
   const allCallLogs = searchParams.get("allCallLogs") === "true";
 
   const where: Record<string, unknown> = {};
@@ -56,19 +62,27 @@ export async function GET(req: NextRequest) {
     delete where.pipelineStatus; // Already in AND
   }
 
-  if (status && !fresh) where.pipelineStatus = status;
-  if (leadStatus) where.leadStatus = leadStatus;
-  if (subStage) {
-    if (subStage === "none") {
-      // Leads whose leadStatus matches but no subStage has been picked yet
-      where.subStage = null;
-    } else {
-      where.subStage = subStage;
+  if (statusList.length > 0 && !fresh) where.pipelineStatus = { in: statusList };
+  if (leadStatusList.length > 0) where.leadStatus = { in: leadStatusList };
+
+  // Build the "AND" conditions list so we can combine multi-filter OR groups safely
+  // (search uses OR; subStage with __none__ also uses OR; we must not overwrite each other).
+  const andConditions: Record<string, unknown>[] = [];
+
+  if (subStageList.length > 0) {
+    const realSubStages = subStageList.filter((s) => s !== "__none__");
+    const includeNull = subStageList.includes("__none__");
+    if (realSubStages.length > 0 && includeNull) {
+      andConditions.push({ OR: [{ subStage: { in: realSubStages } }, { subStage: null }] });
+    } else if (realSubStages.length > 0) {
+      andConditions.push({ subStage: { in: realSubStages } });
+    } else if (includeNull) {
+      andConditions.push({ subStage: null });
     }
   }
-  if (source) where.source = source;
-  if (ownerFilter) where.currentOwnerId = ownerFilter;
-  if (projectId) where.projectId = projectId;
+  if (sourceList.length > 0) where.source = { in: sourceList };
+  if (ownerList.length > 0) where.currentOwnerId = { in: ownerList };
+  if (projectList.length > 0) where.projectId = { in: projectList };
 
   // Pending Follow-ups filter - leads that have at least one incomplete follow-up (any date).
   // NOTE: We do NOT filter followUps by userId here, because the follow-up's userId is
@@ -125,13 +139,27 @@ export async function GET(req: NextRequest) {
     ];
     if (user.role === "telecalling" || user.role === "sales" || myLeads) {
       // Restrict search to leads currently owned by the user
-      where.OR = [
-        { currentOwnerId: user.id, name: { contains: search } },
-        { currentOwnerId: user.id, phone: { contains: search } },
-        { currentOwnerId: user.id, email: { contains: search } },
-      ];
+      andConditions.push({
+        OR: [
+          { currentOwnerId: user.id, name: { contains: search } },
+          { currentOwnerId: user.id, phone: { contains: search } },
+          { currentOwnerId: user.id, email: { contains: search } },
+        ],
+      });
     } else {
-      where.OR = searchConditions;
+      andConditions.push({ OR: searchConditions });
+    }
+  }
+
+  // Combine all AND conditions into the where clause.
+  // If `where.AND` already exists (e.g., from `fresh` filter), we append to it.
+  if (andConditions.length > 0) {
+    if (where.AND) {
+      // Existing AND array (from `fresh` filter)
+      const existing = Array.isArray(where.AND) ? where.AND : [where.AND];
+      where.AND = [...existing, ...andConditions];
+    } else {
+      where.AND = andConditions;
     }
   }
 

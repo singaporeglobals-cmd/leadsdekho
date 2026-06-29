@@ -214,3 +214,41 @@ Stage Summary:
 - Backend now also rejects the API call with HTTP 400 if no valid sub-stage is sent — so the rule is enforced even if someone bypasses the UI.
 - Deployed to https://leadsdekho.in
 
+
+---
+Task ID: 12
+Agent: Main Agent
+Task: Two fixes — (1) Follow-up date edit not replacing old pending follow-up, (2) Convert all filter dropdowns to multi-select on admin & user dashboards
+
+Work Log:
+
+Issue 1 — Follow-up date edit bug
+- Root cause: When user edits feedback and sets a new follow-up date, POST /api/leads/[id]/follow-ups creates a NEW FollowUp row. The OLD pending follow-up was NOT being marked complete. So the lead had multiple pending follow-ups. The lead list API picks the earliest upcoming one (`orderBy: scheduledAt asc, take: 1`), so the OLD date kept showing.
+- Fix: Updated POST /api/leads/[id]/follow-ups route to auto-complete ALL pending follow-ups for the lead BEFORE creating the new one. Now only the newly scheduled follow-up remains pending.
+
+Issue 2 — Multi-select filters
+- Created new reusable MultiSelect component at /src/components/ui/multi-select.tsx — Popover + Checkbox based, with "All" option at top, count badge, and an "x" clear button on the trigger.
+- lead-list.tsx: Converted 6 filters (Pipeline Status, Source, Project, Lead Status, Sub-stage, User/Assignee) from single-select Select to MultiSelect. State changed from string ("all") to string[]. URL params sent as comma-separated. Sub-stage filter now appears when Lead Status includes "Not Interested" OR "Not Connected" (was: equals one of them).
+- reports-page.tsx: Converted Project, Source, Lead Status filters to MultiSelect. Updated 3 child report components (DateWiseReport, SourceWiseReport, ProjectWiseReport) to accept string[] props and send comma-separated values.
+- leads-report-page.tsx: Converted Source, Project filters to MultiSelect.
+- dashboard.tsx: Converted Assignee filter to MultiSelect (Month stays single-select — picking multiple months is conceptually odd).
+
+Backend multi-value filter support:
+- /api/leads/route.ts: status, leadStatus, source, project, owner now accept comma-separated values; uses Prisma `in` operator. subStage accepts comma-separated values including the special "__none__" token for matching leads where subStage IS NULL. Properly combines with search's OR clause via `andConditions` array to avoid OR overwrites.
+- /api/reports/date-wise/route.ts: Same multi-value support for project, source, leadStatus.
+- /api/reports/source-wise/route.ts: Same.
+- /api/reports/project-wise/route.ts: Same.
+- /api/reports/export/route.ts: leadsReport export now accepts comma-separated source and project.
+- /api/dashboard/route.ts: assignee now accepts comma-separated values; combinedFilter signature updated to use `currentOwnerId: { in: string[] }`.
+
+Build & deploy:
+- Build successful with `npx next build` (no TypeScript errors).
+- Deployed to Vercel production at https://leadsdekho.in
+
+Stage Summary:
+- Editing a follow-up date now correctly REPLACES the old pending follow-up (instead of creating duplicates that show the old date).
+- All filter dropdowns across the app now support multi-select with checkboxes — Pipeline Status, Source, Project, Lead Status, Sub-stage, User/Assignee. The MultiSelect shows a count badge and a quick clear (x) button.
+- The "Clear" button on each filter bar resets all multi-select filters too.
+- Backend APIs accept comma-separated filter values everywhere.
+- Deployed to https://leadsdekho.in
+

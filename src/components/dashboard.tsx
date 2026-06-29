@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { MultiSelect } from "@/components/ui/multi-select";
 import {
   Select,
   SelectContent,
@@ -61,7 +62,7 @@ export function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState("all");
-  const [assignFilter, setAssignFilter] = useState("all");
+  const [assignFilter, setAssignFilter] = useState<string[]>([]);
   const [optimizing, setOptimizing] = useState(false);
   const [optimizeResult, setOptimizeResult] = useState<string | null>(null);
 
@@ -89,7 +90,7 @@ export function AdminDashboard() {
     (async () => {
       const params = new URLSearchParams();
       params.set("month", month);
-      if (assignFilter && assignFilter !== "all") params.set("assignee", assignFilter);
+      if (assignFilter.length > 0) params.set("assignee", assignFilter.join(","));
       const res = await fetch(`/api/dashboard?${params}`);
       if (!cancelled && res.ok) {
         const d = await res.json();
@@ -156,20 +157,17 @@ export function AdminDashboard() {
     <div className="space-y-6">
       {/* Filters - Top Right */}
       <div className="flex items-center justify-end gap-2 flex-wrap">
-        <Select value={assignFilter} onValueChange={setAssignFilter}>
-          <SelectTrigger className="w-[180px] h-9">
-            <Users className="mr-1 h-3 w-3" />
-            <SelectValue placeholder="All Users" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Users</SelectItem>
-            {ownerUsers.map((u) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.name} ({ownerLeadCountMap[u.id] || 0})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelect
+          options={ownerUsers.map((u) => ({
+            value: u.id,
+            label: `${u.name} (${ownerLeadCountMap[u.id] || 0})`,
+          }))}
+          value={assignFilter}
+          onChange={setAssignFilter}
+          placeholder="Users"
+          allLabel="All Users"
+          className="w-[180px]"
+        />
         <Select value={month} onValueChange={setMonth}>
           <SelectTrigger className="w-[160px] h-9">
             <CalendarCheck className="mr-1 h-3 w-3" />

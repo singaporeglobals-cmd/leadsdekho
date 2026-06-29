@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MultiSelect } from "@/components/ui/multi-select";
 import {
   Dialog,
   DialogContent,
@@ -188,12 +189,12 @@ export function LeadList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [leadStatusFilter, setLeadStatusFilter] = useState("all");
-  const [subStageFilter, setSubStageFilter] = useState("all");
-  const [sourceFilter, setSourceFilter] = useState("all");
-  const [projectFilter, setProjectFilter] = useState("all");
-  const [userFilter, setUserFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [leadStatusFilter, setLeadStatusFilter] = useState<string[]>([]);
+  const [subStageFilter, setSubStageFilter] = useState<string[]>([]);
+  const [sourceFilter, setSourceFilter] = useState<string[]>([]);
+  const [projectFilter, setProjectFilter] = useState<string[]>([]);
+  const [userFilter, setUserFilter] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [myLeadsFilter, setMyLeadsFilter] = useState(false);
@@ -323,12 +324,12 @@ export function LeadList() {
       setLoading(true);
       const params = new URLSearchParams();
       if (debouncedSearch) params.set("search", debouncedSearch);
-      if (statusFilter !== "all") params.set("status", statusFilter);
-      if (leadStatusFilter !== "all") params.set("leadStatus", leadStatusFilter);
-      if (subStageFilter !== "all") params.set("subStage", subStageFilter);
-      if (sourceFilter !== "all") params.set("source", sourceFilter);
-      if (projectFilter !== "all") params.set("project", projectFilter);
-      if (userFilter !== "all" && isAdminRole(user?.role || "")) params.set("owner", userFilter);
+      if (statusFilter.length > 0) params.set("status", statusFilter.join(","));
+      if (leadStatusFilter.length > 0) params.set("leadStatus", leadStatusFilter.join(","));
+      if (subStageFilter.length > 0) params.set("subStage", subStageFilter.join(","));
+      if (sourceFilter.length > 0) params.set("source", sourceFilter.join(","));
+      if (projectFilter.length > 0) params.set("project", projectFilter.join(","));
+      if (userFilter.length > 0 && isAdminRole(user?.role || "")) params.set("owner", userFilter.join(","));
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo) params.set("dateTo", dateTo);
       if (myLeadsFilter) params.set("myLeads", "true");
@@ -690,82 +691,77 @@ export function LeadList() {
           </div>
           {/* User/Assignee filter - Admin only */}
           {isAdminRole(user?.role || "") && (
-            <Select value={userFilter} onValueChange={setUserFilter}>
-              <SelectTrigger className="w-[180px] h-9">
-                <UsersRound className="mr-1 h-3 w-3" />
-                <SelectValue placeholder="All Users" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
-                {users.filter((u) => u.isActive && u.role !== "admin").map((u) => (
-                  <SelectItem key={u.id} value={u.id}>
-                    {u.name} ({u.role})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiSelect
+              options={users
+                .filter((u) => u.isActive && u.role !== "admin")
+                .map((u) => ({ value: u.id, label: `${u.name} (${u.role})` }))}
+              value={userFilter}
+              onChange={setUserFilter}
+              placeholder="Users"
+              allLabel="All Users"
+              className="w-[180px]"
+            />
           )}
-          <Select value={sourceFilter} onValueChange={setSourceFilter}>
-            <SelectTrigger className="w-[140px] h-9">
-              <SelectValue placeholder="Source" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sources</SelectItem>
-              {sources.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={projectFilter} onValueChange={setProjectFilter}>
-            <SelectTrigger className="w-[160px] h-9">
-              <Building2 className="mr-1 h-3 w-3" />
-              <SelectValue placeholder="Project" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Projects</SelectItem>
-              {projects.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
+          {/* Pipeline Status filter */}
+          <MultiSelect
+            options={PIPELINE_STAGES.map((s) => ({ value: s, label: s }))}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            placeholder="Pipeline"
+            allLabel="All Pipeline"
+            className="w-[160px]"
+          />
+          {/* Source filter */}
+          <MultiSelect
+            options={sources.map((s) => ({ value: s, label: s }))}
+            value={sourceFilter}
+            onChange={setSourceFilter}
+            placeholder="Sources"
+            allLabel="All Sources"
+            className="w-[150px]"
+          />
+          {/* Project filter */}
+          <MultiSelect
+            options={projects.map((p) => ({ value: p.id, label: p.name }))}
+            value={projectFilter}
+            onChange={setProjectFilter}
+            placeholder="Projects"
+            allLabel="All Projects"
+            className="w-[170px]"
+          />
+          {/* Lead Status filter */}
+          <MultiSelect
+            options={LEAD_STATUSES.map((s) => ({ value: s, label: s }))}
             value={leadStatusFilter}
-            onValueChange={(v) => {
+            onChange={(v) => {
               setLeadStatusFilter(v);
               // Reset sub-stage filter whenever lead status changes
-              setSubStageFilter("all");
+              setSubStageFilter([]);
             }}
-          >
-            <SelectTrigger className="w-[160px] h-9">
-              <Filter className="mr-1 h-3 w-3" />
-              <SelectValue placeholder="Lead Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Lead Status</SelectItem>
-              {LEAD_STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {/* Sub-stage filter — only shown when Lead Status is "Not Interested" or "Not Connected" */}
-          {(leadStatusFilter === "Not Interested" || leadStatusFilter === "Not Connected") && (
-            <Select value={subStageFilter} onValueChange={setSubStageFilter}>
-              <SelectTrigger className="w-[180px] h-9">
-                <Filter className="mr-1 h-3 w-3" />
-                <SelectValue placeholder="Sub-stage" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sub-stages</SelectItem>
-                <SelectItem value="none">— Uncategorized —</SelectItem>
-                {getSubStagesForStatus(leadStatusFilter).map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            placeholder="Lead Status"
+            allLabel="All Lead Status"
+            className="w-[170px]"
+          />
+          {/* Sub-stage filter — only shown when Lead Status includes "Not Interested" or "Not Connected" */}
+          {(leadStatusFilter.includes("Not Interested") || leadStatusFilter.includes("Not Connected")) && (
+            <MultiSelect
+              options={[
+                // Uncategorized option (matches leads with subStage = null)
+                { value: "__none__", label: "— Uncategorized —" },
+                ...getSubStagesForStatus(
+                  leadStatusFilter.includes("Not Interested") ? "Not Interested" : "Not Connected"
+                ).map((s) => ({ value: s, label: s })),
+                // If both statuses selected, also include the other one's sub-stages
+                ...(leadStatusFilter.includes("Not Interested") && leadStatusFilter.includes("Not Connected")
+                  ? getSubStagesForStatus("Not Connected").map((s) => ({ value: s, label: s }))
+                  : []),
+              ]}
+              value={subStageFilter}
+              onChange={setSubStageFilter}
+              placeholder="Sub-stage"
+              allLabel="All Sub-stages"
+              className="w-[180px]"
+            />
           )}
           {/* Date filter with presets */}
           <div className="flex items-center gap-1">
@@ -785,12 +781,12 @@ export function LeadList() {
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[130px]" placeholder="From" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[130px]" placeholder="To" />
           {/* Clear all filters */}
-          {(statusFilter !== "all" || leadStatusFilter !== "all" || subStageFilter !== "all" || sourceFilter !== "all" || projectFilter !== "all" || userFilter !== "all" || dateFrom || dateTo || myLeadsFilter || freshLeadsFilter || pendingFollowUpsFilter || todayFollowUpsFilter) && (
+          {(statusFilter.length > 0 || leadStatusFilter.length > 0 || subStageFilter.length > 0 || sourceFilter.length > 0 || projectFilter.length > 0 || userFilter.length > 0 || dateFrom || dateTo || myLeadsFilter || freshLeadsFilter || pendingFollowUpsFilter || todayFollowUpsFilter) && (
             <Button
               variant="ghost"
               size="sm"
               className="h-9 text-muted-foreground hover:text-foreground"
-              onClick={() => { setStatusFilter("all"); setLeadStatusFilter("all"); setSubStageFilter("all"); setSourceFilter("all"); setProjectFilter("all"); setUserFilter("all"); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); setMyLeadsFilter(false); setFreshLeadsFilter(false); setPendingFollowUpsFilter(false); setTodayFollowUpsFilter(false); setFollowUpDate(""); }}
+              onClick={() => { setStatusFilter([]); setLeadStatusFilter([]); setSubStageFilter([]); setSourceFilter([]); setProjectFilter([]); setUserFilter([]); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); setMyLeadsFilter(false); setFreshLeadsFilter(false); setPendingFollowUpsFilter(false); setTodayFollowUpsFilter(false); setFollowUpDate(""); }}
             >
               <RotateCcw className="mr-1 h-3 w-3" /> Clear
             </Button>

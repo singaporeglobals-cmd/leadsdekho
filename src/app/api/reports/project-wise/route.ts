@@ -10,9 +10,12 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
-  const projectFilter = searchParams.get("project");
-  const sourceFilter = searchParams.get("source");
-  const leadStatusFilter = searchParams.get("leadStatus");
+  // Multi-value filters (comma-separated)
+  const splitList = (v: string | null): string[] =>
+    v ? v.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  const projectList = splitList(searchParams.get("project"));
+  const sourceList = splitList(searchParams.get("source"));
+  const leadStatusList = splitList(searchParams.get("leadStatus"));
 
   const now = new Date();
   const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -26,18 +29,18 @@ export async function GET(req: NextRequest) {
   };
 
   // Project filter
-  if (projectFilter) {
-    where.project = { id: projectFilter };
+  if (projectList.length > 0) {
+    where.project = { id: { in: projectList } };
   }
 
   // Source filter
-  if (sourceFilter) {
-    where.source = sourceFilter;
+  if (sourceList.length > 0) {
+    where.source = { in: sourceList };
   }
 
   // Lead status filter
-  if (leadStatusFilter) {
-    where.leadStatus = leadStatusFilter;
+  if (leadStatusList.length > 0) {
+    where.leadStatus = { in: leadStatusList };
   }
 
   if (user.role === "sales" || user.role === "telecalling") {

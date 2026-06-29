@@ -1,0 +1,987 @@
+     1→"use client";
+     2→
+     3→import { Fragment, useEffect, useState, useCallback } from "react";
+     4→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+     5→import { Button } from "@/components/ui/button";
+     6→import { Input } from "@/components/ui/input";
+     7→import { Label } from "@/components/ui/label";
+     8→import { Badge } from "@/components/ui/badge";
+     9→import {
+    10→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    11→} from "@/components/ui/select";
+    12→import {
+    13→  Tabs, TabsContent, TabsList, TabsTrigger,
+    14→} from "@/components/ui/tabs";
+    15→import {
+    16→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    17→} from "@/components/ui/table";
+    18→import {
+    19→  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+    20→  ResponsiveContainer, LineChart, Line,
+    21→} from "recharts";
+    22→import {
+    23→  Download, Calendar, TrendingUp, Building2, Users, Phone,
+    24→  Clock, MapPin, ChevronDown, ChevronUp, FileSpreadsheet,
+    25→  BarChart3, Target, Pencil, Filter, RotateCcw,
+    26→} from "lucide-react";
+    27→import { useAppStore } from "@/lib/store";
+    28→
+    29→const COLORS = ["#dfb338", "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444", "#6366f1", "#ec4899", "#14b8a6", "#f97316", "#64748b"];
+    30→
+    31→const statusColors: Record<string, string> = {
+    32→  New: "#64748b",
+    33→  Contacted: "#3b82f6",
+    34→  Qualified: "#10b981",
+    35→  "Visit Scheduled": "#f59e0b",
+    36→  Visited: "#8b5cf6",
+    37→  Negotiation: "#f97316",
+    38→  Booked: "#22c55e",
+    39→  Lost: "#ef4444",
+    40→};
+    41→
+    42→// Sources are fetched dynamically from the database - no hardcoded fallback
+    43→
+    44→// Quick date range presets
+    45→const DATE_PRESETS = [
+    46→  { label: "Today", days: 0 },
+    47→  { label: "Last 7 Days", days: 7 },
+    48→  { label: "Last 30 Days", days: 30 },
+    49→  { label: "This Month", days: -1 },
+    50→  { label: "Last Month", days: -2 },
+    51→  { label: "Last 3 Months", days: 90 },
+    52→];
+    53→
+    54→interface ProjectItem {
+    55→  id: string;
+    56→  name: string;
+    57→}
+    58→
+    59→// ─── KPI Card ───
+    60→function KpiCard({ label, value, icon: Icon, color, sub }: {
+    61→  label: string; value: number | string; icon: React.ElementType; color: string; sub?: string;
+    62→}) {
+    63→  return (
+    64→    <Card className="relative overflow-hidden">
+    65→      <div className="absolute left-0 top-0 h-full w-1" style={{ backgroundColor: color }} />
+    66→      <CardContent className="p-4 pl-4">
+    67→        <div className="flex items-center justify-between">
+    68→          <div>
+    69→            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
+    70→            <p className="mt-1 text-2xl font-bold">{value}</p>
+    71→            {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
+    72→          </div>
+    73→          <div className="rounded-lg p-2.5" style={{ backgroundColor: color + "18" }}>
+    74→            <Icon className="h-5 w-5" style={{ color }} />
+    75→          </div>
+    76→        </div>
+    77→      </CardContent>
+    78→    </Card>
+    79→  );
+    80→}
+    81→
+    82→// ─── Status Badge ───
+    83→function StatusBadge({ status }: { status: string }) {
+    84→  const color = statusColors[status] || "#64748b";
+    85→  return (
+    86→    <Badge variant="secondary" className="text-xs font-medium" style={{ backgroundColor: color + "20", color }}>
+    87→      {status}
+    88→    </Badge>
+    89→  );
+    90→}
+    91→
+    92→// ─── Custom Tooltip ───
+    93→function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
+    94→  if (!active || !payload) return null;
+    95→  return (
+    96→    <div className="rounded-lg border bg-background p-3 shadow-lg">
+    97→      <p className="mb-1 font-semibold text-sm">{label}</p>
+    98→      {payload.map((p, i) => (
+    99→        <p key={i} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value}</p>
+   100→      ))}
+   101→    </div>
+   102→  );
+   103→}
+   104→
+   105→// ─── HELPERS ───
+   106→function formatDate(dateStr: string) {
+   107→  if (!dateStr) return "";
+   108→  const d = new Date(dateStr + "T00:00:00");
+   109→  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+   110→}
+   111→
+   112→function getDateRange(preset: number): { from: string; to: string } {
+   113→  const now = new Date();
+   114→  const to = now.toISOString().split("T")[0];
+   115→  let from: string;
+   116→
+   117→  if (preset === -1) {
+   118→    // This Month
+   119→    from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+   120→  } else if (preset === -2) {
+   121→    // Last Month
+   122→    const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+   123→    const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+   124→    from = firstDayLastMonth.toISOString().split("T")[0];
+   125→    return { from, to: lastDayLastMonth.toISOString().split("T")[0] };
+   126→  } else {
+   127→    from = new Date(now.getTime() - preset * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+   128→  }
+   129→  return { from, to };
+   130→}
+   131→
+   132→// ─── Lead Row with Update Button ───
+   133→function LeadRow({ lead }: { lead: Record<string, unknown> }) {
+   134→  const { setSelectedLeadId, setPage } = useAppStore();
+   135→  const handleUpdate = (e: React.MouseEvent) => {
+   136→    e.stopPropagation();
+   137→    e.preventDefault();
+   138→    setSelectedLeadId(lead.id as string);
+   139→    setPage("lead-detail");
+   140→  };
+   141→  return (
+   142→    <TableRow>
+   143→      <TableCell className="font-medium">{lead.name as string}</TableCell>
+   144→      <TableCell>{lead.phone as string}</TableCell>
+   145→      <TableCell><Badge variant="outline" className="text-xs">{lead.source as string}</Badge></TableCell>
+   146→      <TableCell>{(lead.project as Record<string, string>)?.name || "-"}</TableCell>
+   147→      <TableCell><StatusBadge status={lead.pipelineStatus as string} /></TableCell>
+   148→      <TableCell>{(lead.currentOwner as Record<string, string>)?.name || "-"}</TableCell>
+   149→      <TableCell className="text-right">
+   150→        <Button size="sm" variant="ghost" className="h-7 gap-1 text-brand hover:text-brand-dark" onClick={handleUpdate} onMouseDown={(e) => e.stopPropagation()}>
+   151→          <Pencil className="h-3.5 w-3.5" /> Update
+   152→        </Button>
+   153→      </TableCell>
+   154→    </TableRow>
+   155→  );
+   156→}
+   157→
+   158→// ─── Lead Row with Update Button (flexible columns) ───
+   159→function LeadRowSimple({ lead, showSource, showCreated }: { lead: Record<string, unknown>; showSource?: boolean; showCreated?: boolean }) {
+   160→  const { setSelectedLeadId, setPage } = useAppStore();
+   161→  const handleUpdate = (e: React.MouseEvent) => {
+   162→    e.stopPropagation();
+   163→    e.preventDefault();
+   164→    setSelectedLeadId(lead.id as string);
+   165→    setPage("lead-detail");
+   166→  };
+   167→  return (
+   168→    <TableRow>
+   169→      <TableCell className="font-medium">{lead.name as string}</TableCell>
+   170→      <TableCell>{lead.phone as string}</TableCell>
+   171→      {showSource && <TableCell><Badge variant="outline" className="text-xs">{lead.source as string}</Badge></TableCell>}
+   172→      <TableCell>{(lead.project as Record<string, string>)?.name || "-"}</TableCell>
+   173→      <TableCell><StatusBadge status={lead.pipelineStatus as string} /></TableCell>
+   174→      <TableCell>{(lead.currentOwner as Record<string, string>)?.name || "-"}</TableCell>
+   175→      {showCreated && <TableCell className="text-xs text-muted-foreground">{formatDate(((lead.createdAt as string) || "").split("T")[0])}</TableCell>}
+   176→      <TableCell className="text-right">
+   177→        <Button size="sm" variant="ghost" className="h-7 gap-1 text-brand hover:text-brand-dark" onClick={handleUpdate} onMouseDown={(e) => e.stopPropagation()}>
+   178→          <Pencil className="h-3.5 w-3.5" /> Update
+   179→        </Button>
+   180→      </TableCell>
+   181→    </TableRow>
+   182→  );
+   183→}
+   184→
+   185→async function handleExport(type: string, from?: string, to?: string) {
+   186→  const params = new URLSearchParams({ type });
+   187→  if (from) params.set("from", from);
+   188→  if (to) params.set("to", to);
+   189→  const res = await fetch(`/api/reports/export?${params}`);
+   190→  if (res.ok) {
+   191→    const blob = await res.blob();
+   192→    const url = window.URL.createObjectURL(blob);
+   193→    const a = document.createElement("a");
+   194→    a.href = url;
+   195→    a.download = `${type}-export.csv`;
+   196→    a.click();
+   197→    window.URL.revokeObjectURL(url);
+   198→  }
+   199→}
+   200→
+   201→// ─── DATE-WISE REPORT ───
+   202→function DateWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }: { fromDate: string; toDate: string; projectId: string; sourceId: string; leadStatusId: string }) {
+   203→  const [data, setData] = useState<Record<string, unknown> | null>(null);
+   204→  const [loading, setLoading] = useState(false);
+   205→  const [expandedDate, setExpandedDate] = useState<string | null>(null);
+   206→
+   207→  const fetchData = useCallback(async () => {
+   208→    setLoading(true);
+   209→    try {
+   210→      const params = new URLSearchParams({ from: fromDate, to: toDate });
+   211→      if (projectId) params.set("project", projectId);
+   212→      if (sourceId) params.set("source", sourceId);
+   213→      if (leadStatusId) params.set("leadStatus", leadStatusId);
+   214→      const res = await fetch(`/api/reports/date-wise?${params}`);
+   215→      if (res.ok) setData(await res.json());
+   216→    } catch (e) { console.error(e); }
+   217→    setLoading(false);
+   218→  }, [fromDate, toDate, projectId, sourceId, leadStatusId]);
+   219→
+   220→  useEffect(() => { fetchData(); }, [fetchData]);
+   221→
+   222→  if (!data && !loading) return null;
+   223→
+   224→  const summary = (data?.summary || {}) as Record<string, number>;
+   225→  const byDate = (data?.byDate || []) as Array<Record<string, unknown>>;
+   226→  const dailyTrend = (data?.dailyTrend || []) as Array<Record<string, unknown>>;
+   227→
+   228→  return (
+   229→    <div className="space-y-6">
+   230→      {loading ? (
+   231→        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+   232→          {[...Array(5)].map((_, i) => <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />)}
+   233→        </div>
+   234→      ) : (
+   235→        <>
+   236→          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+   237→            <KpiCard label="Total Leads" value={summary.totalLeads || 0} icon={Users} color="#dfb338" />
+   238→            <KpiCard label="Bookings" value={summary.won || 0} icon={Target} color="#22c55e" sub={`${summary.totalLeads ? Math.round(((summary.won || 0) / summary.totalLeads) * 100) : 0}% booking rate`} />
+   239→            <KpiCard label="Total Calls" value={summary.totalCalls || 0} icon={Phone} color="#3b82f6" />
+   240→            <KpiCard label="Follow-ups" value={summary.totalFollowUps || 0} icon={Clock} color="#8b5cf6" />
+   241→            <KpiCard label="Site Visits" value={summary.totalSiteVisits || 0} icon={MapPin} color="#f59e0b" />
+   242→          </div>
+   243→
+   244→          {dailyTrend.length > 0 && (
+   245→            <Card>
+   246→              <CardHeader className="pb-3">
+   247→                <CardTitle className="text-base flex items-center gap-2">
+   248→                  <TrendingUp className="h-4 w-4 text-brand" /> Daily Lead Trend
+   249→                </CardTitle>
+   250→              </CardHeader>
+   251→              <CardContent>
+   252→                <div className="h-72">
+   253→                  <ResponsiveContainer width="100%" height="100%">
+   254→                    <LineChart data={dailyTrend}>
+   255→                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+   256→                      <XAxis dataKey="date" fontSize={11} />
+   257→                      <YAxis allowDecimals={false} fontSize={11} />
+   258→                      <Tooltip content={<CustomTooltip />} />
+   259→                      <Legend />
+   260→                      <Line type="monotone" dataKey="leads" stroke="#dfb338" strokeWidth={2.5} dot={{ r: 4, fill: "#dfb338" }} name="Leads" />
+   261→                      <Line type="monotone" dataKey="calls" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3, fill: "#3b82f6" }} name="Calls" />
+   262→                      <Line type="monotone" dataKey="followUps" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3, fill: "#8b5cf6" }} name="Follow-ups" />
+   263→                      <Line type="monotone" dataKey="siteVisits" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3, fill: "#f59e0b" }} name="Site Visits" />
+   264→                    </LineChart>
+   265→                  </ResponsiveContainer>
+   266→                </div>
+   267→              </CardContent>
+   268→            </Card>
+   269→          )}
+   270→
+   271→          <Card>
+   272→            <CardHeader className="pb-3">
+   273→              <CardTitle className="text-base flex items-center gap-2">
+   274→                <Calendar className="h-4 w-4 text-brand" /> Date-wise Breakdown
+   275→              </CardTitle>
+   276→            </CardHeader>
+   277→            <CardContent>
+   278→              <div className="rounded-md border">
+   279→                <Table>
+   280→                  <TableHeader>
+   281→                    <TableRow>
+   282→                      <TableHead className="w-10"></TableHead>
+   283→                      <TableHead>Date</TableHead>
+   284→                      <TableHead className="text-center">Leads</TableHead>
+   285→                      <TableHead className="text-center">New</TableHead>
+   286→                      <TableHead className="text-center">Booked</TableHead>
+   287→                      <TableHead className="text-center">Lost</TableHead>
+   288→                      <TableHead>Status Breakdown</TableHead>
+   289→                    </TableRow>
+   290→                  </TableHeader>
+   291→                  <TableBody>
+   292→                    {byDate.length === 0 && (
+   293→                      <TableRow>
+   294→                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No leads found in this date range</TableCell>
+   295→                      </TableRow>
+   296→                    )}
+   297→                    {byDate.map((day) => {
+   298→                      const dateStr = day.date as string;
+   299→                      const isExpanded = expandedDate === dateStr;
+   300→                      const leads = (day.leads || []) as Array<Record<string, unknown>>;
+   301→                      const statusBreakdown = (day.statusBreakdown || {}) as Record<string, number>;
+   302→                      return (
+   303→                        <Fragment key={dateStr}>
+   304→                          <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => setExpandedDate(isExpanded ? null : dateStr)}>
+   305→                            <TableCell>
+   306→                              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+   307→                            </TableCell>
+   308→                            <TableCell className="font-medium">{formatDate(dateStr)}</TableCell>
+   309→                            <TableCell className="text-center">
+   310→                              <Badge className="bg-brand/15 text-brand font-bold">{day.total as number}</Badge>
+   311→                            </TableCell>
+   312→                            <TableCell className="text-center">{statusBreakdown["New"] || 0}</TableCell>
+   313→                            <TableCell className="text-center text-green-600 font-semibold">{statusBreakdown["Booked"] || 0}</TableCell>
+   314→                            <TableCell className="text-center text-red-600 font-semibold">{statusBreakdown["Lost"] || 0}</TableCell>
+   315→                            <TableCell>
+   316→                              <div className="flex flex-wrap gap-1">
+   317→                                {Object.entries(statusBreakdown).map(([status]) => (
+   318→                                  <StatusBadge key={status} status={status} />
+   319→                                ))}
+   320→                              </div>
+   321→                            </TableCell>
+   322→                          </TableRow>
+   323→                          {isExpanded && (
+   324→                            <TableRow>
+   325→                              <TableCell colSpan={7} className="bg-muted/30 p-0" onClick={(e) => e.stopPropagation()}>
+   326→                                <div className="p-3">
+   327→                                  <Table>
+   328→                                    <TableHeader>
+   329→                                      <TableRow>
+   330→                                        <TableHead>Name</TableHead>
+   331→                                        <TableHead>Phone</TableHead>
+   332→                                        <TableHead>Source</TableHead>
+   333→                                        <TableHead>Project</TableHead>
+   334→                                        <TableHead>Status</TableHead>
+   335→                                        <TableHead>Owner</TableHead>
+   336→                                        <TableHead className="text-right">Action</TableHead>
+   337→                                      </TableRow>
+   338→                                    </TableHeader>
+   339→                                    <TableBody>
+   340→                                      {leads.map((lead) => (
+   341→                                        <LeadRow key={lead.id as string} lead={lead} />
+   342→                                      ))}
+   343→                                    </TableBody>
+   344→                                  </Table>
+   345→                                </div>
+   346→                              </TableCell>
+   347→                            </TableRow>
+   348→                          )}
+   349→                        </Fragment>
+   350→                      );
+   351→                    })}
+   352→                  </TableBody>
+   353→                </Table>
+   354→              </div>
+   355→            </CardContent>
+   356→          </Card>
+   357→        </>
+   358→      )}
+   359→    </div>
+   360→  );
+   361→}
+   362→
+   363→// ─── SOURCE-WISE REPORT ───
+   364→function SourceWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }: { fromDate: string; toDate: string; projectId: string; sourceId: string; leadStatusId: string }) {
+   365→  const [data, setData] = useState<Record<string, unknown> | null>(null);
+   366→  const [loading, setLoading] = useState(false);
+   367→  const [expandedSource, setExpandedSource] = useState<string | null>(null);
+   368→
+   369→  const fetchData = useCallback(async () => {
+   370→    setLoading(true);
+   371→    try {
+   372→      const params = new URLSearchParams({ from: fromDate, to: toDate });
+   373→      if (projectId) params.set("project", projectId);
+   374→      if (sourceId) params.set("source", sourceId);
+   375→      if (leadStatusId) params.set("leadStatus", leadStatusId);
+   376→      const res = await fetch(`/api/reports/source-wise?${params}`);
+   377→      if (res.ok) setData(await res.json());
+   378→    } catch (e) { console.error(e); }
+   379→    setLoading(false);
+   380→  }, [fromDate, toDate, projectId, sourceId, leadStatusId]);
+   381→
+   382→  useEffect(() => { fetchData(); }, [fetchData]);
+   383→
+   384→  if (!data && !loading) return null;
+   385→
+   386→  const bySource = (data?.bySource || []) as Array<Record<string, unknown>>;
+   387→  const sourceLeadCounts = (data?.sourceLeadCounts || []) as Array<Record<string, unknown>>;
+   388→  const sourceWinRate = (data?.sourceWinRate || []) as Array<Record<string, unknown>>;
+   389→
+   390→  return (
+   391→    <div className="space-y-6">
+   392→      {loading ? (
+   393→        <div className="grid gap-3 sm:grid-cols-3">
+   394→          {[...Array(3)].map((_, i) => <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />)}
+   395→        </div>
+   396→      ) : (
+   397→        <>
+   398→          <div className="grid gap-3 sm:grid-cols-3">
+   399→            <KpiCard label="Total Leads" value={(data?.totalLeads as number) || 0} icon={Users} color="#dfb338" />
+   400→            <KpiCard label="Total Sources" value={(data?.totalSources as number) || 0} icon={BarChart3} color="#3b82f6" />
+   401→            <KpiCard label="Best Source" value={(bySource[0]?.source as string) || "-"} icon={Target} color="#22c55e" sub={`${(bySource[0]?.total as number) || 0} leads`} />
+   402→          </div>
+   403→
+   404→          <div className="grid gap-4 lg:grid-cols-2">
+   405→            {sourceLeadCounts.length > 0 && (
+   406→              <Card>
+   407→                <CardHeader className="pb-3">
+   408→                  <CardTitle className="text-base flex items-center gap-2">
+   409→                    <BarChart3 className="h-4 w-4 text-brand" /> Leads by Source
+   410→                  </CardTitle>
+   411→                </CardHeader>
+   412→                <CardContent>
+   413→                  <div className="h-72">
+   414→                    <ResponsiveContainer width="100%" height="100%">
+   415→                      <BarChart data={sourceLeadCounts} layout="vertical">
+   416→                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+   417→                        <XAxis type="number" allowDecimals={false} fontSize={11} />
+   418→                        <YAxis type="category" dataKey="name" fontSize={11} width={100} />
+   419→                        <Tooltip content={<CustomTooltip />} />
+   420→                        <Legend />
+   421→                        <Bar dataKey="leads" fill="#dfb338" name="Total Leads" radius={[0, 4, 4, 0]} />
+   422→                        <Bar dataKey="booked" fill="#22c55e" name="Booked" radius={[0, 4, 4, 0]} />
+   423→                        <Bar dataKey="lost" fill="#ef4444" name="Lost" radius={[0, 4, 4, 0]} />
+   424→                      </BarChart>
+   425→                    </ResponsiveContainer>
+   426→                  </div>
+   427→                </CardContent>
+   428→              </Card>
+   429→            )}
+   430→
+   431→            {sourceWinRate.length > 0 && (
+   432→              <Card>
+   433→                <CardHeader className="pb-3">
+   434→                  <CardTitle className="text-base flex items-center gap-2">
+   435→                    <Target className="h-4 w-4 text-green-600" /> Booking Rate by Source
+   436→                  </CardTitle>
+   437→                </CardHeader>
+   438→                <CardContent>
+   439→                  <div className="h-72">
+   440→                    <ResponsiveContainer width="100%" height="100%">
+   441→                      <BarChart data={sourceWinRate}>
+   442→                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+   443→                        <XAxis dataKey="name" fontSize={11} />
+   444→                        <YAxis fontSize={11} unit="%" />
+   445→                        <Tooltip content={<CustomTooltip />} />
+   446→                        <Bar dataKey="bookingRate" fill="#22c55e" name="Booking Rate %" radius={[4, 4, 0, 0]} />
+   447→                      </BarChart>
+   448→                    </ResponsiveContainer>
+   449→                  </div>
+   450→                </CardContent>
+   451→              </Card>
+   452→            )}
+   453→          </div>
+   454→
+   455→          <Card>
+   456→            <CardHeader className="pb-3">
+   457→              <CardTitle className="text-base flex items-center gap-2">
+   458→                <Users className="h-4 w-4 text-brand" /> Source-wise Breakdown
+   459→              </CardTitle>
+   460→            </CardHeader>
+   461→            <CardContent>
+   462→              <div className="rounded-md border">
+   463→                <Table>
+   464→                  <TableHeader>
+   465→                    <TableRow>
+   466→                      <TableHead className="w-10"></TableHead>
+   467→                      <TableHead>Source</TableHead>
+   468→                      <TableHead className="text-center">Total Leads</TableHead>
+   469→                      <TableHead className="text-center">Booked</TableHead>
+   470→                      <TableHead className="text-center">Lost</TableHead>
+   471→                      <TableHead className="text-center">Booking Rate</TableHead>
+   472→                      <TableHead className="text-center">Calls</TableHead>
+   473→                      <TableHead className="text-center">Follow-ups</TableHead>
+   474→                      <TableHead className="text-center">Site Visits</TableHead>
+   475→                    </TableRow>
+   476→                  </TableHeader>
+   477→                  <TableBody>
+   478→                    {bySource.length === 0 && (
+   479→                      <TableRow>
+   480→                        <TableCell colSpan={9} className="text-center text-muted-foreground py-8">No leads found</TableCell>
+   481→                      </TableRow>
+   482→                    )}
+   483→                    {bySource.map((src) => {
+   484→                      const srcName = src.source as string;
+   485→                      const isExpanded = expandedSource === srcName;
+   486→                      const leads = (src.leads || []) as Array<Record<string, unknown>>;
+   487→                      const total = src.total as number;
+   488→                      const wonCount = src.wonCount as number;
+   489→                      return (
+   490→                        <Fragment key={srcName}>
+   491→                          <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => setExpandedSource(isExpanded ? null : srcName)}>
+   492→                            <TableCell>
+   493→                              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+   494→                            </TableCell>
+   495→                            <TableCell className="font-semibold">{srcName}</TableCell>
+   496→                            <TableCell className="text-center">
+   497→                              <Badge className="bg-brand/15 text-brand font-bold">{total}</Badge>
+   498→                            </TableCell>
+   499→                            <TableCell className="text-center text-green-600 font-semibold">{wonCount}</TableCell>
+   500→                            <TableCell className="text-center text-red-600 font-semibold">{src.lostCount as number}</TableCell>
+   501→                            <TableCell className="text-center">
+   502→                              <Badge variant="outline" className={total > 0 && (wonCount / total) >= 0.2 ? "border-green-500 text-green-600" : "border-muted-foreground text-muted-foreground"}>
+   503→                                {total > 0 ? Math.round((wonCount / total) * 100) : 0}%
+   504→                              </Badge>
+   505→                            </TableCell>
+   506→                            <TableCell className="text-center">{src.callCount as number}</TableCell>
+   507→                            <TableCell className="text-center">{src.followUpCount as number}</TableCell>
+   508→                            <TableCell className="text-center">{src.siteVisitCount as number}</TableCell>
+   509→                          </TableRow>
+   510→                          {isExpanded && (
+   511→                            <TableRow>
+   512→                              <TableCell colSpan={9} className="bg-muted/30 p-0" onClick={(e) => e.stopPropagation()}>
+   513→                                <div className="p-3">
+   514→                                  <Table>
+   515→                                    <TableHeader>
+   516→                                      <TableRow>
+   517→                                        <TableHead>Name</TableHead>
+   518→                                        <TableHead>Phone</TableHead>
+   519→                                        <TableHead>Project</TableHead>
+   520→                                        <TableHead>Status</TableHead>
+   521→                                        <TableHead>Owner</TableHead>
+   522→                                        <TableHead>Created</TableHead>
+   523→                                        <TableHead className="text-right">Action</TableHead>
+   524→                                      </TableRow>
+   525→                                    </TableHeader>
+   526→                                    <TableBody>
+   527→                                      {leads.map((lead) => (
+   528→                                        <LeadRowSimple key={lead.id as string} lead={lead} showCreated showSource={false} />
+   529→                                      ))}
+   530→                                    </TableBody>
+   531→                                  </Table>
+   532→                                </div>
+   533→                              </TableCell>
+   534→                            </TableRow>
+   535→                          )}
+   536→                        </Fragment>
+   537→                      );
+   538→                    })}
+   539→                  </TableBody>
+   540→                </Table>
+   541→              </div>
+   542→            </CardContent>
+   543→          </Card>
+   544→        </>
+   545→      )}
+   546→    </div>
+   547→  );
+   548→}
+   549→
+   550→// ─── PROJECT-WISE REPORT ───
+   551→function ProjectWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }: { fromDate: string; toDate: string; projectId: string; sourceId: string; leadStatusId: string }) {
+   552→  const [data, setData] = useState<Record<string, unknown> | null>(null);
+   553→  const [loading, setLoading] = useState(false);
+   554→  const [expandedProject, setExpandedProject] = useState<string | null>(null);
+   555→
+   556→  const fetchData = useCallback(async () => {
+   557→    setLoading(true);
+   558→    try {
+   559→      const params = new URLSearchParams({ from: fromDate, to: toDate });
+   560→      if (projectId) params.set("project", projectId);
+   561→      if (sourceId) params.set("source", sourceId);
+   562→      if (leadStatusId) params.set("leadStatus", leadStatusId);
+   563→      const res = await fetch(`/api/reports/project-wise?${params}`);
+   564→      if (res.ok) setData(await res.json());
+   565→    } catch (e) { console.error(e); }
+   566→    setLoading(false);
+   567→  }, [fromDate, toDate, projectId, sourceId, leadStatusId]);
+   568→
+   569→  useEffect(() => { fetchData(); }, [fetchData]);
+   570→
+   571→  if (!data && !loading) return null;
+   572→
+   573→  const byProject = (data?.byProject || []) as Array<Record<string, unknown>>;
+   574→  const projectLeadCounts = (data?.projectLeadCounts || []) as Array<Record<string, unknown>>;
+   575→  const projectWinRate = (data?.projectWinRate || []) as Array<Record<string, unknown>>;
+   576→  const projectSourceMatrix = (data?.projectSourceMatrix || []) as Array<Record<string, unknown>>;
+   577→  const allSources = (data?.allSources || []) as string[];
+   578→
+   579→  return (
+   580→    <div className="space-y-6">
+   581→      {loading ? (
+   582→        <div className="grid gap-3 sm:grid-cols-3">
+   583→          {[...Array(3)].map((_, i) => <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />)}
+   584→        </div>
+   585→      ) : (
+   586→        <>
+   587→          <div className="grid gap-3 sm:grid-cols-3">
+   588→            <KpiCard label="Total Leads" value={(data?.totalLeads as number) || 0} icon={Users} color="#dfb338" />
+   589→            <KpiCard label="Total Projects" value={(data?.totalProjects as number) || 0} icon={Building2} color="#8b5cf6" />
+   590→            <KpiCard label="Top Project" value={(byProject[0]?.projectName as string) || "-"} icon={Target} color="#22c55e" sub={`${(byProject[0]?.total as number) || 0} leads`} />
+   591→          </div>
+   592→
+   593→          <div className="grid gap-4 lg:grid-cols-2">
+   594→            {projectLeadCounts.length > 0 && (
+   595→              <Card>
+   596→                <CardHeader className="pb-3">
+   597→                  <CardTitle className="text-base flex items-center gap-2">
+   598→                    <Building2 className="h-4 w-4 text-brand" /> Leads by Project
+   599→                  </CardTitle>
+   600→                </CardHeader>
+   601→                <CardContent>
+   602→                  <div className="h-72">
+   603→                    <ResponsiveContainer width="100%" height="100%">
+   604→                      <BarChart data={projectLeadCounts} layout="vertical">
+   605→                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+   606→                        <XAxis type="number" allowDecimals={false} fontSize={11} />
+   607→                        <YAxis type="category" dataKey="name" fontSize={11} width={120} />
+   608→                        <Tooltip content={<CustomTooltip />} />
+   609→                        <Legend />
+   610→                        <Bar dataKey="leads" fill="#dfb338" name="Total Leads" radius={[0, 4, 4, 0]} />
+   611→                        <Bar dataKey="booked" fill="#22c55e" name="Booked" radius={[0, 4, 4, 0]} />
+   612→                        <Bar dataKey="lost" fill="#ef4444" name="Lost" radius={[0, 4, 4, 0]} />
+   613→                      </BarChart>
+   614→                    </ResponsiveContainer>
+   615→                  </div>
+   616→                </CardContent>
+   617→              </Card>
+   618→            )}
+   619→
+   620→            {projectWinRate.length > 0 && (
+   621→              <Card>
+   622→                <CardHeader className="pb-3">
+   623→                  <CardTitle className="text-base flex items-center gap-2">
+   624→                    <Target className="h-4 w-4 text-green-600" /> Booking Rate by Project
+   625→                  </CardTitle>
+   626→                </CardHeader>
+   627→                <CardContent>
+   628→                  <div className="h-72">
+   629→                    <ResponsiveContainer width="100%" height="100%">
+   630→                      <BarChart data={projectWinRate}>
+   631→                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+   632→                        <XAxis dataKey="name" fontSize={11} />
+   633→                        <YAxis fontSize={11} unit="%" />
+   634→                        <Tooltip content={<CustomTooltip />} />
+   635→                        <Bar dataKey="bookingRate" fill="#22c55e" name="Booking Rate %" radius={[4, 4, 0, 0]} />
+   636→                      </BarChart>
+   637→                    </ResponsiveContainer>
+   638→                  </div>
+   639→                </CardContent>
+   640→              </Card>
+   641→            )}
+   642→          </div>
+   643→
+   644→          {projectSourceMatrix.length > 0 && allSources.length > 0 && (
+   645→            <Card>
+   646→              <CardHeader className="pb-3">
+   647→                <CardTitle className="text-base flex items-center gap-2">
+   648→                  <FileSpreadsheet className="h-4 w-4 text-brand" /> Source Distribution by Project
+   649→                </CardTitle>
+   650→              </CardHeader>
+   651→              <CardContent>
+   652→                <div className="h-72">
+   653→                  <ResponsiveContainer width="100%" height="100%">
+   654→                    <BarChart data={projectSourceMatrix}>
+   655→                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+   656→                      <XAxis dataKey="name" fontSize={11} />
+   657→                      <YAxis allowDecimals={false} fontSize={11} />
+   658→                      <Tooltip content={<CustomTooltip />} />
+   659→                      <Legend />
+   660→                      {allSources.map((src, i) => (
+   661→                        <Bar key={src} dataKey={src} stackId="a" fill={COLORS[i % COLORS.length]} name={src} />
+   662→                      ))}
+   663→                    </BarChart>
+   664→                  </ResponsiveContainer>
+   665→                </div>
+   666→              </CardContent>
+   667→            </Card>
+   668→          )}
+   669→
+   670→          <Card>
+   671→            <CardHeader className="pb-3">
+   672→              <CardTitle className="text-base flex items-center gap-2">
+   673→                <Building2 className="h-4 w-4 text-brand" /> Project-wise Breakdown
+   674→              </CardTitle>
+   675→            </CardHeader>
+   676→            <CardContent>
+   677→              <div className="rounded-md border">
+   678→                <Table>
+   679→                  <TableHeader>
+   680→                    <TableRow>
+   681→                      <TableHead className="w-10"></TableHead>
+   682→                      <TableHead>Project</TableHead>
+   683→                      <TableHead>Location</TableHead>
+   684→                      <TableHead className="text-center">Total Leads</TableHead>
+   685→                      <TableHead className="text-center">Booked</TableHead>
+   686→                      <TableHead className="text-center">Lost</TableHead>
+   687→                      <TableHead className="text-center">Booking Rate</TableHead>
+   688→                      <TableHead className="text-center">Calls</TableHead>
+   689→                      <TableHead className="text-center">Site Visits</TableHead>
+   690→                    </TableRow>
+   691→                  </TableHeader>
+   692→                  <TableBody>
+   693→                    {byProject.length === 0 && (
+   694→                      <TableRow>
+   695→                        <TableCell colSpan={9} className="text-center text-muted-foreground py-8">No leads found</TableCell>
+   696→                      </TableRow>
+   697→                    )}
+   698→                    {byProject.map((proj) => {
+   699→                      const projName = proj.projectName as string;
+   700→                      const isExpanded = expandedProject === projName;
+   701→                      const leads = (proj.leads || []) as Array<Record<string, unknown>>;
+   702→                      const total = proj.total as number;
+   703→                      const wonCount = proj.wonCount as number;
+   704→                      return (
+   705→                        <Fragment key={projName}>
+   706→                          <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => setExpandedProject(isExpanded ? null : projName)}>
+   707→                            <TableCell>
+   708→                              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+   709→                            </TableCell>
+   710→                            <TableCell className="font-semibold">{projName}</TableCell>
+   711→                            <TableCell className="text-muted-foreground text-sm">{(proj.projectLocation as string) || "-"}</TableCell>
+   712→                            <TableCell className="text-center">
+   713→                              <Badge className="bg-brand/15 text-brand font-bold">{total}</Badge>
+   714→                            </TableCell>
+   715→                            <TableCell className="text-center text-green-600 font-semibold">{wonCount}</TableCell>
+   716→                            <TableCell className="text-center text-red-600 font-semibold">{proj.lostCount as number}</TableCell>
+   717→                            <TableCell className="text-center">
+   718→                              <Badge variant="outline" className={total > 0 && (wonCount / total) >= 0.2 ? "border-green-500 text-green-600" : "border-muted-foreground text-muted-foreground"}>
+   719→                                {total > 0 ? Math.round((wonCount / total) * 100) : 0}%
+   720→                              </Badge>
+   721→                            </TableCell>
+   722→                            <TableCell className="text-center">{proj.callCount as number}</TableCell>
+   723→                            <TableCell className="text-center">{proj.siteVisitCount as number}</TableCell>
+   724→                          </TableRow>
+   725→                          {isExpanded && (
+   726→                            <TableRow>
+   727→                              <TableCell colSpan={9} className="bg-muted/30 p-0" onClick={(e) => e.stopPropagation()}>
+   728→                                <div className="p-3">
+   729→                                  <Table>
+   730→                                    <TableHeader>
+   731→                                      <TableRow>
+   732→                                        <TableHead>Name</TableHead>
+   733→                                        <TableHead>Phone</TableHead>
+   734→                                        <TableHead>Source</TableHead>
+   735→                                        <TableHead>Status</TableHead>
+   736→                                        <TableHead>Owner</TableHead>
+   737→                                        <TableHead>Created</TableHead>
+   738→                                        <TableHead className="text-right">Action</TableHead>
+   739→                                      </TableRow>
+   740→                                    </TableHeader>
+   741→                                    <TableBody>
+   742→                                      {leads.map((lead) => (
+   743→                                        <LeadRowSimple key={lead.id as string} lead={lead} showCreated showSource />
+   744→                                      ))}
+   745→                                    </TableBody>
+   746→                                  </Table>
+   747→                                </div>
+   748→                              </TableCell>
+   749→                            </TableRow>
+   750→                          )}
+   751→                        </Fragment>
+   752→                      );
+   753→                    })}
+   754→                  </TableBody>
+   755→                </Table>
+   756→              </div>
+   757→            </CardContent>
+   758→          </Card>
+   759→        </>
+   760→      )}
+   761→    </div>
+   762→  );
+   763→}
+   764→
+   765→// ─── MAIN REPORTS PAGE ───
+   766→export function ReportsPage() {
+   767→  const [activeTab, setActiveTab] = useState("date-wise");
+   768→  const [projects, setProjects] = useState<ProjectItem[]>([]);
+   769→  const [sources, setSources] = useState<string[]>([]);
+   770→
+   771→  // Shared filter state
+   772→  const now = new Date();
+   773→  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+   774→  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+   775→
+   776→  const [fromDate, setFromDate] = useState(firstDay);
+   777→  const [toDate, setToDate] = useState(lastDay);
+   778→  const [projectId, setProjectId] = useState("all");
+   779→  const [sourceId, setSourceId] = useState("all");
+   780→  const [leadStatusId, setLeadStatusId] = useState("all");
+   781→
+   782→  // Fetch projects and lead sources for the dropdown
+   783→  useEffect(() => {
+   784→    (async () => {
+   785→      try {
+   786→        const [pRes, srcRes] = await Promise.all([
+   787→          fetch("/api/projects"),
+   788→          fetch("/api/lead-sources"),
+   789→        ]);
+   790→        if (pRes.ok) setProjects(await pRes.json());
+   791→        if (srcRes.ok) {
+   792→          const data = await srcRes.json();
+   793→          if (Array.isArray(data)) {
+   794→            const dbSources = data.map((s: { name: string }) => s.name);
+   795→            setSources(dbSources);
+   796→          }
+   797→        }
+   798→      } catch (e) { console.error(e); }
+   799→    })();
+   800→  }, []);
+   801→
+   802→  const handlePreset = (preset: number) => {
+   803→    const { from, to } = getDateRange(preset);
+   804→    setFromDate(from);
+   805→    setToDate(to);
+   806→  };
+   807→
+   808→  const resetFilters = () => {
+   809→    setFromDate(firstDay);
+   810→    setToDate(lastDay);
+   811→    setProjectId("all");
+   812→    setSourceId("all");
+   813→    setLeadStatusId("all");
+   814→  };
+   815→
+   816→  const hasActiveFilters = projectId !== "all" || sourceId !== "all" || leadStatusId !== "all" || fromDate !== firstDay || toDate !== lastDay;
+   817→
+   818→  return (
+   819→    <div className="space-y-4">
+   820→      {/* Header */}
+   821→      <div className="flex flex-wrap items-center justify-between gap-3">
+   822→        <div>
+   823→          <h2 className="text-xl font-bold flex items-center gap-2">
+   824→            <BarChart3 className="h-5 w-5 text-brand" /> Reports
+   825→          </h2>
+   826→          <p className="text-sm text-muted-foreground mt-0.5">Analyze leads by date, source, and project</p>
+   827→        </div>
+   828→        <div className="flex gap-2">
+   829→          <Button variant="outline" size="sm" onClick={() => handleExport("leads", fromDate, toDate)} className="h-8">
+   830→            <Download className="mr-1 h-3 w-3" /> Export Leads
+   831→          </Button>
+   832→          <Button variant="outline" size="sm" onClick={() => handleExport("callLogs", fromDate, toDate)} className="h-8">
+   833→            <Download className="mr-1 h-3 w-3" /> Export Calls
+   834→          </Button>
+   835→        </div>
+   836→      </div>
+   837→
+   838→      {/* ─── UNIFIED FILTER BAR ─── */}
+   839→      <Card className="border-brand/20">
+   840→        <CardContent className="p-4">
+   841→          <div className="space-y-3">
+   842→            {/* Row 1: Quick Date Presets */}
+   843→            <div>
+   844→              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Quick Date Range</Label>
+   845→              <div className="flex flex-wrap gap-1.5">
+   846→                {DATE_PRESETS.map((preset) => (
+   847→                  <Button
+   848→                    key={preset.label}
+   849→                    variant="outline"
+   850→                    size="sm"
+   851→                    className="h-7 text-xs"
+   852→                    onClick={() => handlePreset(preset.days)}
+   853→                  >
+   854→                    {preset.label}
+   855→                  </Button>
+   856→                ))}
+   857→              </div>
+   858→            </div>
+   859→
+   860→            {/* Row 2: Custom Filters */}
+   861→            <div className="flex flex-wrap items-end gap-3">
+   862→              {/* Custom Date Range */}
+   863→              <div>
+   864→                <Label className="text-xs font-medium text-muted-foreground">From Date</Label>
+   865→                <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-40 h-9" />
+   866→              </div>
+   867→              <div>
+   868→                <Label className="text-xs font-medium text-muted-foreground">To Date</Label>
+   869→                <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-40 h-9" />
+   870→              </div>
+   871→
+   872→              {/* Project Filter */}
+   873→              <div>
+   874→                <Label className="text-xs font-medium text-muted-foreground">Project</Label>
+   875→                <Select value={projectId} onValueChange={setProjectId}>
+   876→                  <SelectTrigger className="w-48 h-9">
+   877→                    <Building2 className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+   878→                    <SelectValue placeholder="All Projects" />
+   879→                  </SelectTrigger>
+   880→                  <SelectContent>
+   881→                    <SelectItem value="all">All Projects</SelectItem>
+   882→                    {projects.map((p) => (
+   883→                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+   884→                    ))}
+   885→                  </SelectContent>
+   886→                </Select>
+   887→              </div>
+   888→
+   889→              {/* Source Filter */}
+   890→              <div>
+   891→                <Label className="text-xs font-medium text-muted-foreground">Source</Label>
+   892→                <Select value={sourceId} onValueChange={setSourceId}>
+   893→                  <SelectTrigger className="w-44 h-9">
+   894→                    <Filter className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+   895→                    <SelectValue placeholder="All Sources" />
+   896→                  </SelectTrigger>
+   897→                  <SelectContent>
+   898→                    <SelectItem value="all">All Sources</SelectItem>
+   899→                    {sources.map((s) => (
+   900→                      <SelectItem key={s} value={s}>{s}</SelectItem>
+   901→                    ))}
+   902→                  </SelectContent>
+   903→                </Select>
+   904→              </div>
+   905→
+   906→              {/* Lead Status Filter */}
+   907→              <div>
+   908→                <Label className="text-xs font-medium text-muted-foreground">Lead Status</Label>
+   909→                <Select value={leadStatusId} onValueChange={setLeadStatusId}>
+   910→                  <SelectTrigger className="w-44 h-9">
+   911→                    <Filter className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+   912→                    <SelectValue placeholder="All Status" />
+   913→                  </SelectTrigger>
+   914→                  <SelectContent>
+   915→                    <SelectItem value="all">All Status</SelectItem>
+   916→                    <SelectItem value="Not Connected">Not Connected</SelectItem>
+   917→                    <SelectItem value="Site Visit Done">Site Visit Done</SelectItem>
+   918→                    <SelectItem value="Prospect">Prospect</SelectItem>
+   919→                    <SelectItem value="Not Interested">Not Interested</SelectItem>
+   920→                    <SelectItem value="Site Visit Promised">Site Visit Promised</SelectItem>
+   921→                    <SelectItem value="Booked">Booked</SelectItem>
+   922→                  </SelectContent>
+   923→                </Select>
+   924→              </div>
+   925→
+   926→              {/* Reset Button */}
+   927→              {hasActiveFilters && (
+   928→                <Button variant="ghost" size="sm" className="h-9 text-muted-foreground hover:text-foreground" onClick={resetFilters}>
+   929→                  <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset
+   930→                </Button>
+   931→              )}
+   932→            </div>
+   933→
+   934→            {/* Active filter indicators */}
+   935→            {hasActiveFilters && (
+   936→              <div className="flex flex-wrap gap-1.5">
+   937→                {fromDate !== firstDay || toDate !== lastDay ? (
+   938→                  <Badge variant="secondary" className="text-xs gap-1">
+   939→                    <Calendar className="h-3 w-3" /> {formatDate(fromDate)} — {formatDate(toDate)}
+   940→                  </Badge>
+   941→                ) : null}
+   942→                {projectId !== "all" && (
+   943→                  <Badge variant="secondary" className="text-xs gap-1">
+   944→                    <Building2 className="h-3 w-3" /> {projects.find(p => p.id === projectId)?.name || "Project"}
+   945→                  </Badge>
+   946→                )}
+   947→                {sourceId !== "all" && (
+   948→                  <Badge variant="secondary" className="text-xs gap-1">
+   949→                    <Filter className="h-3 w-3" /> {sourceId}
+   950→                  </Badge>
+   951→                )}
+   952→              </div>
+   953→            )}
+   954→          </div>
+   955→        </CardContent>
+   956→      </Card>
+   957→
+   958→      {/* Tabs */}
+   959→      <Tabs value={activeTab} onValueChange={setActiveTab}>
+   960→        <TabsList className="grid w-full grid-cols-3">
+   961→          <TabsTrigger value="date-wise" className="gap-1.5">
+   962→            <Calendar className="h-3.5 w-3.5" /> Date-wise
+   963→          </TabsTrigger>
+   964→          <TabsTrigger value="source-wise" className="gap-1.5">
+   965→            <BarChart3 className="h-3.5 w-3.5" /> Source-wise
+   966→          </TabsTrigger>
+   967→          <TabsTrigger value="project-wise" className="gap-1.5">
+   968→            <Building2 className="h-3.5 w-3.5" /> Project-wise
+   969→          </TabsTrigger>
+   970→        </TabsList>
+   971→
+   972→        <TabsContent value="date-wise" className="mt-4">
+   973→          <DateWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} leadStatusId={leadStatusId === "all" ? "" : leadStatusId} />
+   974→        </TabsContent>
+   975→
+   976→        <TabsContent value="source-wise" className="mt-4">
+   977→          <SourceWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} leadStatusId={leadStatusId === "all" ? "" : leadStatusId} />
+   978→        </TabsContent>
+   979→
+   980→        <TabsContent value="project-wise" className="mt-4">
+   981→          <ProjectWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} leadStatusId={leadStatusId === "all" ? "" : leadStatusId} />
+   982→        </TabsContent>
+   983→      </Tabs>
+   984→    </div>
+   985→  );
+   986→}
+   987→

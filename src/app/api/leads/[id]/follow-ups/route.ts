@@ -38,6 +38,21 @@ export async function POST(
   const lead = await db.lead.findUnique({ where: { id } });
   if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
 
+  // Auto-complete any previously pending follow-ups for this lead so that
+  // only the NEWLY scheduled follow-up shows up as the next upcoming one.
+  // Otherwise editing feedback and setting a new date leaves the old (earlier)
+  // follow-up still pending, and the lead list UI shows the OLD date.
+  await db.followUp.updateMany({
+    where: {
+      leadId: id,
+      completed: false,
+    },
+    data: {
+      completed: true,
+      completedAt: new Date(),
+    },
+  });
+
   const followUp = await db.followUp.create({
     data: {
       leadId: id,

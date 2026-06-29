@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { MultiSelect } from "@/components/ui/multi-select";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -199,7 +200,7 @@ async function handleExport(type: string, from?: string, to?: string) {
 }
 
 // ─── DATE-WISE REPORT ───
-function DateWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }: { fromDate: string; toDate: string; projectId: string; sourceId: string; leadStatusId: string }) {
+function DateWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }: { fromDate: string; toDate: string; projectId: string[]; sourceId: string[]; leadStatusId: string[] }) {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -208,9 +209,9 @@ function DateWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }:
     setLoading(true);
     try {
       const params = new URLSearchParams({ from: fromDate, to: toDate });
-      if (projectId) params.set("project", projectId);
-      if (sourceId) params.set("source", sourceId);
-      if (leadStatusId) params.set("leadStatus", leadStatusId);
+      if (projectId.length > 0) params.set("project", projectId.join(","));
+      if (sourceId.length > 0) params.set("source", sourceId.join(","));
+      if (leadStatusId.length > 0) params.set("leadStatus", leadStatusId.join(","));
       const res = await fetch(`/api/reports/date-wise?${params}`);
       if (res.ok) setData(await res.json());
     } catch (e) { console.error(e); }
@@ -361,7 +362,7 @@ function DateWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }:
 }
 
 // ─── SOURCE-WISE REPORT ───
-function SourceWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }: { fromDate: string; toDate: string; projectId: string; sourceId: string; leadStatusId: string }) {
+function SourceWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }: { fromDate: string; toDate: string; projectId: string[]; sourceId: string[]; leadStatusId: string[] }) {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedSource, setExpandedSource] = useState<string | null>(null);
@@ -370,9 +371,9 @@ function SourceWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId 
     setLoading(true);
     try {
       const params = new URLSearchParams({ from: fromDate, to: toDate });
-      if (projectId) params.set("project", projectId);
-      if (sourceId) params.set("source", sourceId);
-      if (leadStatusId) params.set("leadStatus", leadStatusId);
+      if (projectId.length > 0) params.set("project", projectId.join(","));
+      if (sourceId.length > 0) params.set("source", sourceId.join(","));
+      if (leadStatusId.length > 0) params.set("leadStatus", leadStatusId.join(","));
       const res = await fetch(`/api/reports/source-wise?${params}`);
       if (res.ok) setData(await res.json());
     } catch (e) { console.error(e); }
@@ -548,7 +549,7 @@ function SourceWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId 
 }
 
 // ─── PROJECT-WISE REPORT ───
-function ProjectWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }: { fromDate: string; toDate: string; projectId: string; sourceId: string; leadStatusId: string }) {
+function ProjectWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId }: { fromDate: string; toDate: string; projectId: string[]; sourceId: string[]; leadStatusId: string[] }) {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
@@ -557,9 +558,9 @@ function ProjectWiseReport({ fromDate, toDate, projectId, sourceId, leadStatusId
     setLoading(true);
     try {
       const params = new URLSearchParams({ from: fromDate, to: toDate });
-      if (projectId) params.set("project", projectId);
-      if (sourceId) params.set("source", sourceId);
-      if (leadStatusId) params.set("leadStatus", leadStatusId);
+      if (projectId.length > 0) params.set("project", projectId.join(","));
+      if (sourceId.length > 0) params.set("source", sourceId.join(","));
+      if (leadStatusId.length > 0) params.set("leadStatus", leadStatusId.join(","));
       const res = await fetch(`/api/reports/project-wise?${params}`);
       if (res.ok) setData(await res.json());
     } catch (e) { console.error(e); }
@@ -775,9 +776,9 @@ export function ReportsPage() {
 
   const [fromDate, setFromDate] = useState(firstDay);
   const [toDate, setToDate] = useState(lastDay);
-  const [projectId, setProjectId] = useState("all");
-  const [sourceId, setSourceId] = useState("all");
-  const [leadStatusId, setLeadStatusId] = useState("all");
+  const [projectId, setProjectId] = useState<string[]>([]);
+  const [sourceId, setSourceId] = useState<string[]>([]);
+  const [leadStatusId, setLeadStatusId] = useState<string[]>([]);
 
   // Fetch projects and lead sources for the dropdown
   useEffect(() => {
@@ -808,12 +809,12 @@ export function ReportsPage() {
   const resetFilters = () => {
     setFromDate(firstDay);
     setToDate(lastDay);
-    setProjectId("all");
-    setSourceId("all");
-    setLeadStatusId("all");
+    setProjectId([]);
+    setSourceId([]);
+    setLeadStatusId([]);
   };
 
-  const hasActiveFilters = projectId !== "all" || sourceId !== "all" || leadStatusId !== "all" || fromDate !== firstDay || toDate !== lastDay;
+  const hasActiveFilters = projectId.length > 0 || sourceId.length > 0 || leadStatusId.length > 0 || fromDate !== firstDay || toDate !== lastDay;
 
   return (
     <div className="space-y-4">
@@ -872,55 +873,47 @@ export function ReportsPage() {
               {/* Project Filter */}
               <div>
                 <Label className="text-xs font-medium text-muted-foreground">Project</Label>
-                <Select value={projectId} onValueChange={setProjectId}>
-                  <SelectTrigger className="w-48 h-9">
-                    <Building2 className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
-                    <SelectValue placeholder="All Projects" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Projects</SelectItem>
-                    {projects.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelect
+                  options={projects.map((p) => ({ value: p.id, label: p.name }))}
+                  value={projectId}
+                  onChange={setProjectId}
+                  placeholder="Projects"
+                  allLabel="All Projects"
+                  className="w-48"
+                />
               </div>
 
               {/* Source Filter */}
               <div>
                 <Label className="text-xs font-medium text-muted-foreground">Source</Label>
-                <Select value={sourceId} onValueChange={setSourceId}>
-                  <SelectTrigger className="w-44 h-9">
-                    <Filter className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
-                    <SelectValue placeholder="All Sources" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Sources</SelectItem>
-                    {sources.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelect
+                  options={sources.map((s) => ({ value: s, label: s }))}
+                  value={sourceId}
+                  onChange={setSourceId}
+                  placeholder="Sources"
+                  allLabel="All Sources"
+                  className="w-44"
+                />
               </div>
 
               {/* Lead Status Filter */}
               <div>
                 <Label className="text-xs font-medium text-muted-foreground">Lead Status</Label>
-                <Select value={leadStatusId} onValueChange={setLeadStatusId}>
-                  <SelectTrigger className="w-44 h-9">
-                    <Filter className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="Not Connected">Not Connected</SelectItem>
-                    <SelectItem value="Site Visit Done">Site Visit Done</SelectItem>
-                    <SelectItem value="Prospect">Prospect</SelectItem>
-                    <SelectItem value="Not Interested">Not Interested</SelectItem>
-                    <SelectItem value="Site Visit Promised">Site Visit Promised</SelectItem>
-                    <SelectItem value="Booked">Booked</SelectItem>
-                  </SelectContent>
-                </Select>
+                <MultiSelect
+                  options={[
+                    { value: "Not Connected", label: "Not Connected" },
+                    { value: "Site Visit Done", label: "Site Visit Done" },
+                    { value: "Prospect", label: "Prospect" },
+                    { value: "Not Interested", label: "Not Interested" },
+                    { value: "Site Visit Promised", label: "Site Visit Promised" },
+                    { value: "Booked", label: "Booked" },
+                  ]}
+                  value={leadStatusId}
+                  onChange={setLeadStatusId}
+                  placeholder="Status"
+                  allLabel="All Status"
+                  className="w-44"
+                />
               </div>
 
               {/* Reset Button */}
@@ -939,14 +932,19 @@ export function ReportsPage() {
                     <Calendar className="h-3 w-3" /> {formatDate(fromDate)} — {formatDate(toDate)}
                   </Badge>
                 ) : null}
-                {projectId !== "all" && (
+                {projectId.length > 0 && (
                   <Badge variant="secondary" className="text-xs gap-1">
-                    <Building2 className="h-3 w-3" /> {projects.find(p => p.id === projectId)?.name || "Project"}
+                    <Building2 className="h-3 w-3" /> {projectId.length} project{projectId.length > 1 ? "s" : ""}
                   </Badge>
                 )}
-                {sourceId !== "all" && (
+                {sourceId.length > 0 && (
                   <Badge variant="secondary" className="text-xs gap-1">
-                    <Filter className="h-3 w-3" /> {sourceId}
+                    <Filter className="h-3 w-3" /> {sourceId.length} source{sourceId.length > 1 ? "s" : ""}
+                  </Badge>
+                )}
+                {leadStatusId.length > 0 && (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <Filter className="h-3 w-3" /> {leadStatusId.length} status{leadStatusId.length > 1 ? "es" : ""}
                   </Badge>
                 )}
               </div>
@@ -970,15 +968,15 @@ export function ReportsPage() {
         </TabsList>
 
         <TabsContent value="date-wise" className="mt-4">
-          <DateWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} leadStatusId={leadStatusId === "all" ? "" : leadStatusId} />
+          <DateWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId} sourceId={sourceId} leadStatusId={leadStatusId} />
         </TabsContent>
 
         <TabsContent value="source-wise" className="mt-4">
-          <SourceWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} leadStatusId={leadStatusId === "all" ? "" : leadStatusId} />
+          <SourceWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId} sourceId={sourceId} leadStatusId={leadStatusId} />
         </TabsContent>
 
         <TabsContent value="project-wise" className="mt-4">
-          <ProjectWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId === "all" ? "" : projectId} sourceId={sourceId === "all" ? "" : sourceId} leadStatusId={leadStatusId === "all" ? "" : leadStatusId} />
+          <ProjectWiseReport fromDate={fromDate} toDate={toDate} projectId={projectId} sourceId={sourceId} leadStatusId={leadStatusId} />
         </TabsContent>
       </Tabs>
     </div>

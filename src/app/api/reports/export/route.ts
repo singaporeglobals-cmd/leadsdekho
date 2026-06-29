@@ -67,8 +67,11 @@ export async function GET(req: NextRequest) {
       csvContent += `"${log.lead.name}","${log.lead.phone}","${log.callType}","${log.notes.replace(/"/g, '""')}","${log.user.name}","${log.callDate.toISOString()}"\n`;
     });
   } else if (type === "leadsReport") {
-    const source = searchParams.get("source");
-    const project = searchParams.get("project");
+    // Multi-value filters (comma-separated)
+    const splitList = (v: string | null): string[] =>
+      v ? v.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    const sourceList = splitList(searchParams.get("source"));
+    const projectList = splitList(searchParams.get("project"));
 
     // Build where clause
     const leadsWhere: Record<string, unknown> = {};
@@ -78,8 +81,8 @@ export async function GET(req: NextRequest) {
         ...(to ? { lte: new Date(to + "T23:59:59.999Z") } : {}),
       };
     }
-    if (source && source !== "all") leadsWhere.source = source;
-    if (project && project !== "all") leadsWhere.projectId = project;
+    if (sourceList.length > 0) leadsWhere.source = { in: sourceList };
+    if (projectList.length > 0) leadsWhere.projectId = { in: projectList };
 
     // Admin only
     if (user.role !== "admin") {

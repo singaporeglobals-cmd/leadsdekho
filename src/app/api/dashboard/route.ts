@@ -17,11 +17,14 @@ export async function GET(req: NextRequest) {
     dateFilter = { createdAt: { gte: startDate, lte: endDate } };
   }
 
-  // Parse assignee filter
+  // Parse assignee filter (multi-value, comma-separated)
   const assigneeParam = req.nextUrl.searchParams.get("assignee");
-  let assigneeFilter: { currentOwnerId?: string } = {};
-  if (assigneeParam && assigneeParam !== "all") {
-    assigneeFilter = { currentOwnerId: assigneeParam };
+  const assigneeList = assigneeParam
+    ? assigneeParam.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+  let assigneeFilter: { currentOwnerId?: { in: string[] } } = {};
+  if (assigneeList.length > 0) {
+    assigneeFilter = { currentOwnerId: { in: assigneeList } };
   }
 
   const combinedFilter = { ...dateFilter, ...assigneeFilter };
@@ -35,7 +38,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-async function getAdminDashboard(combinedFilter: { createdAt?: { gte?: Date; lte?: Date }; currentOwnerId?: string }, dateFilter: { createdAt?: { gte?: Date; lte?: Date } }) {
+async function getAdminDashboard(combinedFilter: { createdAt?: { gte?: Date; lte?: Date }; currentOwnerId?: { in: string[] } }, dateFilter: { createdAt?: { gte?: Date; lte?: Date } }) {
   // Compute today's follow-up window once
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { MultiSelect } from "@/components/ui/multi-select";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -48,8 +49,8 @@ export function LeadsReportPage() {
   const { firstDay: defaultFrom, lastDay: defaultTo } = getDefaultDates();
   const [fromDate, setFromDate] = useState(defaultFrom);
   const [toDate, setToDate] = useState(defaultTo);
-  const [sourceFilter, setSourceFilter] = useState("all");
-  const [projectFilter, setProjectFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState<string[]>([]);
+  const [projectFilter, setProjectFilter] = useState<string[]>([]);
   const [leads, setLeads] = useState<LeadReportItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -86,8 +87,8 @@ export function LeadsReportPage() {
         const params = new URLSearchParams();
         if (fromDate) params.set("from", fromDate);
         if (toDate) params.set("to", toDate);
-        if (sourceFilter && sourceFilter !== "all") params.set("source", sourceFilter);
-        if (projectFilter && projectFilter !== "all") params.set("project", projectFilter);
+        if (sourceFilter.length > 0) params.set("source", sourceFilter.join(","));
+        if (projectFilter.length > 0) params.set("project", projectFilter.join(","));
         params.set("limit", "100");
         params.set("allCallLogs", "true");
 
@@ -110,8 +111,8 @@ export function LeadsReportPage() {
       const params = new URLSearchParams({ type: "leadsReport" });
       if (fromDate) params.set("from", fromDate);
       if (toDate) params.set("to", toDate);
-      if (sourceFilter && sourceFilter !== "all") params.set("source", sourceFilter);
-      if (projectFilter && projectFilter !== "all") params.set("project", projectFilter);
+      if (sourceFilter.length > 0) params.set("source", sourceFilter.join(","));
+      if (projectFilter.length > 0) params.set("project", projectFilter.join(","));
 
       const res = await fetch(`/api/reports/export?${params}`);
       if (res.ok) {
@@ -170,33 +171,25 @@ export function LeadsReportPage() {
             </div>
             <div>
               <Label className="text-xs font-medium text-muted-foreground">Source</Label>
-              <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                <SelectTrigger className="w-44 h-9">
-                  <Filter className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
-                  <SelectValue placeholder="All Sources" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sources</SelectItem>
-                  {sources.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelect
+                options={sources.map((s) => ({ value: s, label: s }))}
+                value={sourceFilter}
+                onChange={setSourceFilter}
+                placeholder="Sources"
+                allLabel="All Sources"
+                className="w-44"
+              />
             </div>
             <div>
               <Label className="text-xs font-medium text-muted-foreground">Project</Label>
-              <Select value={projectFilter} onValueChange={setProjectFilter}>
-                <SelectTrigger className="w-48 h-9">
-                  <Building2 className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
-                  <SelectValue placeholder="All Projects" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Projects</SelectItem>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelect
+                options={projects.map((p) => ({ value: p.id, label: p.name }))}
+                value={projectFilter}
+                onChange={setProjectFilter}
+                placeholder="Projects"
+                allLabel="All Projects"
+                className="w-48"
+              />
             </div>
           </div>
 
@@ -205,14 +198,14 @@ export function LeadsReportPage() {
             <Badge variant="secondary" className="text-xs gap-1">
               <Calendar className="h-3 w-3" /> {formatDate(fromDate)} — {formatDate(toDate)}
             </Badge>
-            {sourceFilter !== "all" && (
+            {sourceFilter.length > 0 && (
               <Badge variant="secondary" className="text-xs gap-1">
-                <Filter className="h-3 w-3" /> {sourceFilter}
+                <Filter className="h-3 w-3" /> {sourceFilter.length} source{sourceFilter.length > 1 ? "s" : ""}
               </Badge>
             )}
-            {projectFilter !== "all" && (
+            {projectFilter.length > 0 && (
               <Badge variant="secondary" className="text-xs gap-1">
-                <Building2 className="h-3 w-3" /> {projects.find(p => p.id === projectFilter)?.name || "Project"}
+                <Building2 className="h-3 w-3" /> {projectFilter.length} project{projectFilter.length > 1 ? "s" : ""}
               </Badge>
             )}
             <Badge variant="secondary" className="text-xs gap-1">
