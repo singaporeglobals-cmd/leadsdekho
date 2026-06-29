@@ -90,12 +90,15 @@ export async function GET(req: NextRequest) {
   // currently responsible for the lead. Visibility is controlled by lead ownership:
   //   - admin/super_admin: see ALL leads with pending follow-ups
   //   - telecalling/sales: only leads where currentOwnerId == user.id
+  // LOST leads are EXCLUDED from follow-up views (they still appear in My Leads,
+  // but should not surface as pending follow-up reminders).
   if (pendingFollowUps) {
     where.followUps = {
       some: {
         completed: false,
       },
     };
+    andConditions.push({ pipelineStatus: { not: "Lost" } });
     if (user.role === "telecalling" || user.role === "sales") {
       where.currentOwnerId = user.id;
     }
@@ -105,6 +108,7 @@ export async function GET(req: NextRequest) {
   // scheduled on the given date (defaults to today).
   // Same visibility rule as pendingFollowUps above: do NOT filter followUps by userId,
   // only restrict by lead ownership for telecalling/sales.
+  // LOST leads are EXCLUDED from follow-up views.
   if (todayFollowUps) {
     const targetDate = followUpDate ? new Date(followUpDate) : new Date();
     const startOfDay = new Date(targetDate);
@@ -118,6 +122,7 @@ export async function GET(req: NextRequest) {
         scheduledAt: { gte: startOfDay, lte: endOfDay },
       },
     };
+    andConditions.push({ pipelineStatus: { not: "Lost" } });
     if (user.role === "telecalling" || user.role === "sales") {
       where.currentOwnerId = user.id;
     }

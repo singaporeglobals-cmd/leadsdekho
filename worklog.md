@@ -252,3 +252,32 @@ Stage Summary:
 - Backend APIs accept comma-separated filter values everywhere.
 - Deployed to https://leadsdekho.in
 
+
+---
+Task ID: 13
+Agent: Main Agent
+Task: Exclude Lost leads from Follow-up views (Today's Pending Follow-ups + Pending Follow-ups) while keeping them visible in My Leads
+
+Work Log:
+- Read existing code: /api/leads route.ts (pendingFollowUps + todayFollowUps filter logic), /api/dashboard route.ts (admin/telecalling/sales follow-up count queries), /api/leads/[id]/call-logs (auto-complete follow-ups on feedback), /api/leads/[id] PUT (status change), lead-detail.tsx (handleMarkLost)
+- Approach: Filter Lost leads OUT of follow-up queries without deleting/touching existing follow-up rows. This way, if a Lost lead is later revived, its follow-ups remain intact.
+- /api/leads/route.ts: Added `andConditions.push({ pipelineStatus: { not: "Lost" } })` inside both `if (pendingFollowUps)` and `if (todayFollowUps)` blocks. Used andConditions array (not direct where.pipelineStatus) to avoid overwriting any user-selected Pipeline Status multi-select filter.
+- /api/dashboard/route.ts: Updated all 8 follow-up-related Prisma queries across the 3 dashboard functions:
+  * Admin: 2 count queries (todayFollowUps, pendingFollowUps) — added `lead: { pipelineStatus: { not: "Lost" } }`
+  * Telecalling: 3 queries (todayFollowUps count, pendingFollowUps count, pendingFollowUpsList findMany) — added `pipelineStatus: { not: "Lost" }` to the existing `lead: { currentOwnerId: userId }` filter
+  * Sales: 3 queries (todayFollowUps count, pendingFollowUps count, pendingFollowUpsList findMany) — same change as telecalling
+- Build: `npx next build` succeeded with no TypeScript errors.
+- Deploy: BLOCKED — Vercel token not present in environment. User needs to deploy manually with `npx vercel --prod` from their authenticated environment.
+
+Stage Summary:
+- Lost leads will now be excluded from:
+  * Dashboard "Today's Pending Follow-ups" card count (all 3 dashboards: admin, telecalling, sales)
+  * Dashboard "Pending Follow-ups" count (admin only)
+  * Dashboard pendingFollowUpsList (telecalling + sales dashboard widgets)
+  * Lead Management page when "Follow Up" filter is active (todayFollowUpsFilter)
+  * Lead Management page when "Pending Follow-ups" filter is active (pendingFollowUpsFilter, clicked from admin dashboard)
+- Lost leads still appear in My Leads, Fresh Leads, and all other Lead Management views (no Pipeline Status filter applied there).
+- Lost leads still appear in the Lead Detail page with their follow-up history intact.
+- If a Lost lead is later revived (pipelineStatus changed away from "Lost"), it will automatically re-appear in follow-up views again — no data loss.
+- PENDING: User needs to run `npx vercel --prod` to deploy to https://leadsdekho.in
+

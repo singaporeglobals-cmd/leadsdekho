@@ -96,14 +96,18 @@ async function getAdminDashboard(combinedFilter: { createdAt?: { gte?: Date; lte
       where: { isActive: true, role: { in: ["telecalling", "sales"] } },
       select: { id: true, name: true, role: true },
     }),
+    // LOST leads are EXCLUDED from follow-up counts (they still appear in My Leads,
+    // but should not surface as pending follow-up reminders).
     db.followUp.count({
       where: {
+        lead: { pipelineStatus: { not: "Lost" } },
         scheduledAt: { gte: todayStart, lte: todayEnd },
         completed: false,
       },
     }),
     db.followUp.count({
       where: {
+        lead: { pipelineStatus: { not: "Lost" } },
         completed: false,
       },
     }),
@@ -160,9 +164,10 @@ async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?:
       _count: true,
     }),
     // Count today's follow-ups on leads CURRENTLY owned by this user (regardless of who created the follow-up)
+    // LOST leads are EXCLUDED from follow-up counts.
     db.followUp.count({
       where: {
-        lead: { currentOwnerId: userId },
+        lead: { currentOwnerId: userId, pipelineStatus: { not: "Lost" } },
         scheduledAt: {
           gte: new Date(new Date().setHours(0, 0, 0, 0)),
           lte: new Date(new Date().setHours(23, 59, 59, 999)),
@@ -172,13 +177,13 @@ async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?:
     }),
     db.followUp.count({
       where: {
-        lead: { currentOwnerId: userId },
+        lead: { currentOwnerId: userId, pipelineStatus: { not: "Lost" } },
         completed: false,
       },
     }),
     db.followUp.findMany({
       where: {
-        lead: { currentOwnerId: userId },
+        lead: { currentOwnerId: userId, pipelineStatus: { not: "Lost" } },
         completed: false,
       },
       include: { lead: { select: { id: true, name: true, phone: true } } },
@@ -260,9 +265,10 @@ async function getSalesDashboard(userId: string, dateFilter: { createdAt?: { gte
       },
     }),
     // Count today's follow-ups on leads CURRENTLY owned by this user (regardless of who created the follow-up)
+    // LOST leads are EXCLUDED from follow-up counts.
     db.followUp.count({
       where: {
-        lead: { currentOwnerId: userId },
+        lead: { currentOwnerId: userId, pipelineStatus: { not: "Lost" } },
         scheduledAt: {
           gte: new Date(new Date().setHours(0, 0, 0, 0)),
           lte: new Date(new Date().setHours(23, 59, 59, 999)),
@@ -272,13 +278,13 @@ async function getSalesDashboard(userId: string, dateFilter: { createdAt?: { gte
     }),
     db.followUp.count({
       where: {
-        lead: { currentOwnerId: userId },
+        lead: { currentOwnerId: userId, pipelineStatus: { not: "Lost" } },
         completed: false,
       },
     }),
     db.followUp.findMany({
       where: {
-        lead: { currentOwnerId: userId },
+        lead: { currentOwnerId: userId, pipelineStatus: { not: "Lost" } },
         completed: false,
       },
       include: { lead: { select: { id: true, name: true, phone: true } } },
