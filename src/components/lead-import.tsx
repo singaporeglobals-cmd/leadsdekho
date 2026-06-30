@@ -554,7 +554,15 @@ export function LeadImport() {
                         />
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
-                      <TableCell className="text-xs">{row.date || "\u2014"}</TableCell>
+                      <TableCell>
+                        <Input
+                          value={row.date || ""}
+                          onChange={(e) => updateRow(i, "date", e.target.value)}
+                          className="h-7 text-xs w-[110px]"
+                          placeholder="DD.MM.YYYY"
+                          title="Lead date from source file. Edit if format is wrong. Supports DD.MM.YY, DD-MM-YYYY, DD/MM/YYYY, YYYY-MM-DD."
+                        />
+                      </TableCell>
                       <TableCell>
                         <Select
                           value={row.source || ""}

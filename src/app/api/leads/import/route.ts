@@ -61,14 +61,29 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "File has no sheets" }, { status: 400 });
       }
       const sheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: "" });
+      // Use cellNF + raw:false for date cells so we get a human-readable string instead of
+      // an Excel serial number (e.g. "15.01.2024" instead of "45658").
+      // For other cell types (text/number), raw:false still returns the formatted value
+      // which is usually what we want (e.g. phone numbers without scientific notation).
+      const jsonData = XLSX.utils.sheet_to_json<Record<string, string | number>>(sheet, {
+        defval: "",
+        raw: false,
+        dateNF: "dd.mm.yyyy",
+      });
 
       if (jsonData.length === 0) {
         return NextResponse.json({ error: "File is empty or has no data rows" }, { status: 400 });
       }
 
       headers = Object.keys(jsonData[0]);
-      rows = jsonData;
+      // Coerce all values to string for downstream processing
+      rows = jsonData.map((r) => {
+        const out: Record<string, string> = {};
+        Object.entries(r).forEach(([k, v]) => {
+          out[k] = String(v ?? "").trim();
+        });
+        return out;
+      });
     } catch (e) {
       console.error("XLS parse error:", e);
       return NextResponse.json({

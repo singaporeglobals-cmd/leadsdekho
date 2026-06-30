@@ -281,3 +281,59 @@ Stage Summary:
 - If a Lost lead is later revived (pipelineStatus changed away from "Lost"), it will automatically re-appear in follow-up views again — no data loss.
 - Deployed to https://leadsdekho.in
 
+
+---
+Task ID: 14
+Agent: Main Agent
+Task: Import lead date fix — when admin imports an old lead file, the lead should take the original date from the source file (not today's date)
+
+Work Log:
+- Root cause: The import route parsed the `date` column from the source file, but only APPENDED it to the lead's `notes` field. The lead's `createdAt` defaulted to today via Prisma `@default(now())`. So a lead that came in 1 month ago but was imported today always showed today's date.
+- Approach: ONLY apply this fix to import — manual lead creation must still use today's date (unchanged). Used the source file's date column (DD.MM.YY format hint in the UI) and set it as the lead's `createdAt`.
+
+Files created:
+- /src/lib/parse-import-date.ts — new helper module. Robust date parser that handles:
+  * DD.MM.YY (e.g. "15.01.24" → 2024-01-15) — Excel-style 2-digit year with cutoff at 30 (00-29 → 2000-2029, 30-99 → 1930-1999)
+  * DD.MM.YYYY / DD-MM-YYYY / DD/MM/YYYY (any separator: . - /)
+  * ISO YYYY-MM-DD / YYYY/MM/DD
+  * Excel serial number (string or numeric) — converts via 1899-12-30 epoch
+  * Date objects (passed through)
+  * Strings with time component (strips the time part)
+  * Returns null for invalid input (e.g. 31.02.2024) so caller can fall back
+  * Uses local-time `new Date(year, month-1, day, 12, 0, 0)` to avoid timezone off-by-one issues
+
+Files modified:
+- /src/app/api/leads/import/confirm/route.ts:
+  * Imported parseImportDate helper
+  * After determining the source/project, call parseImportDate(row.date) to get a Date
+  * Pass it as `createdAt: leadCreatedAt` in db.lead.create() — overrides the default now()
+  * If date is missing or unparseable, fall back to current date/time
+  * If a date was provided but couldn't be parsed, append a note in the lead's notes field: "(Original date format unrecognized, used import timestamp)" — so admin can spot bad data later
+  * Keeps the existing `Import Date: <original>` notes string for audit trail
+
+- /src/app/api/leads/import/route.ts (XLSX parsing):
+  * Changed `sheet_to_json` options from `{defval: ""}` to `{defval: "", raw: false, dateNF: "dd.mm.yyyy"}`
+  * Reason: previously XLSX date cells returned Excel serial numbers like "45658" (useless as a date). With raw:false + dateNF, they come back as formatted strings like "15.01.2024".
+  * Coerced all values to string with .trim() to maintain downstream compatibility
+
+- /src/components/lead-import.tsx (UI):
+  * Changed the Date column from read-only text `<TableCell>{row.date || "—"}</TableCell>` to an editable Input field
+  * Placeholder "DD.MM.YYYY"
+  * Title tooltip explaining supported formats
+  * Width 110px, height 7 (matches other inputs in the table)
+  * User can now fix bad dates BEFORE importing
+
+Build & deploy:
+- Build successful with `npx next build` (no TypeScript errors).
+- Deployed to Vercel production at https://leadsdekho.in
+
+Stage Summary:
+- When admin imports leads from CSV/XLSX, each lead's `createdAt` is now set to the date parsed from the source file's DATE column.
+- A lead that came in 1 month ago but is imported today will show the original date (1 month ago) — not today's date.
+- Manual lead creation (via the Create Lead dialog) is UNAFFECTED — still uses current date.
+- Supported source formats: DD.MM.YY, DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY, YYYY-MM-DD, YYYY/MM/DD, Excel serial numbers.
+- XLSX files now properly extract dates as readable strings (was returning Excel serial numbers).
+- The Date column in the import review table is now editable, so admins can fix bad dates before importing.
+- If the date string is missing or unparseable, the lead falls back to current timestamp with a note flagged in the notes field for audit.
+- Deployed to https://leadsdekho.in
+

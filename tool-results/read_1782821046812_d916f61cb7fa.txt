@@ -1,0 +1,908 @@
+     1→"use client";
+     2→
+     3→import { useState, useEffect } from "react";
+     4→import { useAppStore } from "@/lib/store";
+     5→import { Button } from "@/components/ui/button";
+     6→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+     7→import { Input } from "@/components/ui/input";
+     8→import { Label } from "@/components/ui/label";
+     9→import { Checkbox } from "@/components/ui/checkbox";
+    10→import {
+    11→  Select,
+    12→  SelectContent,
+    13→  SelectItem,
+    14→  SelectTrigger,
+    15→  SelectValue,
+    16→} from "@/components/ui/select";
+    17→import {
+    18→  Table,
+    19→  TableBody,
+    20→  TableCell,
+    21→  TableHead,
+    22→  TableHeader,
+    23→  TableRow,
+    24→} from "@/components/ui/table";
+    25→import { Badge } from "@/components/ui/badge";
+    26→import {
+    27→  Upload,
+    28→  FileText,
+    29→  CheckCircle2,
+    30→  ArrowLeft,
+    31→  ArrowRight,
+    32→  MapPin,
+    33→  Building2,
+    34→  AlertTriangle,
+    35→  XCircle,
+    36→  Users,
+    37→} from "lucide-react";
+    38→
+    39→// Sources are fetched dynamically from the database - no hardcoded fallback
+    40→
+    41→interface ParsedRow {
+    42→  name: string;
+    43→  phone: string;
+    44→  email?: string;
+    45→  source?: string;
+    46→  date?: string;
+    47→  projectName?: string;
+    48→  budget?: string;
+    49→  notes?: string;
+    50→  isDuplicate?: boolean;
+    51→  duplicateOf?: string | null;
+    52→  duplicateId?: string | null;
+    53→  projectId?: string;
+    54→  assignToId?: string;
+    55→}
+    56→
+    57→interface ProjectItem {
+    58→  id: string;
+    59→  name: string;
+    60→  location?: string | null;
+    61→}
+    62→
+    63→// Step 1: Upload, Step 2: Edit & Review, Step 3: Map Projects, Step 4: Confirm, Step 5: Done
+    64→type ImportStep = 1 | 2 | 3 | 4 | 5;
+    65→
+    66→export function LeadImport() {
+    67→  const { user, setPage } = useAppStore();
+    68→  const [step, setStep] = useState<ImportStep>(1);
+    69→  const [file, setFile] = useState<File | null>(null);
+    70→  const [parsing, setParsing] = useState(false);
+    71→  const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
+    72→  const [projectNames, setProjectNames] = useState<string[]>([]);
+    73→  const [importing, setImporting] = useState(false);
+    74→  const [imported, setImported] = useState(0);
+    75→  const [skippedCount, setSkippedCount] = useState(0);
+    76→  const [users, setUsers] = useState<Array<{ id: string; name: string; role: string; isActive: boolean }>>([]);
+    77→  const [error, setError] = useState("");
+    78→  const [duplicateCount, setDuplicateCount] = useState(0);
+    79→  const [skipDuplicates, setSkipDuplicates] = useState(true);
+    80→
+    81→  // Bulk selection state
+    82→  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+    83→  const [bulkProject, setBulkProject] = useState("");
+    84→  const [bulkSource, setBulkSource] = useState("");
+    85→  const [bulkAssignTo, setBulkAssignTo] = useState("");
+    86→
+    87→  // Project mapping: projectName -> projectId
+    88→  const [propertyMapping, setPropertyMapping] = useState<Record<string, string>>({});
+    89→  const [projects, setProjects] = useState<ProjectItem[]>([]);
+    90→  const [sources, setSources] = useState<string[]>([]);
+    91→
+    92→  // Fetch users, projects, and lead sources
+    93→  useEffect(() => {
+    94→    if (user?.role === "admin") {
+    95→      fetch("/api/users")
+    96→        .then((r) => r.json())
+    97→        .then((data) => setUsers(data))
+    98→        .catch(() => {});
+    99→
+   100→      fetch("/api/projects")
+   101→        .then((r) => r.json())
+   102→        .then((data) => setProjects(data))
+   103→        .catch(() => {});
+   104→    }
+   105→
+   106→    // Fetch lead sources for all authenticated users
+   107→    fetch("/api/lead-sources")
+   108→      .then((r) => {
+   109→        if (!r.ok) throw new Error(`Failed: ${r.status}`);
+   110→        return r.json();
+   111→      })
+   112→      .then((data) => {
+   113→        if (Array.isArray(data)) {
+   114→          const dbSources = data.map((s: { name: string }) => s.name);
+   115→          setSources(dbSources);
+   116→        }
+   117→      })
+   118→      .catch((err) => {
+   119→        console.error("Error fetching lead sources:", err);
+   120→      });
+   121→  }, [user?.role]);
+   122→
+   123→  // Redirect non-admin users
+   124→  useEffect(() => {
+   125→    if (user && user.role !== "admin") {
+   126→      setPage("leads");
+   127→    }
+   128→  }, [user, setPage]);
+   129→
+   130→  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+   131→    const selectedFile = e.target.files?.[0];
+   132→    if (!selectedFile) return;
+   133→
+   134→    setFile(selectedFile);
+   135→    setError("");
+   136→    setParsing(true);
+   137→
+   138→    const formData = new FormData();
+   139→    formData.append("file", selectedFile);
+   140→
+   141→    try {
+   142→      const res = await fetch("/api/leads/import", {
+   143→        method: "POST",
+   144→        body: formData,
+   145→      });
+   146→
+   147→      const data = await res.json();
+   148→      if (res.ok) {
+   149→        const rows = data.rows as ParsedRow[];
+   150→        // Auto-match project names to DB projects
+   151→        const autoMapping: Record<string, string> = {};
+   152→        for (const projectName of data.projectNames || []) {
+   153→          const matchedProject = projects.find(
+   154→            (p) => p.name.toLowerCase() === projectName.toLowerCase()
+   155→          );
+   156→          if (matchedProject) {
+   157→            autoMapping[projectName] = matchedProject.id;
+   158→            // Also set projectId on matching rows
+   159→            rows.forEach((row) => {
+   160→              if (row.projectName?.toLowerCase() === projectName.toLowerCase()) {
+   161→                row.projectId = matchedProject.id;
+   162→              }
+   163→            });
+   164→          }
+   165→        }
+   166→        setParsedRows(rows);
+   167→        setProjectNames(data.projectNames || []);
+   168→        setDuplicateCount(data.duplicateCount || 0);
+   169→        setPropertyMapping(autoMapping);
+   170→        // Select all non-duplicate rows by default
+   171→        const defaultSelected = new Set<number>();
+   172→        rows.forEach((row, i) => {
+   173→          if (!row.isDuplicate) defaultSelected.add(i);
+   174→        });
+   175→        setSelectedRows(defaultSelected);
+   176→        setStep(2);
+   177→      } else {
+   178→        setError(data.error || "Failed to parse file");
+   179→      }
+   180→    } catch {
+   181→      setError("Failed to parse file");
+   182→    } finally {
+   183→      setParsing(false);
+   184→    }
+   185→  };
+   186→
+   187→  // Update a specific row's field
+   188→  const updateRow = (index: number, field: string, value: string) => {
+   189→    setParsedRows((prev) => {
+   190→      const updated = [...prev];
+   191→      updated[index] = { ...updated[index], [field]: value };
+   192→      return updated;
+   193→    });
+   194→  };
+   195→
+   196→  // Remove a row
+   197→  const removeRow = (index: number) => {
+   198→    setParsedRows((prev) => prev.filter((_, i) => i !== index));
+   199→    setSelectedRows((prev) => {
+   200→      const next = new Set<number>();
+   201→      prev.forEach((idx) => {
+   202→        if (idx < index) next.add(idx);
+   203→        else if (idx > index) next.add(idx - 1);
+   204→      });
+   205→      return next;
+   206→    });
+   207→  };
+   208→
+   209→  // Toggle row selection
+   210→  const toggleRowSelection = (index: number) => {
+   211→    setSelectedRows((prev) => {
+   212→      const next = new Set(prev);
+   213→      if (next.has(index)) next.delete(index);
+   214→      else next.add(index);
+   215→      return next;
+   216→    });
+   217→  };
+   218→
+   219→  // Select/deselect all rows
+   220→  const toggleSelectAll = () => {
+   221→    if (selectedRows.size === parsedRows.length) {
+   222→      setSelectedRows(new Set());
+   223→    } else {
+   224→      setSelectedRows(new Set(parsedRows.map((_, i) => i)));
+   225→    }
+   226→  };
+   227→
+   228→  // Select only non-duplicate rows
+   229→  const selectNonDuplicates = () => {
+   230→    const nonDup = new Set<number>();
+   231→    parsedRows.forEach((row, i) => {
+   232→      if (!row.isDuplicate) nonDup.add(i);
+   233→    });
+   234→    setSelectedRows(nonDup);
+   235→  };
+   236→
+   237→  // Apply bulk project to selected rows
+   238→  const applyBulkProject = () => {
+   239→    if (!bulkProject || selectedRows.size === 0) return;
+   240→    const projName = projects.find((p) => p.id === bulkProject)?.name || "";
+   241→    setParsedRows((prev) =>
+   242→      prev.map((row, i) =>
+   243→        selectedRows.has(i)
+   244→          ? { ...row, projectName: projName, projectId: bulkProject }
+   245→          : row
+   246→      )
+   247→    );
+   248→    setProjectNames((prev) => {
+   249→      const newNames = new Set(prev);
+   250→      if (projName) newNames.add(projName);
+   251→      return Array.from(newNames);
+   252→    });
+   253→    setPropertyMapping((prev) => ({ ...prev, [projName]: bulkProject }));
+   254→    setBulkProject("");
+   255→  };
+   256→
+   257→  // Apply bulk source to selected rows
+   258→  const applyBulkSource = () => {
+   259→    if (!bulkSource || selectedRows.size === 0) return;
+   260→    setParsedRows((prev) =>
+   261→      prev.map((row, i) =>
+   262→        selectedRows.has(i) ? { ...row, source: bulkSource } : row
+   263→      )
+   264→    );
+   265→    setBulkSource("");
+   266→  };
+   267→
+   268→  // Apply bulk assignee to selected rows
+   269→  const applyBulkAssignTo = () => {
+   270→    if (!bulkAssignTo || selectedRows.size === 0) return;
+   271→    setParsedRows((prev) =>
+   272→      prev.map((row, i) =>
+   273→        selectedRows.has(i) ? { ...row, assignToId: bulkAssignTo } : row
+   274→      )
+   275→    );
+   276→    setBulkAssignTo("");
+   277→  };
+   278→
+   279→  const handleImport = async () => {
+   280→    if (parsedRows.length === 0) return;
+   281→
+   282→    setImporting(true);
+   283→    try {
+   284→      const res = await fetch("/api/leads/import/confirm", {
+   285→        method: "POST",
+   286→        headers: { "Content-Type": "application/json" },
+   287→        body: JSON.stringify({
+   288→          rows: parsedRows,
+   289→          projectMapping: propertyMapping,
+   290→          skipDuplicates,
+   291→        }),
+   292→      });
+   293→
+   294→      const data = await res.json();
+   295→      if (res.ok) {
+   296→        setImported(data.imported);
+   297→        setSkippedCount(data.skipped || 0);
+   298→        setStep(5);
+   299→      } else {
+   300→        setError(data.error || "Import failed");
+   301→      }
+   302→    } catch {
+   303→      setError("Import failed");
+   304→    } finally {
+   305→      setImporting(false);
+   306→    }
+   307→  };
+   308→
+   309→  // Get the project name for display
+   310→  const getProjectName = (projectId: string) => {
+   311→    const proj = projects.find((p) => p.id === projectId);
+   312→    return proj ? proj.name : "Unknown";
+   313→  };
+   314→
+   315→  // Get user name
+   316→  const getUserName = (userId: string) => {
+   317→    const u = users.find((u) => u.id === userId);
+   318→    return u ? u.name : "Unknown";
+   319→  };
+   320→
+   321→  // If not admin, don't render
+   322→  if (user?.role !== "admin") return null;
+   323→
+   324→  return (
+   325→    <div className="space-y-4 max-w-7xl mx-auto">
+   326→      <div className="flex items-center gap-3">
+   327→        <Button variant="ghost" size="sm" onClick={() => setPage("leads")}>
+   328→          <ArrowLeft className="mr-1 h-4 w-4" /> Back to Leads
+   329→        </Button>
+   330→      </div>
+   331→
+   332→      {/* Step Indicator */}
+   333→      <div className="flex items-center gap-2 mb-4 flex-wrap">
+   334→        {[
+   335→          { num: 1, label: "Upload File" },
+   336→          { num: 2, label: "Review & Edit" },
+   337→          { num: 3, label: "Map Projects" },
+   338→          { num: 4, label: "Confirm" },
+   339→          { num: 5, label: "Done" },
+   340→        ].map((s, i) => (
+   341→          <div key={s.num} className="flex items-center gap-2">
+   342→            <div
+   343→              className={`flex items-center justify-center h-8 w-8 rounded-full text-sm font-medium ${
+   344→                step >= s.num
+   345→                  ? "bg-brand text-white"
+   346→                  : "bg-muted text-muted-foreground"
+   347→              }`}
+   348→            >
+   349→              {s.num}
+   350→            </div>
+   351→            <span
+   352→              className={`text-sm ${
+   353→                step >= s.num
+   354→                  ? "text-foreground font-medium"
+   355→                  : "text-muted-foreground"
+   356→              }`}
+   357→            >
+   358→              {s.label}
+   359→            </span>
+   360→            {i < 4 && (
+   361→              <div
+   362→                className={`w-8 h-0.5 ${
+   363→                  step > s.num ? "bg-brand" : "bg-muted"
+   364→                }`}
+   365→              />
+   366→            )}
+   367→          </div>
+   368→        ))}
+   369→      </div>
+   370→
+   371→      {/* Step 1: Upload */}
+   372→      {step === 1 && (
+   373→        <Card>
+   374→          <CardHeader>
+   375→            <CardTitle className="text-lg">Import Leads from CSV or XLS</CardTitle>
+   376→          </CardHeader>
+   377→          <CardContent className="space-y-4">
+   378→            <div className="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-8 text-center">
+   379→              <Upload className="mx-auto h-10 w-10 text-gray-400" />
+   380→              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+   381→                Upload a CSV or XLS/XLSX file with lead data
+   382→              </p>
+   383→              <div className="mt-2 text-xs text-gray-400 space-y-1">
+   384→                <p className="font-medium text-gray-500 dark:text-gray-300">File Format:</p>
+   385→                <p>Column order: <strong>DATE (DD.MM.YY)</strong>, <strong>LEAD SOURCE</strong>, <strong>NAME</strong>, <strong>NUMBER</strong>, <strong>MAIL ID</strong>, <strong>PROJECT NAME</strong></p>
+   386→                <p className="mt-1">Example: 15.01.24, Housing.com, Raj Kumar, 9876543210, raj@email.com, Sunshine Green City</p>
+   387→              </div>
+   388→              <Input
+   389→                type="file"
+   390→                accept=".csv,.xlsx,.xls"
+   391→                onChange={handleFileChange}
+   392→                className="mt-4 max-w-xs mx-auto"
+   393→              />
+   394→            </div>
+   395→
+   396→            {parsing && (
+   397→              <div className="text-center text-sm text-gray-500">
+   398→                Parsing file...
+   399→              </div>
+   400→            )}
+   401→
+   402→            {error && (
+   403→              <div className="rounded-md bg-red-50 dark:bg-red-950 p-3 text-sm text-red-600 dark:text-red-400">
+   404→                {error}
+   405→              </div>
+   406→            )}
+   407→          </CardContent>
+   408→        </Card>
+   409→      )}
+   410→
+   411→      {/* Step 2: Review & Edit */}
+   412→      {step === 2 && (
+   413→        <Card>
+   414→          <CardHeader>
+   415→            <CardTitle className="text-lg flex items-center gap-2">
+   416→              <FileText className="h-5 w-5" />
+   417→              Review & Edit — {parsedRows.length} leads found
+   418→              {duplicateCount > 0 && (
+   419→                <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 ml-2">
+   420→                  <AlertTriangle className="mr-1 h-3 w-3" />
+   421→                  {duplicateCount} Duplicate{duplicateCount !== 1 ? "s" : ""}
+   422→                </Badge>
+   423→              )}
+   424→            </CardTitle>
+   425→          </CardHeader>
+   426→          <CardContent className="space-y-4">
+   427→            {duplicateCount > 0 && (
+   428→              <div className="rounded-md bg-red-50 dark:bg-red-950 p-3 text-sm text-red-700 dark:text-red-300 space-y-2">
+   429→                <div className="font-medium flex items-center gap-2">
+   430→                  <AlertTriangle className="h-4 w-4" />
+   431→                  Duplicate leads detected!
+   432→                </div>
+   433→                <p>Leads highlighted in <span className="text-red-600 font-bold">RED</span> already exist in the system or are duplicated in the file.</p>
+   434→                <div className="flex items-center gap-2">
+   435→                  <Checkbox
+   436→                    id="skipDuplicates"
+   437→                    checked={skipDuplicates}
+   438→                    onCheckedChange={(checked) => setSkipDuplicates(!!checked)}
+   439→                  />
+   440→                  <label htmlFor="skipDuplicates" className="cursor-pointer">
+   441→                    Skip duplicate leads during import (recommended)
+   442→                  </label>
+   443→                </div>
+   444→              </div>
+   445→            )}
+   446→
+   447→            {/* ─── BULK SELECT & APPLY CONTROLS ─── */}
+   448→            <div className="space-y-3 p-3 bg-muted/50 rounded-lg border border-border">
+   449→              <div className="flex items-center justify-between">
+   450→                <div className="flex items-center gap-3">
+   451→                  <span className="text-sm font-medium">Selection:</span>
+   452→                  <Button size="sm" variant="outline" onClick={toggleSelectAll} className="h-7 text-xs">
+   453→                    {selectedRows.size === parsedRows.length ? "Deselect All" : "Select All"}
+   454→                  </Button>
+   455→                  <Button size="sm" variant="outline" onClick={selectNonDuplicates} className="h-7 text-xs">
+   456→                    Select Non-Duplicates
+   457→                  </Button>
+   458→                  <span className="text-xs text-muted-foreground">
+   459→                    {selectedRows.size} of {parsedRows.length} selected
+   460→                  </span>
+   461→                </div>
+   462→              </div>
+   463→
+   464→              <div className="flex flex-wrap gap-2 items-center">
+   465→                <span className="text-sm font-medium text-brand">Bulk Apply to Selected:</span>
+   466→
+   467→                {/* Bulk Project */}
+   468→                <Select value={bulkProject} onValueChange={setBulkProject}>
+   469→                  <SelectTrigger className="w-[180px] h-8">
+   470→                    <Building2 className="mr-1 h-3 w-3 shrink-0" />
+   471→                    <SelectValue placeholder="Set Project" />
+   472→                  </SelectTrigger>
+   473→                  <SelectContent>
+   474→                    {projects.map((p) => (
+   475→                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+   476→                    ))}
+   477→                  </SelectContent>
+   478→                </Select>
+   479→                <Button size="sm" variant="outline" onClick={applyBulkProject} disabled={!bulkProject || selectedRows.size === 0} className="h-8 text-xs">
+   480→                  Apply Project
+   481→                </Button>
+   482→
+   483→                {/* Bulk Source */}
+   484→                <Select value={bulkSource} onValueChange={setBulkSource}>
+   485→                  <SelectTrigger className="w-[150px] h-8">
+   486→                    <SelectValue placeholder="Set Source" />
+   487→                  </SelectTrigger>
+   488→                  <SelectContent>
+   489→                    {sources.map((s) => (
+   490→                      <SelectItem key={s} value={s}>{s}</SelectItem>
+   491→                    ))}
+   492→                  </SelectContent>
+   493→                </Select>
+   494→                <Button size="sm" variant="outline" onClick={applyBulkSource} disabled={!bulkSource || selectedRows.size === 0} className="h-8 text-xs">
+   495→                  Apply Source
+   496→                </Button>
+   497→
+   498→                {/* Bulk Assign */}
+   499→                <Select value={bulkAssignTo} onValueChange={setBulkAssignTo}>
+   500→                  <SelectTrigger className="w-[160px] h-8">
+   501→                    <Users className="mr-1 h-3 w-3 shrink-0" />
+   502→                    <SelectValue placeholder="Set Assignee" />
+   503→                  </SelectTrigger>
+   504→                  <SelectContent>
+   505→                    {users
+   506→                      .filter((u) => u.isActive && u.role !== "admin")
+   507→                      .map((u) => (
+   508→                        <SelectItem key={u.id} value={u.id}>
+   509→                          {u.name} ({u.role})
+   510→                        </SelectItem>
+   511→                      ))}
+   512→                  </SelectContent>
+   513→                </Select>
+   514→                <Button size="sm" variant="outline" onClick={applyBulkAssignTo} disabled={!bulkAssignTo || selectedRows.size === 0} className="h-8 text-xs">
+   515→                  Apply Assignee
+   516→                </Button>
+   517→              </div>
+   518→            </div>
+   519→
+   520→            {/* Editable table */}
+   521→            <div className="max-h-[500px] overflow-auto rounded-lg border">
+   522→              <Table>
+   523→                <TableHeader>
+   524→                  <TableRow>
+   525→                    <TableHead className="w-8">
+   526→                      <Checkbox
+   527→                        checked={selectedRows.size === parsedRows.length && parsedRows.length > 0}
+   528→                        onCheckedChange={toggleSelectAll}
+   529→                      />
+   530→                    </TableHead>
+   531→                    <TableHead className="w-8">#</TableHead>
+   532→                    <TableHead>Date</TableHead>
+   533→                    <TableHead>Source</TableHead>
+   534→                    <TableHead>Name</TableHead>
+   535→                    <TableHead>Number</TableHead>
+   536→                    <TableHead>Mail ID</TableHead>
+   537→                    <TableHead>Project (from file)</TableHead>
+   538→                    <TableHead>Project (select)</TableHead>
+   539→                    <TableHead>Assign To</TableHead>
+   540→                    <TableHead>Status</TableHead>
+   541→                    <TableHead className="w-10"></TableHead>
+   542→                  </TableRow>
+   543→                </TableHeader>
+   544→                <TableBody>
+   545→                  {parsedRows.map((row, i) => (
+   546→                    <TableRow
+   547→                      key={i}
+   548→                      className={`${row.isDuplicate ? "bg-red-50 dark:bg-red-950/50" : ""} ${selectedRows.has(i) ? "bg-brand/5" : ""}`}
+   549→                    >
+   550→                      <TableCell>
+   551→                        <Checkbox
+   552→                          checked={selectedRows.has(i)}
+   553→                          onCheckedChange={() => toggleRowSelection(i)}
+   554→                        />
+   555→                      </TableCell>
+   556→                      <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+   557→                      <TableCell className="text-xs">{row.date || "\u2014"}</TableCell>
+   558→                      <TableCell>
+   559→                        <Select
+   560→                          value={row.source || ""}
+   561→                          onValueChange={(v) => updateRow(i, "source", v)}
+   562→                        >
+   563→                          <SelectTrigger className="h-7 text-xs w-[120px]">
+   564→                            <SelectValue placeholder="Source" />
+   565→                          </SelectTrigger>
+   566→                          <SelectContent>
+   567→                            {sources.map((s) => (
+   568→                              <SelectItem key={s} value={s}>{s}</SelectItem>
+   569→                            ))}
+   570→                          </SelectContent>
+   571→                        </Select>
+   572→                      </TableCell>
+   573→                      <TableCell>
+   574→                        <Input
+   575→                          value={row.name}
+   576→                          onChange={(e) => updateRow(i, "name", e.target.value)}
+   577→                          className={`h-7 text-xs ${row.isDuplicate ? "border-red-300 dark:border-red-700" : ""}`}
+   578→                        />
+   579→                      </TableCell>
+   580→                      <TableCell>
+   581→                        <Input
+   582→                          value={row.phone}
+   583→                          onChange={(e) => updateRow(i, "phone", e.target.value)}
+   584→                          className={`h-7 text-xs ${row.isDuplicate ? "border-red-300 dark:border-red-700" : ""}`}
+   585→                        />
+   586→                      </TableCell>
+   587→                      <TableCell>
+   588→                        <Input
+   589→                          value={row.email || ""}
+   590→                          onChange={(e) => updateRow(i, "email", e.target.value)}
+   591→                          className="h-7 text-xs"
+   592→                          placeholder="Email"
+   593→                        />
+   594→                      </TableCell>
+   595→                      <TableCell className="text-xs text-muted-foreground">
+   596→                        {row.projectName || "\u2014"}
+   597→                      </TableCell>
+   598→                      <TableCell>
+   599→                        <Select
+   600→                          value={row.projectId || ""}
+   601→                          onValueChange={(v) => {
+   602→                            updateRow(i, "projectId", v);
+   603→                            const projName = projects.find((p) => p.id === v)?.name || "";
+   604→                            updateRow(i, "projectName", projName);
+   605→                            setProjectNames((prev) => {
+   606→                              const newNames = new Set(prev);
+   607→                              if (projName) newNames.add(projName);
+   608→                              return Array.from(newNames);
+   609→                            });
+   610→                            setPropertyMapping((prev) => ({ ...prev, [projName]: v }));
+   611→                          }}
+   612→                        >
+   613→                          <SelectTrigger className="h-7 text-xs w-[140px]">
+   614→                            <Building2 className="mr-1 h-3 w-3 shrink-0" />
+   615→                            <SelectValue placeholder="Select..." />
+   616→                          </SelectTrigger>
+   617→                          <SelectContent>
+   618→                            {projects.map((p) => (
+   619→                              <SelectItem key={p.id} value={p.id}>
+   620→                                {p.name}
+   621→                              </SelectItem>
+   622→                            ))}
+   623→                          </SelectContent>
+   624→                        </Select>
+   625→                      </TableCell>
+   626→                      <TableCell>
+   627→                        <Select
+   628→                          value={row.assignToId || ""}
+   629→                          onValueChange={(v) => updateRow(i, "assignToId", v)}
+   630→                        >
+   631→                          <SelectTrigger className="h-7 text-xs w-[120px]">
+   632→                            <Users className="mr-1 h-3 w-3 shrink-0" />
+   633→                            <SelectValue placeholder="Assign..." />
+   634→                          </SelectTrigger>
+   635→                          <SelectContent>
+   636→                            {users
+   637→                              .filter((u) => u.isActive && u.role !== "admin")
+   638→                              .map((u) => (
+   639→                                <SelectItem key={u.id} value={u.id}>
+   640→                                  {u.name}
+   641→                                </SelectItem>
+   642→                              ))}
+   643→                          </SelectContent>
+   644→                        </Select>
+   645→                      </TableCell>
+   646→                      <TableCell>
+   647→                        {row.isDuplicate ? (
+   648→                          <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 text-xs">
+   649→                            <XCircle className="mr-1 h-3 w-3" />
+   650→                            Dup
+   651→                          </Badge>
+   652→                        ) : (
+   653→                          <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 text-xs">
+   654→                            New
+   655→                          </Badge>
+   656→                        )}
+   657→                      </TableCell>
+   658→                      <TableCell>
+   659→                        <Button
+   660→                          variant="ghost"
+   661→                          size="sm"
+   662→                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+   663→                          onClick={() => removeRow(i)}
+   664→                        >
+   665→                          <XCircle className="h-3.5 w-3.5" />
+   666→                        </Button>
+   667→                      </TableCell>
+   668→                    </TableRow>
+   669→                  ))}
+   670→                </TableBody>
+   671→              </Table>
+   672→            </div>
+   673→
+   674→            <div className="flex gap-2 justify-end">
+   675→              <Button variant="outline" onClick={() => setStep(1)}>
+   676→                Back
+   677→              </Button>
+   678→              <Button
+   679→                onClick={() => setStep(3)}
+   680→                className="bg-brand hover:bg-brand-dark"
+   681→              >
+   682→                Next: Map Projects <ArrowRight className="ml-1 h-4 w-4" />
+   683→              </Button>
+   684→            </div>
+   685→          </CardContent>
+   686→        </Card>
+   687→      )}
+   688→
+   689→      {/* Step 3: Map Projects */}
+   690→      {step === 3 && (
+   691→        <Card>
+   692→          <CardHeader>
+   693→            <CardTitle className="text-lg flex items-center gap-2">
+   694→              <MapPin className="h-5 w-5" />
+   695→              Map Project Names to Projects
+   696→            </CardTitle>
+   697→          </CardHeader>
+   698→          <CardContent className="space-y-4">
+   699→            <div className="rounded-md bg-amber-50 dark:bg-amber-950 p-3 text-sm text-amber-700 dark:text-amber-300">
+   700→              Match the project names from your leads to your listed projects. This will automatically link the correct project to each lead.
+   701→            </div>
+   702→
+   703→            {/* Project Mapping Section */}
+   704→            {projectNames.length > 0 ? (
+   705→              <div className="space-y-3">
+   706→                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+   707→                  <MapPin className="h-4 w-4" />
+   708→                  Map Project Names to Projects
+   709→                </h3>
+   710→                {projectNames.map((projectName) => (
+   711→                  <div
+   712→                    key={projectName}
+   713→                    className="flex items-center gap-3 rounded-lg border border-border p-3"
+   714→                  >
+   715→                    <div className="flex-1 min-w-0">
+   716→                      <div className="text-sm font-medium text-foreground">
+   717→                        Project: &quot;{projectName}&quot;
+   718→                      </div>
+   719→                      <div className="text-xs text-muted-foreground">
+   720→                        {parsedRows.filter((r) => r.projectName === projectName).length} leads with this project
+   721→                      </div>
+   722→                    </div>
+   723→                    <div className="flex items-center gap-2 shrink-0">
+   724→                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+   725→                      <Select
+   726→                        value={propertyMapping[projectName] || ""}
+   727→                        onValueChange={(v) =>
+   728→                          setPropertyMapping((prev) => ({ ...prev, [projectName]: v }))
+   729→                        }
+   730→                      >
+   731→                        <SelectTrigger className="w-[250px]">
+   732→                          <Building2 className="mr-1 h-3 w-3 shrink-0" />
+   733→                          <SelectValue placeholder="Select project..." />
+   734→                        </SelectTrigger>
+   735→                        <SelectContent>
+   736→                          {projects.map((p) => (
+   737→                            <SelectItem key={p.id} value={p.id}>
+   738→                              {p.name} {p.location ? `- ${p.location}` : ""}
+   739→                            </SelectItem>
+   740→                          ))}
+   741→                        </SelectContent>
+   742→                      </Select>
+   743→                    </div>
+   744→                    {propertyMapping[projectName] && (
+   745→                      <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 shrink-0">
+   746→                        Mapped
+   747→                      </Badge>
+   748→                    )}
+   749→                  </div>
+   750→                ))}
+   751→              </div>
+   752→            ) : (
+   753→              <div className="text-sm text-muted-foreground">
+   754→                No project names found in the imported data. You can skip this step.
+   755→              </div>
+   756→            )}
+   757→
+   758→            <div className="flex gap-2 justify-end">
+   759→              <Button variant="outline" onClick={() => setStep(2)}>
+   760→                Back
+   761→              </Button>
+   762→              <Button
+   763→                onClick={() => setStep(4)}
+   764→                className="bg-brand hover:bg-brand-dark"
+   765→              >
+   766→                Next: Confirm <ArrowRight className="ml-1 h-4 w-4" />
+   767→              </Button>
+   768→            </div>
+   769→          </CardContent>
+   770→        </Card>
+   771→      )}
+   772→
+   773→      {/* Step 4: Confirm & Assign */}
+   774→      {step === 4 && (
+   775→        <Card>
+   776→          <CardHeader>
+   777→            <CardTitle className="text-lg">Confirm Import</CardTitle>
+   778→          </CardHeader>
+   779→          <CardContent className="space-y-4">
+   780→            <div className="grid gap-3 sm:grid-cols-3">
+   781→              <div className="rounded-lg border border-border p-4">
+   782→                <div className="text-2xl font-bold text-foreground">
+   783→                  {skipDuplicates ? parsedRows.filter((r) => !r.isDuplicate).length : parsedRows.length}
+   784→                </div>
+   785→                <div className="text-sm text-muted-foreground">Leads to import</div>
+   786→              </div>
+   787→              <div className="rounded-lg border border-border p-4">
+   788→                <div className="text-2xl font-bold text-foreground">
+   789→                  {Object.keys(propertyMapping).length}
+   790→                </div>
+   791→                <div className="text-sm text-muted-foreground">Projects mapped</div>
+   792→              </div>
+   793→              {duplicateCount > 0 && (
+   794→                <div className="rounded-lg border border-red-200 dark:border-red-800 p-4">
+   795→                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+   796→                    {duplicateCount}
+   797→                  </div>
+   798→                  <div className="text-sm text-red-600 dark:text-red-400">
+   799→                    Duplicates {skipDuplicates ? "(will skip)" : "(will import anyway)"}
+   800→                  </div>
+   801→                </div>
+   802→              )}
+   803→            </div>
+   804→
+   805→            {/* Assignment Summary */}
+   806→            <div className="space-y-2">
+   807→              <Label>Assignment Summary</Label>
+   808→              {(() => {
+   809→                const assigneeCounts: Record<string, number> = {};
+   810→                const noAssigneeCount = parsedRows.filter((r) => !r.isDuplicate || !skipDuplicates).filter((r) => !r.assignToId).length;
+   811→                parsedRows.forEach((r) => {
+   812→                  if ((skipDuplicates && r.isDuplicate) || !r.assignToId) return;
+   813→                  assigneeCounts[r.assignToId!] = (assigneeCounts[r.assignToId!] || 0) + 1;
+   814→                });
+   815→                return (
+   816→                  <div className="space-y-1">
+   817→                    {Object.entries(assigneeCounts).map(([userId, count]) => (
+   818→                      <div key={userId} className="flex items-center gap-2 text-sm">
+   819→                        <Users className="h-3 w-3 text-muted-foreground" />
+   820→                        <span className="text-foreground font-medium">{getUserName(userId)}</span>
+   821→                        <span className="text-muted-foreground">— {count} leads</span>
+   822→                      </div>
+   823→                    ))}
+   824→                    {noAssigneeCount > 0 && (
+   825→                      <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+   826→                        <Users className="h-3 w-3" />
+   827→                        <span>Not assigned — {noAssigneeCount} leads (will be assigned to you)</span>
+   828→                      </div>
+   829→                    )}
+   830→                  </div>
+   831→                );
+   832→              })()}
+   833→            </div>
+   834→
+   835→            {/* Project mapping summary */}
+   836→            {projectNames.length > 0 && (
+   837→              <div className="space-y-2">
+   838→                <Label>Project Mapping Summary</Label>
+   839→                {projectNames.map((pn) => (
+   840→                  <div key={pn} className="flex items-center gap-2 text-sm">
+   841→                    <span className="text-muted-foreground">File: &quot;{pn}&quot;</span>
+   842→                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
+   843→                    {propertyMapping[pn] ? (
+   844→                      <span className="text-foreground font-medium">
+   845→                        {getProjectName(propertyMapping[pn])}
+   846→                      </span>
+   847→                    ) : (
+   848→                      <span className="text-amber-600 dark:text-amber-400">Not mapped</span>
+   849→                    )}
+   850→                  </div>
+   851→                ))}
+   852→              </div>
+   853→            )}
+   854→
+   855→            {error && (
+   856→              <div className="rounded-md bg-red-50 dark:bg-red-950 p-3 text-sm text-red-600 dark:text-red-400">
+   857→                {error}
+   858→              </div>
+   859→            )}
+   860→
+   861→            <div className="flex gap-2 justify-end">
+   862→              <Button variant="outline" onClick={() => setStep(3)}>
+   863→                Back
+   864→              </Button>
+   865→              <Button
+   866→                onClick={handleImport}
+   867→                className="bg-brand hover:bg-brand-dark"
+   868→                disabled={importing}
+   869→              >
+   870→                {importing
+   871→                  ? "Importing..."
+   872→                  : `Import ${skipDuplicates ? parsedRows.filter((r) => !r.isDuplicate).length : parsedRows.length} Leads`}
+   873→              </Button>
+   874→            </div>
+   875→          </CardContent>
+   876→        </Card>
+   877→      )}
+   878→
+   879→      {/* Step 5: Done */}
+   880→      {step === 5 && (
+   881→        <Card>
+   882→          <CardContent className="text-center py-12">
+   883→            <CheckCircle2 className="mx-auto h-12 w-12 text-green-500" />
+   884→            <p className="mt-2 text-lg font-medium text-foreground">
+   885→              Successfully imported {imported} leads!
+   886→            </p>
+   887→            {skippedCount > 0 && (
+   888→              <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+   889→                {skippedCount} duplicate leads were skipped.
+   890→              </p>
+   891→            )}
+   892→            <p className="text-sm text-muted-foreground mt-1">
+   893→              Projects and assignees have been linked to leads based on your settings.
+   894→            </p>
+   895→            <Button
+   896→              variant="outline"
+   897→              className="mt-4"
+   898→              onClick={() => setPage("leads")}
+   899→            >
+   900→              Go to Leads
+   901→            </Button>
+   902→          </CardContent>
+   903→        </Card>
+   904→      )}
+   905→    </div>
+   906→  );
+   907→}
+   908→
