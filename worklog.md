@@ -337,3 +337,86 @@ Stage Summary:
 - If the date string is missing or unparseable, the lead falls back to current timestamp with a note flagged in the notes field for audit.
 - Deployed to https://leadsdekho.in
 
+
+---
+Task ID: 15
+Agent: Main Agent
+Task: Portal API leads should NOT go directly to lead dashboard — they should land in admin's Import Lead area where admin can review, assign, set project, set portal, and confirm them into the main lead dashboard
+
+Work Log:
+- Investigated codebase: confirmed no existing portal API; user wants a NEW public endpoint that external portals (Housing.com, MagicBricks, 99acres, etc.) can call to push leads into the system.
+- Designed holding-area pattern: incoming portal leads are stored in a SEPARATE PortalLead table (NOT the Lead table), so they don't pollute the main lead dashboard until admin reviews + confirms them.
+
+Database changes (prisma/schema.prisma):
+- Added new PortalLead model:
+  * Fields: id, name, phone, email, source, budget, notes, projectName, portalRef, rawPayload (JSON for audit), assignedTo, projectId, status, createdAt, updatedAt
+  * Status values: "pending" (default), "confirmed", "discarded"
+  * Indexes: (status, createdAt desc), phone, source
+- Ran `prisma db push` directly against production Postgres to apply schema. PortalLead table now exists in production.
+
+API routes created:
+1. POST /api/portal-leads (PUBLIC — no auth, called by external portals)
+   - Accepts ANY field-name variations (case-insensitive): name/lead_name/customerName, phone/number/mobile/contact, email/mail/mailId, source/portal/lead_source, budget, notes/message/requirement, projectName/project, portalRef/ref/lead_id/external_id
+   - Required: name, phone (returns 400 otherwise)
+   - Deduplication: if same phone + portalRef already in pending queue, returns 409
+   - Stores full raw payload in rawPayload JSON field for audit
+   - Returns { id, status: "pending", message }
+
+2. GET /api/portal-leads (ADMIN only)
+   - Lists portal leads filtered by ?status=pending|confirmed|discarded (default: pending)
+   - Returns { portalLeads[], pendingCount } so UI can show badge
+
+3. POST /api/portal-leads/confirm (ADMIN only)
+   - Body: { leads: [{ id, assignToId?, projectId?, source? }] }
+   - For each portal lead:
+     a) Validates assignee (must be active user) + project (must exist)
+     b) Phone-based duplicate check — if a Lead already exists with this phone, marks the portal lead as confirmed WITHOUT creating a duplicate Lead
+     c) Creates a Lead in main Lead table with chosen assignee/project/source
+     d) Creates timeline event + LeadAssignment record
+     e) Marks the PortalLead as "confirmed" (kept for audit, not deleted)
+   - Returns { confirmed, duplicated, failed, failedDetails }
+
+4. DELETE /api/portal-leads/[id] (ADMIN only)
+   - Default: marks as "discarded" (soft delete, kept for audit)
+   - With ?hard=true: permanently deletes the row
+
+5. PATCH /api/portal-leads/[id] (ADMIN only)
+   - Edit pending portal lead fields before confirming
+
+UI changes:
+- Created new /src/components/portal-leads.tsx — full admin review panel:
+  * Shows the public API endpoint URL with copy-to-clipboard button (so admin can share it with portal integrators)
+  * Filter tabs: pending / confirmed / discarded
+  * Pending view shows a table with all portal leads; each row has dropdowns for Source, Project, Assign To
+  * Bulk-apply bar (like the existing import-lead UI): select-all checkbox, bulk-apply Project/Source/Assignee to selected rows, "Confirm N Leads → Lead Management" button
+  * Per-row discard button (soft delete)
+  * Confirmed/Discarded views show status badge + permanent delete option
+  * Refresh button
+- Modified /src/components/lead-import.tsx to add a TAB switcher at the top:
+  * Tab 1: "Import from File (CSV/XLS)" — existing file-upload workflow (unchanged)
+  * Tab 2: "Portal Leads (API)" — shows the new <PortalLeads /> component
+- Both tabs live under the existing "Import Leads" sidebar menu item — no navigation changes needed
+
+Production testing:
+- Verified portal API endpoint with curl: POST https://leadsdekho.in/api/portal-leads with a sample payload returned { id, status: "pending", message } — endpoint is live and saving to PortalLead table.
+
+Build & deploy:
+- Build successful with `npx next build` (no TypeScript errors).
+- Ran `prisma db push` against production Postgres to apply PortalLead schema.
+- Deployed to Vercel production at https://leadsdekho.in
+
+Stage Summary:
+- External portals (Housing.com, MagicBricks, 99acres, etc.) can now POST leads to https://leadsdekho.in/api/portal-leads — no auth required.
+- Portal leads land in a SEPARATE PortalLead table — they do NOT appear in the main lead dashboard.
+- Admin sees a new "Portal Leads (API)" tab under Import Leads menu with a pending count badge.
+- In that tab, admin can:
+  * See all pending portal leads with name/phone/email/source/budget/notes/project name/received timestamp
+  * Pick Source / Project / Assign To per row (or bulk-apply to selected rows)
+  * Click "Confirm N Leads → Lead Management" to push them into the main Lead table
+  * Discard individual leads (soft delete) or permanently delete from confirmed/discarded views
+  * Copy the public API endpoint URL to share with portal integrators
+- Phone-based duplicate check prevents double-import: if a lead with the same phone already exists in main Lead table, the portal lead is auto-marked confirmed without creating a duplicate.
+- Portal-side deduplication: same phone + portalRef can't be pushed twice into the pending queue.
+- All original raw payloads are saved in rawPayload JSON field for audit / debugging.
+- Deployed to https://leadsdekho.in
+

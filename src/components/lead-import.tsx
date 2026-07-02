@@ -34,7 +34,9 @@ import {
   AlertTriangle,
   XCircle,
   Users,
+  Inbox,
 } from "lucide-react";
+import { PortalLeads } from "@/components/portal-leads";
 
 // Sources are fetched dynamically from the database - no hardcoded fallback
 
@@ -62,9 +64,11 @@ interface ProjectItem {
 
 // Step 1: Upload, Step 2: Edit & Review, Step 3: Map Projects, Step 4: Confirm, Step 5: Done
 type ImportStep = 1 | 2 | 3 | 4 | 5;
+type ImportTab = "file" | "portal";
 
 export function LeadImport() {
   const { user, setPage } = useAppStore();
+  const [activeTab, setActiveTab] = useState<ImportTab>("file");
   const [step, setStep] = useState<ImportStep>(1);
   const [file, setFile] = useState<File | null>(null);
   const [parsing, setParsing] = useState(false);
@@ -329,44 +333,78 @@ export function LeadImport() {
         </Button>
       </div>
 
-      {/* Step Indicator */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        {[
-          { num: 1, label: "Upload File" },
-          { num: 2, label: "Review & Edit" },
-          { num: 3, label: "Map Projects" },
-          { num: 4, label: "Confirm" },
-          { num: 5, label: "Done" },
-        ].map((s, i) => (
-          <div key={s.num} className="flex items-center gap-2">
-            <div
-              className={`flex items-center justify-center h-8 w-8 rounded-full text-sm font-medium ${
-                step >= s.num
-                  ? "bg-brand text-white"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {s.num}
-            </div>
-            <span
-              className={`text-sm ${
-                step >= s.num
-                  ? "text-foreground font-medium"
-                  : "text-muted-foreground"
-              }`}
-            >
-              {s.label}
-            </span>
-            {i < 4 && (
-              <div
-                className={`w-8 h-0.5 ${
-                  step > s.num ? "bg-brand" : "bg-muted"
-                }`}
-              />
-            )}
-          </div>
-        ))}
+      {/* Tab switcher: File Import vs Portal Leads */}
+      <div className="flex items-center gap-2 border-b">
+        <button
+          type="button"
+          onClick={() => setActiveTab("file")}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "file"
+              ? "border-brand text-brand"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Upload className="h-4 w-4" />
+          Import from File (CSV/XLS)
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("portal")}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "portal"
+              ? "border-brand text-brand"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Inbox className="h-4 w-4" />
+          Portal Leads (API)
+        </button>
       </div>
+
+      {/* Portal leads tab — short-circuits all the file-import UI */}
+      {activeTab === "portal" && <PortalLeads />}
+
+      {/* File import tab — original UI shown only when this tab is active */}
+      {activeTab === "file" && (
+        <>
+          {/* Step Indicator */}
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
+            {[
+              { num: 1, label: "Upload File" },
+              { num: 2, label: "Review & Edit" },
+              { num: 3, label: "Map Projects" },
+              { num: 4, label: "Confirm" },
+              { num: 5, label: "Done" },
+            ].map((s, i) => (
+              <div key={s.num} className="flex items-center gap-2">
+                <div
+                  className={`flex items-center justify-center h-8 w-8 rounded-full text-sm font-medium ${
+                    step >= s.num
+                      ? "bg-brand text-white"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {s.num}
+                </div>
+                <span
+                  className={`text-sm ${
+                    step >= s.num
+                      ? "text-foreground font-medium"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {s.label}
+                </span>
+                {i < 4 && (
+                  <div
+                    className={`w-8 h-0.5 ${
+                      step > s.num ? "bg-brand" : "bg-muted"
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
 
       {/* Step 1: Upload */}
       {step === 1 && (
@@ -909,6 +947,8 @@ export function LeadImport() {
             </Button>
           </CardContent>
         </Card>
+      )}
+        </>
       )}
     </div>
   );

@@ -9,57 +9,57 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  name          String
-  password      String
-  role          String   @default("telecalling")
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("telecalling")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  primaryLeads  Lead[]   @relation("PrimaryOwner")
-  currentLeads  Lead[]   @relation("CurrentOwner")
-  callLogs      CallLog[]
-  followUps     FollowUp[]
-  siteVisits    SiteVisit[]
-  assignedFrom  LeadAssignment[] @relation("AssignedFrom")
-  assignedTo    LeadAssignment[] @relation("AssignedTo")
-  timeline      TimelineEvent[]
-  bookings      Booking[]
+  primaryLeads Lead[]           @relation("PrimaryOwner")
+  currentLeads Lead[]           @relation("CurrentOwner")
+  callLogs     CallLog[]
+  followUps    FollowUp[]
+  siteVisits   SiteVisit[]
+  assignedFrom LeadAssignment[] @relation("AssignedFrom")
+  assignedTo   LeadAssignment[] @relation("AssignedTo")
+  timeline     TimelineEvent[]
+  bookings     Booking[]
 }
 
 model Lead {
-  id              String   @id @default(cuid())
-  name            String
-  phone           String
-  email           String?
-  source          String   @default("Manual")
-  budget          String?
-  notes           String?
-  pipelineStatus  String   @default("New")
-  leadStatus     String?  @default("New")
+  id             String  @id @default(cuid())
+  name           String
+  phone          String
+  email          String?
+  source         String  @default("Manual")
+  budget         String?
+  notes          String?
+  pipelineStatus String  @default("New")
+  leadStatus     String? @default("New")
   subStage       String?
-  lostReason      String?
+  lostReason     String?
 
-  primaryOwnerId  String
-  currentOwnerId  String
-  primaryOwner    User     @relation("PrimaryOwner", fields: [primaryOwnerId], references: [id])
-  currentOwner    User     @relation("CurrentOwner", fields: [currentOwnerId], references: [id])
+  primaryOwnerId String
+  currentOwnerId String
+  primaryOwner   User   @relation("PrimaryOwner", fields: [primaryOwnerId], references: [id])
+  currentOwner   User   @relation("CurrentOwner", fields: [currentOwnerId], references: [id])
 
-  projectId       String?
-  project         Project? @relation(fields: [projectId], references: [id])
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
 
-  callLogs        CallLog[]
-  followUps       FollowUp[]
-  siteVisits      SiteVisit[]
-  assignments     LeadAssignment[]
-  timeline        TimelineEvent[]
-  leadProperties  LeadProperty[]
-  bookings        Booking[]
+  callLogs       CallLog[]
+  followUps      FollowUp[]
+  siteVisits     SiteVisit[]
+  assignments    LeadAssignment[]
+  timeline       TimelineEvent[]
+  leadProperties LeadProperty[]
+  bookings       Booking[]
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([pipelineStatus])
   @@index([source])
@@ -74,16 +74,16 @@ model Lead {
 }
 
 model CallLog {
-  id          String   @id @default(cuid())
-  leadId      String
-  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  notes       String
-  callDate    DateTime @default(now())
-  callType    String   @default("Feedback")
-  subStage    String?
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  notes     String
+  callDate  DateTime @default(now())
+  callType  String   @default("Feedback")
+  subStage  String?
+  createdAt DateTime @default(now())
 
   @@index([leadId, createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
@@ -91,16 +91,16 @@ model CallLog {
 }
 
 model FollowUp {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   leadId      String
-  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
   scheduledAt DateTime
   notes       String
-  completed   Boolean  @default(false)
+  completed   Boolean   @default(false)
   completedAt DateTime?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
   @@index([leadId, scheduledAt])
   @@index([userId, completed, scheduledAt])
@@ -126,15 +126,15 @@ model SiteVisit {
 }
 
 model LeadAssignment {
-  id          String   @id @default(cuid())
-  leadId      String
-  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  fromUserId  String
-  fromUser    User     @relation("AssignedFrom", fields: [fromUserId], references: [id])
-  toUserId    String
-  toUser      User     @relation("AssignedTo", fields: [toUserId], references: [id])
-  reason      String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  leadId     String
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  fromUserId String
+  fromUser   User     @relation("AssignedFrom", fields: [fromUserId], references: [id])
+  toUserId   String
+  toUser     User     @relation("AssignedTo", fields: [toUserId], references: [id])
+  reason     String?
+  createdAt  DateTime @default(now())
 
   @@index([leadId])
   @@index([toUserId])
@@ -154,33 +154,33 @@ model TimelineEvent {
 }
 
 model Project {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   name        String
   location    String?
   description String?
   leads       Lead[]
   properties  Property[]
   bookings    Booking[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model Property {
-  id          String   @id @default(cuid())
-  name        String
-  type        String   @default("Apartment")
-  location    String?
-  price       Float?
-  size        String?
-  bedrooms    Int?
-  bathrooms   Int?
-  status      String   @default("Available")
-  description String?
-  projectId   String?
-  project     Project? @relation(fields: [projectId], references: [id])
+  id             String         @id @default(cuid())
+  name           String
+  type           String         @default("Apartment")
+  location       String?
+  price          Float?
+  size           String?
+  bedrooms       Int?
+  bathrooms      Int?
+  status         String         @default("Available")
+  description    String?
+  projectId      String?
+  project        Project?       @relation(fields: [projectId], references: [id])
   leadProperties LeadProperty[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
 
 model LeadProperty {
@@ -195,63 +195,97 @@ model LeadProperty {
 }
 
 model LeadSource {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ContactSubmission {
-  id          String   @id @default(cuid())
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  company   String?
+  message   String?
+  source    String   @default("landing_page")
+  createdAt DateTime @default(now())
+}
+
+/// Pending leads received from external portals (Housing.com, MagicBricks, etc.).
+/// These are kept SEPARATE from the main Lead table so that they don't pollute the
+/// main lead dashboard until an admin has reviewed and confirmed them.
+/// Admin can:
+///   - Assign them to a user (currentOwnerId)
+///   - Assign them to a project (projectId)
+///   - Pick the source / portal they came from (source)
+/// When admin confirms, a real Lead row is created from this data and the PortalLead
+/// row is deleted (or marked as confirmed via status field).
+model PortalLead {
+  id          String  @id @default(cuid())
   name        String
-  email       String
-  phone       String?
-  company     String?
-  message     String?
-  source      String   @default("landing_page")
-  createdAt   DateTime @default(now())
+  phone       String
+  email       String?
+  source      String  @default("Manual") // Portal name: Housing.com / MagicBricks / 99acres / etc.
+  budget      String?
+  notes       String?
+  projectName String? // Project name as it came from the portal (admin can map it later)
+  portalRef   String? // External portal's lead ID/reference, for deduplication
+  rawPayload  Json? // Original JSON payload received from the portal, for audit
+
+  // Admin-assigned fields (filled in by admin before confirming):
+  assignedTo String? // User ID this lead will be assigned to when confirmed
+  projectId  String? // Project ID this lead will be linked to when confirmed
+
+  status    String   @default("pending") // pending | confirmed | discarded
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([phone])
+  @@index([source])
 }
 
 model Booking {
-  id              String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Link to lead (optional - booking can be standalone)
-  leadId          String?
-  lead            Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
 
   // User who created the booking
-  userId          String
-  user            User     @relation(fields: [userId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
   // Customer details (captured at booking time)
-  customerName    String
-  customerPhone   String
-  customerEmail   String?
+  customerName  String
+  customerPhone String
+  customerEmail String?
 
   // Project / property info
-  projectId       String?
-  project         Project? @relation(fields: [projectId], references: [id])
-  propertyName    String?
-  unitNumber      String?
+  projectId    String?
+  project      Project? @relation(fields: [projectId], references: [id])
+  propertyName String?
+  unitNumber   String?
 
   // Booking financials
-  bookingAmount   Float?
-  totalValue      Float?
-  paymentMode     String?
+  bookingAmount Float?
+  totalValue    Float?
+  paymentMode   String?
 
   // Booking date (when the customer booked)
-  bookingDate     DateTime @default(now())
+  bookingDate DateTime @default(now())
 
   // Notes / status
-  notes           String?
-  status          String   @default("Confirmed")
+  notes  String?
+  status String  @default("Confirmed")
 
   // Images stored as JSON array: [{ name, dataUrl, type, size }]
-  images          Json     @default("[]")
+  images Json @default("[]")
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([projectId])
