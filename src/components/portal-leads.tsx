@@ -35,6 +35,9 @@ import {
   CloudDownload,
   Save,
   Settings2,
+  Plus,
+  Pencil,
+  X,
 } from "lucide-react";
 
 interface PortalLead {
@@ -66,6 +69,19 @@ interface ProjectItem {
   location?: string | null;
 }
 
+interface HousingAccount {
+  id: string;
+  label: string;
+  profileId: string;
+  encryptionKeyMasked: string;
+  defaultProjectId: string;
+  isActive: boolean;
+  lastSyncAt: string | null;
+  lastSyncStatus: string | null;
+  lastSyncMessage: string | null;
+  createdAt: string;
+}
+
 export function PortalLeads() {
   const { user } = useAppStore();
   const [portalLeads, setPortalLeads] = useState<PortalLead[]>([]);
@@ -95,17 +111,20 @@ export function PortalLeads() {
   // Copy API URL state
   const [copied, setCopied] = useState(false);
 
-  // Housing.com integration state
+  // Housing.com multi-account integration state
   const [showHousing, setShowHousing] = useState(false);
-  const [housingProfileId, setHousingProfileId] = useState("");
-  const [housingEncryptionKey, setHousingEncryptionKey] = useState("");
-  const [housingKeyMasked, setHousingKeyMasked] = useState("");
-  const [housingDefaultProjectId, setHousingDefaultProjectId] = useState("");
-  const [housingLastSyncAt, setHousingLastSyncAt] = useState<string | null>(null);
-  const [housingLastSyncStatus, setHousingLastSyncStatus] = useState<string | null>(null);
-  const [housingLastSyncMessage, setHousingLastSyncMessage] = useState<string | null>(null);
-  const [savingHousing, setSavingHousing] = useState(false);
-  const [syncingHousing, setSyncingHousing] = useState(false);
+  const [housingAccounts, setHousingAccounts] = useState<HousingAccount[]>([]);
+  // Form state for add/edit
+  const [editingId, setEditingId] = useState<string | null>(null); // null = create mode
+  const [showForm, setShowForm] = useState(false);
+  const [formLabel, setFormLabel] = useState("");
+  const [formProfileId, setFormProfileId] = useState("");
+  const [formEncryptionKey, setFormEncryptionKey] = useState("");
+  const [formDefaultProjectId, setFormDefaultProjectId] = useState("");
+  const [formIsActive, setFormIsActive] = useState(true);
+  const [savingAccount, setSavingAccount] = useState(false);
+  // Sync state
+  const [syncingAccountId, setSyncingAccountId] = useState<string | null>(null); // "all" | "<id>" | null
   const [housingMsg, setHousingMsg] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
 
   const apiUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/api/portal-leads`;
@@ -160,63 +179,151 @@ export function PortalLeads() {
     }).catch(() => {});
   }, []);
 
-  // Fetch Housing.com integration settings
-  const fetchHousingSettings = useCallback(async () => {
+  // Fetch Housing.com accounts list
+  const fetchHousingAccounts = useCallback(async () => {
     try {
-      const res = await fetch("/api/portal-leads/settings");
+      const res = await fetch("/api/portal-leads/housing-accounts");
       if (!res.ok) return;
       const data = await res.json();
-      setHousingProfileId(data.housingProfileId || "");
-      setHousingKeyMasked(data.housingEncryptionKeyMasked || "");
-      setHousingEncryptionKey(""); // never expose the saved key in the input
-      setHousingDefaultProjectId(data.housingDefaultProjectId || "");
-      setHousingLastSyncAt(data.housingLastSyncAt || null);
-      setHousingLastSyncStatus(data.housingLastSyncStatus || null);
-      setHousingLastSyncMessage(data.housingLastSyncMessage || null);
+      setHousingAccounts(data.accounts || []);
     } catch {}
   }, []);
 
   useEffect(() => {
     if (user?.role === "admin" || user?.role === "super_admin") {
-      fetchHousingSettings();
+      fetchHousingAccounts();
     }
-  }, [user, fetchHousingSettings]);
+  }, [user, fetchHousingAccounts]);
 
-  const saveHousingSettings = async () => {
-    setSavingHousing(true);
+  const resetForm = () => {
+    setEditingId(null);
+    setShowForm(false);
+    setFormLabel("");
+    setFormProfileId("");
+    setFormEncryptionKey("");
+    setFormDefaultProjectId("");
+    setFormIsActive(true);
+  };
+
+  const openCreateForm = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
+  const openEditForm = (acct: HousingAccount) => {
+    setEditingId(acct.id);
+    setShowForm(true);
+    setFormLabel(acct.label);
+    setFormProfileId(acct.profileId);
+    setFormEncryptionKey(""); // never pre-fill the key
+    setFormDefaultProjectId(acct.defaultProjectId || "");
+    setFormIsActive(acct.isActive);
+  };
+
+  const saveAccount = async () => {
+    if (!formLabel.trim() || !formProfileId.trim() || !formEncryptionKey.trim()) {
+      setHousingMsg({ type: "error", text: "Label, Profile ID, and Encryption Key are all required." });
+      return;
+    }
+    setSavingAccount(true);
     setHousingMsg(null);
     try {
-      const payload: Record<string, string> = {
-        housingProfileId,
-        housingDefaultProjectId,
+      const payload: Record<string, unknown> = {
+        label: formLabel.trim(),
+        profileId: formProfileId.trim(),
+        encryptionKey: formEncryptionKey.trim(),
+        defaultProjectId: formDefaultProjectId || null,
+        isActive: formIsActive,
       };
-      // Only send the key if admin typed a new one (don't send empty string,
-      // which would clear the existing key).
-      if (housingEncryptionKey.trim() !== "") {
-        payload.housingEncryptionKey = housingEncryptionKey.trim();
+
+      let res: Response;
+      if (editingId) {
+        // Update existing
+        res = await fetch(`/api/portal-leads/housing-accounts/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        // Create new
+        res = await fetch("/api/portal-leads/housing-accounts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
       }
-      const res = await fetch("/api/portal-leads/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
-      setHousingMsg({ type: "success", text: "Housing.com settings saved." });
-      setHousingEncryptionKey("");
-      await fetchHousingSettings();
+      setHousingMsg({
+        type: "success",
+        text: editingId ? "Account updated." : `Account "${formLabel.trim()}" added.`,
+      });
+      resetForm();
+      await fetchHousingAccounts();
     } catch (err) {
       setHousingMsg({
         type: "error",
-        text: err instanceof Error ? err.message : "Failed to save settings",
+        text: err instanceof Error ? err.message : "Failed to save account",
       });
     } finally {
-      setSavingHousing(false);
+      setSavingAccount(false);
     }
   };
 
-  const syncHousing = async () => {
-    setSyncingHousing(true);
+  const deleteAccount = async (id: string, label: string) => {
+    if (!confirm(`Delete account "${label}"? Already-synced leads are NOT affected.`)) return;
+    try {
+      const res = await fetch(`/api/portal-leads/housing-accounts/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete");
+      }
+      setHousingMsg({ type: "success", text: `Account "${label}" deleted.` });
+      await fetchHousingAccounts();
+    } catch (err) {
+      setHousingMsg({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to delete account",
+      });
+    }
+  };
+
+  const syncOne = async (accountId: string, label: string) => {
+    setSyncingAccountId(accountId);
+    setHousingMsg(null);
+    try {
+      const res = await fetch(`/api/portal-leads/housing-sync?accountId=${accountId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ days: 7 }),
+      });
+      const data = await res.json();
+      if (!res.ok && !data.ok) {
+        throw new Error(data.message || data.error || "Sync failed");
+      }
+      setHousingMsg({
+        type: data.imported > 0 ? "success" : "info",
+        text: `[${label}] ${data.message}`,
+      });
+      await Promise.all([fetchHousingAccounts(), fetchPortalLeads(filterStatus)]);
+    } catch (err) {
+      setHousingMsg({
+        type: "error",
+        text: `[${label}] ${err instanceof Error ? err.message : "Failed to sync"}`,
+      });
+    } finally {
+      setSyncingAccountId(null);
+    }
+  };
+
+  const syncAll = async () => {
+    if (housingAccounts.filter((a) => a.isActive).length === 0) {
+      setHousingMsg({ type: "error", text: "No active accounts to sync. Add one first." });
+      return;
+    }
+    setSyncingAccountId("all");
     setHousingMsg(null);
     try {
       const res = await fetch("/api/portal-leads/housing-sync", {
@@ -228,20 +335,18 @@ export function PortalLeads() {
       if (!res.ok && !data.ok) {
         throw new Error(data.message || data.error || "Sync failed");
       }
-      const summary = `Fetched ${data.fetched ?? 0}, imported ${data.imported ?? 0}, duplicated ${data.duplicated ?? 0}, failed ${data.failed ?? 0}.`;
       setHousingMsg({
-        type: data.imported > 0 ? "success" : "info",
-        text: data.message || summary,
+        type: data.totalImported > 0 ? "success" : "info",
+        text: data.message,
       });
-      // Refresh both settings (last-sync timestamp) and the leads list
-      await Promise.all([fetchHousingSettings(), fetchPortalLeads(filterStatus)]);
+      await Promise.all([fetchHousingAccounts(), fetchPortalLeads(filterStatus)]);
     } catch (err) {
       setHousingMsg({
         type: "error",
         text: err instanceof Error ? err.message : "Failed to sync",
       });
     } finally {
-      setSyncingHousing(false);
+      setSyncingAccountId(null);
     }
   };
 
@@ -359,86 +464,140 @@ export function PortalLeads() {
 
   return (
     <div className="space-y-4">
-      {/* Housing.com integration card */}
+      {/* Housing.com multi-account integration card */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
               <Settings2 className="h-4 w-4" />
-              Housing.com Integration
-              {housingLastSyncStatus && (
-                <Badge className={`ml-2 text-xs ${
-                  housingLastSyncStatus === "success"
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
-                    : housingLastSyncStatus === "partial"
-                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
-                    : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-                }`}>
-                  Last sync: {housingLastSyncStatus}
+              Housing.com Accounts
+              {housingAccounts.length > 0 && (
+                <Badge className="ml-2 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                  {housingAccounts.length} account{housingAccounts.length !== 1 ? "s" : ""}
                 </Badge>
               )}
             </CardTitle>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-xs"
-              onClick={() => setShowHousing((v) => !v)}
-            >
-              {showHousing ? "Hide" : "Show"}
-            </Button>
+            <div className="flex items-center gap-2">
+              {housingAccounts.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={() => setShowHousing((v) => !v)}
+                >
+                  {showHousing ? "Hide" : "Show"}
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
-        {showHousing && (
+        {showHousing || housingAccounts.length === 0 ? (
           <CardContent className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Connect your Housing.com partner account. Pull leads from Housing's API into this queue,
-              where you can assign them to a project (e.g. Royal Aura) and a salesperson before
-              confirming into Lead Management.
+              Connect one or more Housing.com partner accounts. Each account syncs
+              independently. After sync, leads appear in the pending queue below —
+              you select project &amp; assignee <strong>per lead</strong> (no pre-assignment
+              needed for multi-project accounts).
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs font-medium">Profile ID</label>
-                <Input
-                  value={housingProfileId}
-                  onChange={(e) => setHousingProfileId(e.target.value)}
-                  placeholder="e.g. 22239545"
-                  className="h-8 text-sm"
-                />
+            {/* Accounts list */}
+            {housingAccounts.length > 0 ? (
+              <div className="space-y-2">
+                {housingAccounts.map((acct) => (
+                  <div
+                    key={acct.id}
+                    className={`rounded-md border p-3 space-y-2 ${
+                      acct.isActive ? "border-border bg-card" : "border-dashed opacity-70 bg-muted/30"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium">{acct.label}</span>
+                          {!acct.isActive && (
+                            <Badge className="text-xs bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                              inactive
+                            </Badge>
+                          )}
+                          {acct.lastSyncStatus && (
+                            <Badge className={`text-xs ${
+                              acct.lastSyncStatus === "success"
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+                                : acct.lastSyncStatus === "partial"
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+                                : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                            }`}>
+                              {acct.lastSyncStatus}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Profile ID: <code>{acct.profileId}</code>
+                          {" · "}
+                          Key: <code>{acct.encryptionKeyMasked || "—"}</code>
+                          {acct.defaultProjectId && (
+                            <>
+                              {" · "}
+                              Default project:{" "}
+                              <span className="font-medium">
+                                {projects.find((p) => p.id === acct.defaultProjectId)?.name || "(deleted project)"}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        {acct.lastSyncMessage && (
+                          <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
+                            {acct.lastSyncAt && (
+                              <span>
+                                Last sync: {new Date(acct.lastSyncAt).toLocaleString("en-IN")}
+                                {" — "}
+                              </span>
+                            )}
+                            {acct.lastSyncMessage}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => syncOne(acct.id, acct.label)}
+                          disabled={syncingAccountId !== null || !acct.isActive}
+                          className="h-7 text-xs"
+                        >
+                          <CloudDownload className={`h-3 w-3 mr-1 ${syncingAccountId === acct.id ? "animate-spin" : ""}`} />
+                          {syncingAccountId === acct.id ? "Syncing..." : "Sync"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0"
+                          onClick={() => openEditForm(acct)}
+                          title="Edit"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => deleteAccount(acct.id, acct.label)}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium">
-                  Encryption Key
-                  {housingKeyMasked && (
-                    <span className="ml-2 text-muted-foreground font-normal">
-                      Saved: <code className="text-[10px]">{housingKeyMasked}</code>
-                    </span>
-                  )}
-                </label>
-                <Input
-                  value={housingEncryptionKey}
-                  onChange={(e) => setHousingEncryptionKey(e.target.value)}
-                  placeholder={housingKeyMasked ? "•••••••• (enter new to replace)" : "f8bd5d47a7932ad40f9ebbe2278a5f2f"}
-                  className="h-8 text-sm font-mono"
-                  type="password"
-                />
+            ) : (
+              <div className="rounded-md border border-dashed p-4 text-center text-xs text-muted-foreground">
+                No Housing.com accounts connected yet. Add your first account below.
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium">Default Project (auto-assign)</label>
-                <Select value={housingDefaultProjectId} onValueChange={setHousingDefaultProjectId}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <Building2 className="mr-1 h-3 w-3 shrink-0" />
-                    <SelectValue placeholder="Pick project..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            )}
 
+            {/* Message */}
             {housingMsg && (
               <div className={`rounded-md p-2.5 text-xs ${
                 housingMsg.type === "success"
@@ -451,42 +610,140 @@ export function PortalLeads() {
               </div>
             )}
 
-            {housingLastSyncMessage && (
-              <div className="text-xs text-muted-foreground">
-                <span className="font-medium">Last sync:</span>{" "}
-                {housingLastSyncAt && new Date(housingLastSyncAt).toLocaleString("en-IN")}
-                {" — "}
-                {housingLastSyncMessage}
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 pt-1">
+            {/* Action bar */}
+            <div className="flex items-center gap-2 pt-1 flex-wrap">
               <Button
                 size="sm"
                 variant="outline"
-                onClick={saveHousingSettings}
-                disabled={savingHousing}
+                onClick={openCreateForm}
+                disabled={showForm}
                 className="h-8"
               >
-                <Save className="h-3 w-3 mr-1" />
-                {savingHousing ? "Saving..." : "Save Settings"}
+                <Plus className="h-3 w-3 mr-1" />
+                Add Account
               </Button>
               <Button
                 size="sm"
-                onClick={syncHousing}
-                disabled={syncingHousing || !housingProfileId || !housingKeyMasked}
+                onClick={syncAll}
+                disabled={syncingAccountId !== null || housingAccounts.filter((a) => a.isActive).length === 0}
                 className="h-8 bg-blue-600 hover:bg-blue-700"
               >
-                <CloudDownload className={`h-3 w-3 mr-1 ${syncingHousing ? "animate-spin" : ""}`} />
-                {syncingHousing ? "Syncing..." : "Sync Now (last 7 days)"}
+                <CloudDownload className={`h-3 w-3 mr-1 ${syncingAccountId === "all" ? "animate-spin" : ""}`} />
+                {syncingAccountId === "all" ? "Syncing all..." : `Sync All (last 7 days)`}
               </Button>
-              <span className="text-xs text-muted-foreground ml-1">
-                Pulls leads from Housing.com into the pending queue below. You can still
-                override the project per row.
+              <span className="text-xs text-muted-foreground">
+                Pulls leads into the pending queue. Project &amp; assignee are picked per-row below.
               </span>
             </div>
+
+            {/* Add/Edit form */}
+            {showForm && (
+              <div className="rounded-md border border-blue-300 dark:border-blue-700 p-3 space-y-3 bg-blue-50/50 dark:bg-blue-950/30">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    {editingId ? "Edit Account" : "New Housing.com Account"}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={resetForm}
+                    title="Cancel"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium">Account Label *</label>
+                    <Input
+                      value={formLabel}
+                      onChange={(e) => setFormLabel(e.target.value)}
+                      placeholder="e.g. Royal Aura Account, Multi-Project Account"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium">Profile ID *</label>
+                    <Input
+                      value={formProfileId}
+                      onChange={(e) => setFormProfileId(e.target.value)}
+                      placeholder="e.g. 22239545"
+                      className="h-8 text-sm font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium">
+                      Encryption Key *
+                      {editingId && (
+                        <span className="ml-2 text-muted-foreground font-normal">
+                          Saved: <code className="text-[10px]">{housingAccounts.find((a) => a.id === editingId)?.encryptionKeyMasked}</code>
+                          {" "}(leave blank to keep)
+                        </span>
+                      )}
+                    </label>
+                    <Input
+                      value={formEncryptionKey}
+                      onChange={(e) => setFormEncryptionKey(e.target.value)}
+                      placeholder={editingId ? "Enter new key to replace" : "e.g. f8bd5d47a7932ad40f9ebbe2278a5f2f"}
+                      className="h-8 text-sm font-mono"
+                      type="password"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium">
+                      Default Project <span className="text-muted-foreground font-normal">(optional)</span>
+                    </label>
+                    <Select value={formDefaultProjectId} onValueChange={setFormDefaultProjectId}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <Building2 className="mr-1 h-3 w-3 shrink-0" />
+                        <SelectValue placeholder="None — pick per lead" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 text-xs">
+                  <Checkbox
+                    checked={formIsActive}
+                    onCheckedChange={(v) => setFormIsActive(v === true)}
+                  />
+                  <span>Active (include in "Sync All")</span>
+                </label>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={saveAccount}
+                    disabled={savingAccount}
+                    className="h-8"
+                  >
+                    <Save className="h-3 w-3 mr-1" />
+                    {savingAccount ? "Saving..." : editingId ? "Update Account" : "Save Account"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={resetForm}
+                    className="h-8"
+                  >
+                    Cancel
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Leave Default Project empty if this account has multiple projects —
+                    you'll pick per lead after sync.
+                  </span>
+                </div>
+              </div>
+            )}
           </CardContent>
-        )}
+        ) : null}
       </Card>
 
       {/* API endpoint info card */}

@@ -247,22 +247,24 @@ model PortalLead {
   @@index([source])
 }
 
-// Singleton row (id = "singleton") storing portal-integration credentials and
-// last-sync metadata. Currently used for Housing.com partner API.
-model PortalSetting {
-  id                       String   @id @default("singleton")
-  // Housing.com partner credentials
-  housingProfileId         String?
-  housingEncryptionKey     String?
-  // Default project to auto-assign to Housing leads (admin can override per row)
-  housingDefaultProjectId  String?
-  // Sync bookkeeping
-  housingLastSyncAt        DateTime?
-  housingLastSyncStatus    String? // "success" | "error" | "partial"
-  housingLastSyncMessage   String?
-  housingLastLeadRef       String? // last portalRef processed, for incremental sync
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+// One row per Housing.com partner account. Admin can connect multiple
+// accounts (e.g. one per project, or one with many projects). Each account
+// syncs independently and tracks its own last-sync status.
+model HousingAccount {
+  id                String    @id @default(cuid())
+  label             String    // admin-friendly name e.g. "Royal Aura", "Multi Project Account"
+  profileId         String
+  encryptionKey     String
+  defaultProjectId  String?   // optional - only set when account maps to a single project
+  isActive          Boolean   @default(true)
+  lastSyncAt        DateTime?
+  lastSyncStatus    String?   // "success" | "partial" | "error"
+  lastSyncMessage   String?
+  lastLeadRef       String?   // last portalRef processed, for incremental sync
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([isActive])
 }
 
 model Booking {

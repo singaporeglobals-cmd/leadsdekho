@@ -56,6 +56,15 @@ interface HousingConfig {
   lastLeadRef?: string | null;
 }
 
+export interface HousingAccountRow {
+  id: string;
+  label: string;
+  profileId: string;
+  encryptionKey: string;
+  defaultProjectId?: string | null;
+  lastLeadRef?: string | null;
+}
+
 /**
  * Compute HMAC-SHA256 signature hex. Housing's docs require this to be
  * appended to the request as the `signature` field.
@@ -373,5 +382,71 @@ export async function syncHousingLeads(
       `Fetched ${fetched.length} lead(s) from Housing.com (HTTP ${rawStatus}). ` +
       `Imported ${imported}, skipped ${duplicated} duplicate(s), failed ${failed}.`,
     sample,
+  };
+}
+
+/**
+ * Sync multiple Housing accounts in sequence. Returns aggregated stats
+ * plus per-account details so the UI can show which accounts succeeded
+ * and which failed.
+ */
+export async function syncAllHousingAccounts(
+  accounts: HousingAccountRow[],
+  options: { days?: number } = {}
+): Promise<{
+  totalFetched: number;
+  totalImported: number;
+  totalDuplicated: number;
+  totalFailed: number;
+  perAccount: Array<{ accountId: string; label: string; result: SyncResult }>;
+  messages: string[];
+}> {
+  let totalFetched = 0;
+  let totalImported = 0;
+  let totalDuplicated = 0;
+  let totalFailed = 0;
+  const perAccount: Array<{ accountId: string; label: string; result: SyncResult }> = [];
+  const messages: string[] = [];
+
+  for (const acct of accounts) {
+    const result = await syncHousingLeads(
+      {
+        profileId: acct.profileId,
+        encryptionKey: acct.encryptionKey,
+        defaultProjectId: acct.defaultProjectId,
+        lastLeadRef: acct.lastLeadRef,
+      },
+      options
+    );
+
+    // Update the account's last-sync metadata
+    try {
+      await db.housingAccount.update({
+        where: { id: acct.id },
+        data: {
+          lastSyncAt: new Date(),
+          lastSyncStatus: result.ok ? (result.failed > 0 ? "partial" : "success") : "error",
+          lastSyncMessage: result.message.slice(0, 500),
+        },
+      });
+    } catch (err) {
+      console.error(`Failed to update last-sync for account ${acct.id}`, err);
+    }
+
+    totalFetched += result.fetched;
+    totalImported += result.imported;
+    totalDuplicated += result.duplicated;
+    totalFailed += result.failed;
+    perAccount.push({ accountId: acct.id, label: acct.label, result });
+    messages.push(`[${acct.label}] ${result.message}`);
+  }
+
+  return {
+    totalFetched,
+    totalImported,
+    totalDuplicated,
+    totalFailed,
+    perAccount,
+    messages,
   };
 }
