@@ -112,6 +112,7 @@ export function PortalLeads() {
 
   // Copy API URL state
   const [copied, setCopied] = useState(false);
+  const [copiedWebhook, setCopiedWebhook] = useState<string | null>(null);
 
   // Housing.com multi-account integration state
   const [showHousing, setShowHousing] = useState(false);
@@ -533,11 +534,21 @@ export function PortalLeads() {
         </CardHeader>
         {showHousing || housingAccounts.length === 0 ? (
           <CardContent className="space-y-3">
+            <div className="rounded-md bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 p-3 space-y-2">
+              <div className="text-sm font-medium text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
+                <PlugZap className="h-4 w-4" />
+                Housing.com uses a PUSH API (Webhook)
+              </div>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                Housing.com <strong>pushes leads to your webhook URL</strong> — you don&apos;t pull them.
+                Each Housing account below has its own webhook URL. Share that URL with your Housing.com
+                account manager and ask them to configure lead push for your profile.
+                Once configured, leads will automatically appear in the pending queue below — no &quot;Sync&quot; button needed.
+              </p>
+            </div>
             <p className="text-xs text-muted-foreground">
-              Connect one or more Housing.com partner accounts. Each account syncs
-              independently. After sync, leads appear in the pending queue below —
-              you select project &amp; assignee <strong>per lead</strong> (no pre-assignment
-              needed for multi-project accounts).
+              The &quot;Sync Now&quot; button tries Housing&apos;s pull API (rarely enabled for partners).
+              For most accounts, webhook push is the only working path.
             </p>
 
             {/* Accounts list */}
@@ -577,25 +588,57 @@ export function PortalLeads() {
                             {" · "}
                             Key: <code>{acct.encryptionKeyMasked || "—"}</code>
                           </div>
-                          <div>
-                            Endpoint URL:{" "}
-                            {acct.endpointUrl ? (
-                              <code className="break-all">{acct.endpointUrl}</code>
-                            ) : (
-                              <span className="text-amber-600 dark:text-amber-400 font-medium">
-                                Not set — using fallback URLs (likely won&apos;t work). Ask your Housing account manager for the exact partner API URL.
-                              </span>
-                            )}
-                          </div>
                           {acct.defaultProjectId && (
                             <div>
                               Default project:{" "}
                               <span className="font-medium">
                                 {projects.find((p) => p.id === acct.defaultProjectId)?.name || "(deleted project)"}
                               </span>
+                              <span className="text-muted-foreground"> (auto-applied to incoming webhook leads)</span>
                             </div>
                           )}
                         </div>
+                        {/* Webhook URL — the main thing admin needs to share with Housing.com */}
+                        <div className="mt-2 rounded-md bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-2 space-y-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-[11px] font-semibold text-blue-800 dark:text-blue-200 uppercase tracking-wide">
+                              Webhook URL — give this to Housing.com
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-[11px] text-blue-700 dark:text-blue-300 hover:text-blue-900"
+                              onClick={() => {
+                                const url = `${typeof window !== "undefined" ? window.location.origin : ""}/api/portal-leads/housing/${acct.profileId}`;
+                                navigator.clipboard.writeText(url);
+                                setCopiedWebhook(acct.id);
+                                setTimeout(() => setCopiedWebhook(null), 2000);
+                              }}
+                              title="Copy webhook URL"
+                            >
+                              {copiedWebhook === acct.id ? (
+                                <>
+                                  <Check className="h-3 w-3 mr-1" /> Copied
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-3 w-3 mr-1" /> Copy
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          <code className="block text-[11px] text-blue-900 dark:text-blue-100 break-all">
+                            POST {typeof window !== "undefined" ? window.location.origin : ""}/api/portal-leads/housing/{acct.profileId}
+                          </code>
+                          <p className="text-[10px] text-blue-700 dark:text-blue-300">
+                            Housing&apos;s account manager configures lead push to this URL. Leads will auto-appear in the pending queue — no manual sync needed.
+                          </p>
+                        </div>
+                        {acct.endpointUrl && (
+                          <div className="text-[11px] text-muted-foreground mt-1">
+                            Pull endpoint (optional): <code className="break-all">{acct.endpointUrl}</code>
+                          </div>
+                        )}
                         {acct.lastSyncMessage && (
                           <div className={`text-[11px] mt-1.5 rounded p-1.5 ${
                             acct.lastSyncStatus === "success"
