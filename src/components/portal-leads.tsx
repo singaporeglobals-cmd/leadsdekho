@@ -32,6 +32,9 @@ import {
   Inbox,
   Copy,
   Check,
+  CloudDownload,
+  Save,
+  Settings2,
 } from "lucide-react";
 
 interface PortalLead {
@@ -92,6 +95,19 @@ export function PortalLeads() {
   // Copy API URL state
   const [copied, setCopied] = useState(false);
 
+  // Housing.com integration state
+  const [showHousing, setShowHousing] = useState(false);
+  const [housingProfileId, setHousingProfileId] = useState("");
+  const [housingEncryptionKey, setHousingEncryptionKey] = useState("");
+  const [housingKeyMasked, setHousingKeyMasked] = useState("");
+  const [housingDefaultProjectId, setHousingDefaultProjectId] = useState("");
+  const [housingLastSyncAt, setHousingLastSyncAt] = useState<string | null>(null);
+  const [housingLastSyncStatus, setHousingLastSyncStatus] = useState<string | null>(null);
+  const [housingLastSyncMessage, setHousingLastSyncMessage] = useState<string | null>(null);
+  const [savingHousing, setSavingHousing] = useState(false);
+  const [syncingHousing, setSyncingHousing] = useState(false);
+  const [housingMsg, setHousingMsg] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
+
   const apiUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/api/portal-leads`;
 
   const fetchPortalLeads = useCallback(async (status: "pending" | "confirmed" | "discarded") => {
@@ -143,6 +159,91 @@ export function PortalLeads() {
       if (Array.isArray(data)) setSources(data.map((s: { name: string }) => s.name));
     }).catch(() => {});
   }, []);
+
+  // Fetch Housing.com integration settings
+  const fetchHousingSettings = useCallback(async () => {
+    try {
+      const res = await fetch("/api/portal-leads/settings");
+      if (!res.ok) return;
+      const data = await res.json();
+      setHousingProfileId(data.housingProfileId || "");
+      setHousingKeyMasked(data.housingEncryptionKeyMasked || "");
+      setHousingEncryptionKey(""); // never expose the saved key in the input
+      setHousingDefaultProjectId(data.housingDefaultProjectId || "");
+      setHousingLastSyncAt(data.housingLastSyncAt || null);
+      setHousingLastSyncStatus(data.housingLastSyncStatus || null);
+      setHousingLastSyncMessage(data.housingLastSyncMessage || null);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (user?.role === "admin" || user?.role === "super_admin") {
+      fetchHousingSettings();
+    }
+  }, [user, fetchHousingSettings]);
+
+  const saveHousingSettings = async () => {
+    setSavingHousing(true);
+    setHousingMsg(null);
+    try {
+      const payload: Record<string, string> = {
+        housingProfileId,
+        housingDefaultProjectId,
+      };
+      // Only send the key if admin typed a new one (don't send empty string,
+      // which would clear the existing key).
+      if (housingEncryptionKey.trim() !== "") {
+        payload.housingEncryptionKey = housingEncryptionKey.trim();
+      }
+      const res = await fetch("/api/portal-leads/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Save failed");
+      setHousingMsg({ type: "success", text: "Housing.com settings saved." });
+      setHousingEncryptionKey("");
+      await fetchHousingSettings();
+    } catch (err) {
+      setHousingMsg({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to save settings",
+      });
+    } finally {
+      setSavingHousing(false);
+    }
+  };
+
+  const syncHousing = async () => {
+    setSyncingHousing(true);
+    setHousingMsg(null);
+    try {
+      const res = await fetch("/api/portal-leads/housing-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ days: 7 }),
+      });
+      const data = await res.json();
+      if (!res.ok && !data.ok) {
+        throw new Error(data.message || data.error || "Sync failed");
+      }
+      const summary = `Fetched ${data.fetched ?? 0}, imported ${data.imported ?? 0}, duplicated ${data.duplicated ?? 0}, failed ${data.failed ?? 0}.`;
+      setHousingMsg({
+        type: data.imported > 0 ? "success" : "info",
+        text: data.message || summary,
+      });
+      // Refresh both settings (last-sync timestamp) and the leads list
+      await Promise.all([fetchHousingSettings(), fetchPortalLeads(filterStatus)]);
+    } catch (err) {
+      setHousingMsg({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to sync",
+      });
+    } finally {
+      setSyncingHousing(false);
+    }
+  };
 
   const toggleRow = (id: string) => {
     setSelectedRows((prev) => {
@@ -258,6 +359,136 @@ export function PortalLeads() {
 
   return (
     <div className="space-y-4">
+      {/* Housing.com integration card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Settings2 className="h-4 w-4" />
+              Housing.com Integration
+              {housingLastSyncStatus && (
+                <Badge className={`ml-2 text-xs ${
+                  housingLastSyncStatus === "success"
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+                    : housingLastSyncStatus === "partial"
+                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+                    : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                }`}>
+                  Last sync: {housingLastSyncStatus}
+                </Badge>
+              )}
+            </CardTitle>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs"
+              onClick={() => setShowHousing((v) => !v)}
+            >
+              {showHousing ? "Hide" : "Show"}
+            </Button>
+          </div>
+        </CardHeader>
+        {showHousing && (
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Connect your Housing.com partner account. Pull leads from Housing's API into this queue,
+              where you can assign them to a project (e.g. Royal Aura) and a salesperson before
+              confirming into Lead Management.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Profile ID</label>
+                <Input
+                  value={housingProfileId}
+                  onChange={(e) => setHousingProfileId(e.target.value)}
+                  placeholder="e.g. 22239545"
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium">
+                  Encryption Key
+                  {housingKeyMasked && (
+                    <span className="ml-2 text-muted-foreground font-normal">
+                      Saved: <code className="text-[10px]">{housingKeyMasked}</code>
+                    </span>
+                  )}
+                </label>
+                <Input
+                  value={housingEncryptionKey}
+                  onChange={(e) => setHousingEncryptionKey(e.target.value)}
+                  placeholder={housingKeyMasked ? "•••••••• (enter new to replace)" : "f8bd5d47a7932ad40f9ebbe2278a5f2f"}
+                  className="h-8 text-sm font-mono"
+                  type="password"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Default Project (auto-assign)</label>
+                <Select value={housingDefaultProjectId} onValueChange={setHousingDefaultProjectId}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <Building2 className="mr-1 h-3 w-3 shrink-0" />
+                    <SelectValue placeholder="Pick project..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {housingMsg && (
+              <div className={`rounded-md p-2.5 text-xs ${
+                housingMsg.type === "success"
+                  ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
+                  : housingMsg.type === "error"
+                  ? "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300"
+                  : "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
+              }`}>
+                {housingMsg.text}
+              </div>
+            )}
+
+            {housingLastSyncMessage && (
+              <div className="text-xs text-muted-foreground">
+                <span className="font-medium">Last sync:</span>{" "}
+                {housingLastSyncAt && new Date(housingLastSyncAt).toLocaleString("en-IN")}
+                {" — "}
+                {housingLastSyncMessage}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 pt-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={saveHousingSettings}
+                disabled={savingHousing}
+                className="h-8"
+              >
+                <Save className="h-3 w-3 mr-1" />
+                {savingHousing ? "Saving..." : "Save Settings"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={syncHousing}
+                disabled={syncingHousing || !housingProfileId || !housingKeyMasked}
+                className="h-8 bg-blue-600 hover:bg-blue-700"
+              >
+                <CloudDownload className={`h-3 w-3 mr-1 ${syncingHousing ? "animate-spin" : ""}`} />
+                {syncingHousing ? "Syncing..." : "Sync Now (last 7 days)"}
+              </Button>
+              <span className="text-xs text-muted-foreground ml-1">
+                Pulls leads from Housing.com into the pending queue below. You can still
+                override the project per row.
+              </span>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
       {/* API endpoint info card */}
       <Card>
         <CardHeader>

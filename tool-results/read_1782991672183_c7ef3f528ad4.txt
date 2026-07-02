@@ -1,0 +1,611 @@
+     1→"use client";
+     2→
+     3→import { useState, useEffect, useCallback } from "react";
+     4→import { useAppStore } from "@/lib/store";
+     5→import { Button } from "@/components/ui/button";
+     6→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+     7→import { Input } from "@/components/ui/input";
+     8→import { Checkbox } from "@/components/ui/checkbox";
+     9→import {
+    10→  Select,
+    11→  SelectContent,
+    12→  SelectItem,
+    13→  SelectTrigger,
+    14→  SelectValue,
+    15→} from "@/components/ui/select";
+    16→import {
+    17→  Table,
+    18→  TableBody,
+    19→  TableCell,
+    20→  TableHead,
+    21→  TableHeader,
+    22→  TableRow,
+    23→} from "@/components/ui/table";
+    24→import { Badge } from "@/components/ui/badge";
+    25→import {
+    26→  RefreshCw,
+    27→  Building2,
+    28→  Users,
+    29→  Trash2,
+    30→  CheckCircle2,
+    31→  AlertTriangle,
+    32→  Inbox,
+    33→  Copy,
+    34→  Check,
+    35→} from "lucide-react";
+    36→
+    37→interface PortalLead {
+    38→  id: string;
+    39→  name: string;
+    40→  phone: string;
+    41→  email: string | null;
+    42→  source: string;
+    43→  budget: string | null;
+    44→  notes: string | null;
+    45→  projectName: string | null;
+    46→  portalRef: string | null;
+    47→  assignedTo: string | null;
+    48→  projectId: string | null;
+    49→  status: string;
+    50→  createdAt: string;
+    51→}
+    52→
+    53→interface UserItem {
+    54→  id: string;
+    55→  name: string;
+    56→  role: string;
+    57→  isActive: boolean;
+    58→}
+    59→
+    60→interface ProjectItem {
+    61→  id: string;
+    62→  name: string;
+    63→  location?: string | null;
+    64→}
+    65→
+    66→export function PortalLeads() {
+    67→  const { user } = useAppStore();
+    68→  const [portalLeads, setPortalLeads] = useState<PortalLead[]>([]);
+    69→  const [pendingCount, setPendingCount] = useState(0);
+    70→  const [loading, setLoading] = useState(true);
+    71→  const [error, setError] = useState("");
+    72→  const [users, setUsers] = useState<UserItem[]>([]);
+    73→  const [projects, setProjects] = useState<ProjectItem[]>([]);
+    74→  const [sources, setSources] = useState<string[]>([]);
+    75→  const [filterStatus, setFilterStatus] = useState<"pending" | "confirmed" | "discarded">("pending");
+    76→
+    77→  // Per-row editable fields (kept in a local map keyed by portal lead ID)
+    78→  const [rowAssign, setRowAssign] = useState<Record<string, string>>({});
+    79→  const [rowProject, setRowProject] = useState<Record<string, string>>({});
+    80→  const [rowSource, setRowSource] = useState<Record<string, string>>({});
+    81→
+    82→  // Bulk-apply state
+    83→  const [bulkProject, setBulkProject] = useState("");
+    84→  const [bulkAssign, setBulkAssign] = useState("");
+    85→  const [bulkSource, setBulkSource] = useState("");
+    86→  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+    87→
+    88→  // Confirm / discard action state
+    89→  const [confirming, setConfirming] = useState(false);
+    90→  const [lastResult, setLastResult] = useState<{ confirmed: number; duplicated: number; failed: number } | null>(null);
+    91→
+    92→  // Copy API URL state
+    93→  const [copied, setCopied] = useState(false);
+    94→
+    95→  const apiUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/api/portal-leads`;
+    96→
+    97→  const fetchPortalLeads = useCallback(async (status: "pending" | "confirmed" | "discarded") => {
+    98→    setLoading(true);
+    99→    setError("");
+   100→    try {
+   101→      const res = await fetch(`/api/portal-leads?status=${status}`);
+   102→      const data = await res.json();
+   103→      if (!res.ok) throw new Error(data.error || "Failed to fetch");
+   104→      setPortalLeads(data.portalLeads || []);
+   105→      setPendingCount(data.pendingCount || 0);
+   106→      // Reset per-row state for the freshly fetched rows
+   107→      const assignMap: Record<string, string> = {};
+   108→      const projectMap: Record<string, string> = {};
+   109→      const sourceMap: Record<string, string> = {};
+   110→      (data.portalLeads as PortalLead[]).forEach((p) => {
+   111→        if (p.assignedTo) assignMap[p.id] = p.assignedTo;
+   112→        if (p.projectId) projectMap[p.id] = p.projectId;
+   113→        sourceMap[p.id] = p.source;
+   114→      });
+   115→      setRowAssign(assignMap);
+   116→      setRowProject(projectMap);
+   117→      setRowSource(sourceMap);
+   118→      // Default-select all pending rows
+   119→      if (status === "pending") {
+   120→        setSelectedRows(new Set((data.portalLeads as PortalLead[]).map((p) => p.id)));
+   121→      } else {
+   122→        setSelectedRows(new Set());
+   123→      }
+   124→    } catch (err) {
+   125→      setError(err instanceof Error ? err.message : "Failed to fetch");
+   126→    } finally {
+   127→      setLoading(false);
+   128→    }
+   129→  }, []);
+   130→
+   131→  // Initial fetch
+   132→  useEffect(() => {
+   133→    if (user?.role === "admin" || user?.role === "super_admin") {
+   134→      fetchPortalLeads(filterStatus);
+   135→    }
+   136→  }, [user, filterStatus, fetchPortalLeads]);
+   137→
+   138→  // Fetch users + projects + sources
+   139→  useEffect(() => {
+   140→    fetch("/api/users").then((r) => r.json()).then(setUsers).catch(() => {});
+   141→    fetch("/api/projects").then((r) => r.json()).then(setProjects).catch(() => {});
+   142→    fetch("/api/lead-sources").then((r) => r.json()).then((data) => {
+   143→      if (Array.isArray(data)) setSources(data.map((s: { name: string }) => s.name));
+   144→    }).catch(() => {});
+   145→  }, []);
+   146→
+   147→  const toggleRow = (id: string) => {
+   148→    setSelectedRows((prev) => {
+   149→      const next = new Set(prev);
+   150→      if (next.has(id)) next.delete(id);
+   151→      else next.add(id);
+   152→      return next;
+   153→    });
+   154→  };
+   155→
+   156→  const toggleAll = () => {
+   157→    if (selectedRows.size === portalLeads.length && portalLeads.length > 0) {
+   158→      setSelectedRows(new Set());
+   159→    } else {
+   160→      setSelectedRows(new Set(portalLeads.map((p) => p.id)));
+   161→    }
+   162→  };
+   163→
+   164→  const applyBulkProject = () => {
+   165→    if (!bulkProject || selectedRows.size === 0) return;
+   166→    const map: Record<string, string> = { ...rowProject };
+   167→    selectedRows.forEach((id) => { map[id] = bulkProject; });
+   168→    setRowProject(map);
+   169→    setBulkProject("");
+   170→  };
+   171→
+   172→  const applyBulkAssign = () => {
+   173→    if (!bulkAssign || selectedRows.size === 0) return;
+   174→    const map: Record<string, string> = { ...rowAssign };
+   175→    selectedRows.forEach((id) => { map[id] = bulkAssign; });
+   176→    setRowAssign(map);
+   177→    setBulkAssign("");
+   178→  };
+   179→
+   180→  const applyBulkSource = () => {
+   181→    if (!bulkSource || selectedRows.size === 0) return;
+   182→    const map: Record<string, string> = { ...rowSource };
+   183→    selectedRows.forEach((id) => { map[id] = bulkSource; });
+   184→    setRowSource(map);
+   185→    setBulkSource("");
+   186→  };
+   187→
+   188→  const handleConfirm = async () => {
+   189→    if (selectedRows.size === 0) return;
+   190→    setConfirming(true);
+   191→    setLastResult(null);
+   192→    try {
+   193→      const payload = Array.from(selectedRows).map((id) => {
+   194→        const lead = portalLeads.find((p) => p.id === id);
+   195→        return {
+   196→          id,
+   197→          assignToId: rowAssign[id] || undefined,
+   198→          projectId: rowProject[id] || undefined,
+   199→          source: rowSource[id] || lead?.source || "Portal",
+   200→        };
+   201→      });
+   202→      const res = await fetch("/api/portal-leads/confirm", {
+   203→        method: "POST",
+   204→        headers: { "Content-Type": "application/json" },
+   205→        body: JSON.stringify({ leads: payload }),
+   206→      });
+   207→      const data = await res.json();
+   208→      if (!res.ok) throw new Error(data.error || "Confirm failed");
+   209→      setLastResult({
+   210→        confirmed: data.confirmed || 0,
+   211→        duplicated: data.duplicated || 0,
+   212→        failed: data.failed || 0,
+   213→      });
+   214→      // Refresh the list
+   215→      await fetchPortalLeads(filterStatus);
+   216→    } catch (err) {
+   217→      setError(err instanceof Error ? err.message : "Confirm failed");
+   218→    } finally {
+   219→      setConfirming(false);
+   220→    }
+   221→  };
+   222→
+   223→  const handleDiscard = async (id: string) => {
+   224→    if (!confirm("Discard this portal lead? You can find it later under the 'Discarded' filter.")) return;
+   225→    try {
+   226→      const res = await fetch(`/api/portal-leads/${id}`, { method: "DELETE" });
+   227→      if (!res.ok) {
+   228→        const data = await res.json();
+   229→        throw new Error(data.error || "Failed to discard");
+   230→      }
+   231→      await fetchPortalLeads(filterStatus);
+   232→    } catch (err) {
+   233→      setError(err instanceof Error ? err.message : "Failed to discard");
+   234→    }
+   235→  };
+   236→
+   237→  const handleDeleteForever = async (id: string) => {
+   238→    if (!confirm("PERMANENTLY delete this portal lead? This cannot be undone.")) return;
+   239→    try {
+   240→      const res = await fetch(`/api/portal-leads/${id}?hard=true`, { method: "DELETE" });
+   241→      if (!res.ok) {
+   242→        const data = await res.json();
+   243→        throw new Error(data.error || "Failed to delete");
+   244→      }
+   245→      await fetchPortalLeads(filterStatus);
+   246→    } catch (err) {
+   247→      setError(err instanceof Error ? err.message : "Failed to delete");
+   248→    }
+   249→  };
+   250→
+   251→  const copyApiUrl = () => {
+   252→    navigator.clipboard.writeText(apiUrl);
+   253→    setCopied(true);
+   254→    setTimeout(() => setCopied(false), 2000);
+   255→  };
+   256→
+   257→  if (user?.role !== "admin" && user?.role !== "super_admin") return null;
+   258→
+   259→  return (
+   260→    <div className="space-y-4">
+   261→      {/* API endpoint info card */}
+   262→      <Card>
+   263→        <CardHeader>
+   264→          <CardTitle className="text-lg flex items-center gap-2">
+   265→            <Inbox className="h-5 w-5" />
+   266→            Portal Leads — Pending Review
+   267→            {pendingCount > 0 && (
+   268→              <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 ml-2">
+   269→                {pendingCount} pending
+   270→              </Badge>
+   271→            )}
+   272→          </CardTitle>
+   273→        </CardHeader>
+   274→        <CardContent className="space-y-3">
+   275→          <div className="rounded-md bg-blue-50 dark:bg-blue-950 p-3 text-sm space-y-2">
+   276→            <div className="font-medium text-blue-700 dark:text-blue-300">
+   277→              External Portal API Endpoint
+   278→            </div>
+   279→            <div className="flex items-center gap-2">
+   280→              <code className="flex-1 px-2 py-1 bg-white dark:bg-gray-900 rounded border text-xs">
+   281→                POST {apiUrl}
+   282→              </code>
+   283→              <Button size="sm" variant="outline" onClick={copyApiUrl} className="h-8">
+   284→                {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+   285→                {copied ? "Copied" : "Copy"}
+   286→              </Button>
+   287→            </div>
+   288→            <p className="text-xs text-blue-700 dark:text-blue-300">
+   289→              Send leads from Housing.com, MagicBricks, 99acres, or any portal to this endpoint. Required fields: <code>name</code>, <code>phone</code>. Optional: <code>email</code>, <code>source</code>, <code>budget</code>, <code>notes</code>, <code>projectName</code>, <code>portalRef</code>.
+   290→            </p>
+   291→          </div>
+   292→
+   293→          {/* Filter tabs */}
+   294→          <div className="flex items-center gap-2">
+   295→            {(["pending", "confirmed", "discarded"] as const).map((s) => (
+   296→              <Button
+   297→                key={s}
+   298→                size="sm"
+   299→                variant={filterStatus === s ? "default" : "outline"}
+   300→                onClick={() => setFilterStatus(s)}
+   301→                className="h-8 capitalize"
+   302→              >
+   303→                {s}
+   304→                {s === "pending" && pendingCount > 0 && (
+   305→                  <span className="ml-1.5 px-1.5 py-0.5 bg-amber-500 text-white rounded-full text-xs">
+   306→                    {pendingCount}
+   307→                  </span>
+   308→                )}
+   309→              </Button>
+   310→            ))}
+   311→            <div className="flex-1" />
+   312→            <Button
+   313→              size="sm"
+   314→              variant="outline"
+   315→              onClick={() => fetchPortalLeads(filterStatus)}
+   316→              disabled={loading}
+   317→              className="h-8"
+   318→            >
+   319→              <RefreshCw className={`h-3 w-3 mr-1 ${loading ? "animate-spin" : ""}`} />
+   320→              Refresh
+   321→            </Button>
+   322→          </div>
+   323→
+   324→          {error && (
+   325→            <div className="rounded-md bg-red-50 dark:bg-red-950 p-3 text-sm text-red-600 dark:text-red-400">
+   326→              {error}
+   327→            </div>
+   328→          )}
+   329→
+   330→          {lastResult && (
+   331→            <div className="rounded-md bg-emerald-50 dark:bg-emerald-950 p-3 text-sm text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+   332→              <CheckCircle2 className="h-4 w-4" />
+   333→              <span>
+   334→                <strong>{lastResult.confirmed}</strong> lead(s) added to Lead Management
+   335→                {lastResult.duplicated > 0 && (
+   336→                  <span>, <strong>{lastResult.duplicated}</strong> skipped (duplicate phone)</span>
+   337→                )}
+   338→                {lastResult.failed > 0 && (
+   339→                  <span>, <strong>{lastResult.failed}</strong> failed</span>
+   340→                )}
+   341→              </span>
+   342→            </div>
+   343→          )}
+   344→
+   345→          {portalLeads.length === 0 ? (
+   346→            <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
+   347→              No {filterStatus} portal leads.
+   348→              {filterStatus === "pending" && " When a portal sends a new lead, it will appear here."}
+   349→            </div>
+   350→          ) : (
+   351→            <>
+   352→              {/* Bulk-apply bar (only show in pending view) */}
+   353→              {filterStatus === "pending" && (
+   354→                <div className="space-y-3 p-3 bg-muted/50 rounded-lg border border-border">
+   355→                  <div className="flex items-center justify-between">
+   356→                    <div className="flex items-center gap-3">
+   357→                      <span className="text-sm font-medium">Selection:</span>
+   358→                      <Button size="sm" variant="outline" onClick={toggleAll} className="h-7 text-xs">
+   359→                        {selectedRows.size === portalLeads.length ? "Deselect All" : "Select All"}
+   360→                      </Button>
+   361→                      <span className="text-xs text-muted-foreground">
+   362→                        {selectedRows.size} of {portalLeads.length} selected
+   363→                      </span>
+   364→                    </div>
+   365→                  </div>
+   366→
+   367→                  <div className="flex flex-wrap gap-2 items-center">
+   368→                    <span className="text-sm font-medium text-brand">Bulk Apply to Selected:</span>
+   369→
+   370→                    <Select value={bulkProject} onValueChange={setBulkProject}>
+   371→                      <SelectTrigger className="w-[180px] h-8">
+   372→                        <Building2 className="mr-1 h-3 w-3 shrink-0" />
+   373→                        <SelectValue placeholder="Set Project" />
+   374→                      </SelectTrigger>
+   375→                      <SelectContent>
+   376→                        {projects.map((p) => (
+   377→                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+   378→                        ))}
+   379→                      </SelectContent>
+   380→                    </Select>
+   381→                    <Button size="sm" variant="outline" onClick={applyBulkProject} disabled={!bulkProject || selectedRows.size === 0} className="h-8 text-xs">
+   382→                      Apply Project
+   383→                    </Button>
+   384→
+   385→                    <Select value={bulkSource} onValueChange={setBulkSource}>
+   386→                      <SelectTrigger className="w-[150px] h-8">
+   387→                        <SelectValue placeholder="Set Source" />
+   388→                      </SelectTrigger>
+   389→                      <SelectContent>
+   390→                        {sources.map((s) => (
+   391→                          <SelectItem key={s} value={s}>{s}</SelectItem>
+   392→                        ))}
+   393→                      </SelectContent>
+   394→                    </Select>
+   395→                    <Button size="sm" variant="outline" onClick={applyBulkSource} disabled={!bulkSource || selectedRows.size === 0} className="h-8 text-xs">
+   396→                      Apply Source
+   397→                    </Button>
+   398→
+   399→                    <Select value={bulkAssign} onValueChange={setBulkAssign}>
+   400→                      <SelectTrigger className="w-[160px] h-8">
+   401→                        <Users className="mr-1 h-3 w-3 shrink-0" />
+   402→                        <SelectValue placeholder="Set Assignee" />
+   403→                      </SelectTrigger>
+   404→                      <SelectContent>
+   405→                        {users
+   406→                          .filter((u) => u.isActive && u.role !== "admin")
+   407→                          .map((u) => (
+   408→                            <SelectItem key={u.id} value={u.id}>
+   409→                              {u.name} ({u.role})
+   410→                            </SelectItem>
+   411→                          ))}
+   412→                      </SelectContent>
+   413→                    </Select>
+   414→                    <Button size="sm" variant="outline" onClick={applyBulkAssign} disabled={!bulkAssign || selectedRows.size === 0} className="h-8 text-xs">
+   415→                      Apply Assignee
+   416→                    </Button>
+   417→
+   418→                    <div className="flex-1" />
+   419→
+   420→                    <Button
+   421→                      onClick={handleConfirm}
+   422→                      disabled={confirming || selectedRows.size === 0}
+   423→                      className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700"
+   424→                    >
+   425→                      <CheckCircle2 className="h-3 w-3 mr-1" />
+   426→                      {confirming ? "Confirming..." : `Confirm ${selectedRows.size} Lead${selectedRows.size !== 1 ? "s" : ""} → Lead Management`}
+   427→                    </Button>
+   428→                  </div>
+   429→                </div>
+   430→              )}
+   431→
+   432→              {/* Portal leads table */}
+   433→              <div className="max-h-[600px] overflow-auto rounded-lg border">
+   434→                <Table>
+   435→                  <TableHeader>
+   436→                    <TableRow>
+   437→                      {filterStatus === "pending" && (
+   438→                        <TableHead className="w-8">
+   439→                          <Checkbox
+   440→                            checked={selectedRows.size === portalLeads.length && portalLeads.length > 0}
+   441→                            onCheckedChange={toggleAll}
+   442→                          />
+   443→                        </TableHead>
+   444→                      )}
+   445→                      <TableHead className="w-8">#</TableHead>
+   446→                      <TableHead>Received</TableHead>
+   447→                      <TableHead>Source</TableHead>
+   448→                      <TableHead>Name</TableHead>
+   449→                      <TableHead>Phone</TableHead>
+   450→                      <TableHead>Email</TableHead>
+   451→                      <TableHead>Project (file)</TableHead>
+   452→                      <TableHead>Budget</TableHead>
+   453→                      <TableHead>Notes</TableHead>
+   454→                      {filterStatus === "pending" && <TableHead>Source (pick)</TableHead>}
+   455→                      {filterStatus === "pending" && <TableHead>Project (select)</TableHead>}
+   456→                      {filterStatus === "pending" && <TableHead>Assign To</TableHead>}
+   457→                      {(filterStatus === "confirmed" || filterStatus === "discarded") && <TableHead>Status</TableHead>}
+   458→                      <TableHead className="w-10"></TableHead>
+   459→                    </TableRow>
+   460→                  </TableHeader>
+   461→                  <TableBody>
+   462→                    {portalLeads.map((lead, i) => (
+   463→                      <TableRow key={lead.id} className={selectedRows.has(lead.id) ? "bg-brand/5" : ""}>
+   464→                        {filterStatus === "pending" && (
+   465→                          <TableCell>
+   466→                            <Checkbox
+   467→                              checked={selectedRows.has(lead.id)}
+   468→                              onCheckedChange={() => toggleRow(lead.id)}
+   469→                            />
+   470→                          </TableCell>
+   471→                        )}
+   472→                        <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+   473→                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+   474→                          {new Date(lead.createdAt).toLocaleDateString("en-IN", {
+   475→                            day: "2-digit",
+   476→                            month: "short",
+   477→                            year: "numeric",
+   478→                            hour: "2-digit",
+   479→                            minute: "2-digit",
+   480→                          })}
+   481→                        </TableCell>
+   482→                        <TableCell>
+   483→                          <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 text-xs">
+   484→                            {lead.source}
+   485→                          </Badge>
+   486→                          {lead.portalRef && (
+   487→                            <div className="text-[10px] text-muted-foreground mt-1">Ref: {lead.portalRef}</div>
+   488→                          )}
+   489→                        </TableCell>
+   490→                        <TableCell className="text-sm font-medium">{lead.name}</TableCell>
+   491→                        <TableCell className="text-xs">{lead.phone}</TableCell>
+   492→                        <TableCell className="text-xs text-muted-foreground">{lead.email || "—"}</TableCell>
+   493→                        <TableCell className="text-xs text-muted-foreground">{lead.projectName || "—"}</TableCell>
+   494→                        <TableCell className="text-xs">{lead.budget || "—"}</TableCell>
+   495→                        <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate" title={lead.notes || ""}>
+   496→                          {lead.notes || "—"}
+   497→                        </TableCell>
+   498→
+   499→                        {filterStatus === "pending" && (
+   500→                          <TableCell>
+   501→                            <Select
+   502→                              value={rowSource[lead.id] || lead.source}
+   503→                              onValueChange={(v) => setRowSource((prev) => ({ ...prev, [lead.id]: v }))}
+   504→                            >
+   505→                              <SelectTrigger className="h-7 text-xs w-[120px]">
+   506→                                <SelectValue placeholder="Source" />
+   507→                              </SelectTrigger>
+   508→                              <SelectContent>
+   509→                                {sources.map((s) => (
+   510→                                  <SelectItem key={s} value={s}>{s}</SelectItem>
+   511→                                ))}
+   512→                              </SelectContent>
+   513→                            </Select>
+   514→                          </TableCell>
+   515→                        )}
+   516→
+   517→                        {filterStatus === "pending" && (
+   518→                          <TableCell>
+   519→                            <Select
+   520→                              value={rowProject[lead.id] || ""}
+   521→                              onValueChange={(v) => setRowProject((prev) => ({ ...prev, [lead.id]: v }))}
+   522→                            >
+   523→                              <SelectTrigger className="h-7 text-xs w-[140px]">
+   524→                                <Building2 className="mr-1 h-3 w-3 shrink-0" />
+   525→                                <SelectValue placeholder="Select..." />
+   526→                              </SelectTrigger>
+   527→                              <SelectContent>
+   528→                                {projects.map((p) => (
+   529→                                  <SelectItem key={p.id} value={p.id}>
+   530→                                    {p.name}
+   531→                                  </SelectItem>
+   532→                                ))}
+   533→                              </SelectContent>
+   534→                            </Select>
+   535→                          </TableCell>
+   536→                        )}
+   537→
+   538→                        {filterStatus === "pending" && (
+   539→                          <TableCell>
+   540→                            <Select
+   541→                              value={rowAssign[lead.id] || ""}
+   542→                              onValueChange={(v) => setRowAssign((prev) => ({ ...prev, [lead.id]: v }))}
+   543→                            >
+   544→                              <SelectTrigger className="h-7 text-xs w-[120px]">
+   545→                                <Users className="mr-1 h-3 w-3 shrink-0" />
+   546→                                <SelectValue placeholder="Assign..." />
+   547→                              </SelectTrigger>
+   548→                              <SelectContent>
+   549→                                {users
+   550→                                  .filter((u) => u.isActive && u.role !== "admin")
+   551→                                  .map((u) => (
+   552→                                    <SelectItem key={u.id} value={u.id}>
+   553→                                      {u.name}
+   554→                                    </SelectItem>
+   555→                                  ))}
+   556→                              </SelectContent>
+   557→                            </Select>
+   558→                          </TableCell>
+   559→                        )}
+   560→
+   561→                        {(filterStatus === "confirmed" || filterStatus === "discarded") && (
+   562→                          <TableCell>
+   563→                            <Badge className={`text-xs ${
+   564→                              lead.status === "confirmed"
+   565→                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+   566→                                : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+   567→                            }`}>
+   568→                              {lead.status}
+   569→                            </Badge>
+   570→                          </TableCell>
+   571→                        )}
+   572→
+   573→                        <TableCell>
+   574→                          <div className="flex items-center gap-1">
+   575→                            {filterStatus === "pending" && (
+   576→                              <Button
+   577→                                variant="ghost"
+   578→                                size="sm"
+   579→                                className="h-7 w-7 p-0 text-muted-foreground hover:text-amber-600"
+   580→                                onClick={() => handleDiscard(lead.id)}
+   581→                                title="Discard"
+   582→                              >
+   583→                                <AlertTriangle className="h-3.5 w-3.5" />
+   584→                              </Button>
+   585→                            )}
+   586→                            {(filterStatus === "discarded" || filterStatus === "confirmed") && (
+   587→                              <Button
+   588→                                variant="ghost"
+   589→                                size="sm"
+   590→                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+   591→                                onClick={() => handleDeleteForever(lead.id)}
+   592→                                title="Delete forever"
+   593→                              >
+   594→                                <Trash2 className="h-3.5 w-3.5" />
+   595→                              </Button>
+   596→                            )}
+   597→                          </div>
+   598→                        </TableCell>
+   599→                      </TableRow>
+   600→                    ))}
+   601→                  </TableBody>
+   602→                </Table>
+   603→              </div>
+   604→            </>
+   605→          )}
+   606→        </CardContent>
+   607→      </Card>
+   608→    </div>
+   609→  );
+   610→}
+   611→

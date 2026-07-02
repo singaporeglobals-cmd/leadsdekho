@@ -247,6 +247,24 @@ model PortalLead {
   @@index([source])
 }
 
+// Singleton row (id = "singleton") storing portal-integration credentials and
+// last-sync metadata. Currently used for Housing.com partner API.
+model PortalSetting {
+  id                       String   @id @default("singleton")
+  // Housing.com partner credentials
+  housingProfileId         String?
+  housingEncryptionKey     String?
+  // Default project to auto-assign to Housing leads (admin can override per row)
+  housingDefaultProjectId  String?
+  // Sync bookkeeping
+  housingLastSyncAt        DateTime?
+  housingLastSyncStatus    String? // "success" | "error" | "partial"
+  housingLastSyncMessage   String?
+  housingLastLeadRef       String? // last portalRef processed, for incremental sync
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+
 model Booking {
   id String @id @default(cuid())
 
