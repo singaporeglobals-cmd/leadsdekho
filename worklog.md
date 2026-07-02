@@ -480,3 +480,41 @@ Stage Summary:
 - New "Test" button lets admin verify connectivity BEFORE running a full sync, with detailed error message (DNS error, HTTP status, body preview)
 - Even without endpointUrl set, error messages are now useful — they show the actual cause (e.g. "DNS lookup failed for host lead.housing.com")
 - IMPORTANT: User still needs to ask Housing.com account manager for the exact partner API URL — without it, sync will continue to fail
+
+---
+Task ID: 17
+Agent: Main Agent
+Task: User clarified Housing.com uses PUSH API (webhook) — leads are pushed to a URL we provide, not pulled. Other CRMs work because they have a webhook URL.
+
+Work Log:
+- Diagnosed: Housing.com is push-based, not pull-based. The "fetch failed" errors happen because there's no pull endpoint — Housing pushes leads TO us.
+- Created new webhook endpoint: /api/portal-leads/housing/[profileId]/route.ts
+  * Each Housing account gets its own webhook URL based on profile_id
+  * URL pattern: POST https://leadsdekho.in/api/portal-leads/housing/<profileId>
+  * Optional HMAC-SHA256 signature verification via X-Housing-Signature header (prevents fake lead injection)
+  * Auto-detects which HousingAccount the lead belongs to (by profileId lookup)
+  * Pre-fills source='Housing.com' and account.defaultProjectId if set
+  * Handles nested payload shapes ({lead:{...}}, {data:{...}}, or flat object)
+  * Phone normalization (strips +91, leading 0, takes last 10 digits)
+  * Duplicate detection (phone + portalRef, or phone alone for pending)
+  * Updates account.lastSyncAt/Status/Message on each webhook delivery so admin sees activity
+  * GET endpoint returns 200 with integration instructions for Housing partner team
+- Updated portal-leads.tsx UI:
+  * Prominent emerald callout at top of Housing card: "Housing.com uses a PUSH API (Webhook)"
+  * Each account card now shows a Webhook URL box with copy button (blue highlight)
+  * Pull endpoint URL demoted to optional secondary info
+  * copiedWebhook state for per-account copy feedback
+  * Clarifying text: "Share that URL with your Housing.com account manager and ask them to configure lead push for your profile."
+- Deployed to Vercel production (leadsdekho.in)
+- Verified live:
+  * GET https://leadsdekho.in/api/portal-leads/housing/22239545 → 200 (Royal Aura account)
+  * GET https://leadsdekho.in/api/portal-leads/housing/7013707 → 200 (Multi-Project account)
+  * POST test lead to webhook → 201 Created (lead inserted into pending queue with source='Housing.com')
+
+Stage Summary:
+- Housing.com webhook endpoints are LIVE at:
+  - Royal Aura: POST https://leadsdekho.in/api/portal-leads/housing/22239545
+  - Multi-Project: POST https://leadsdekho.in/api/portal-leads/housing/7013707
+- User needs to share these URLs with their Housing.com account manager
+- Once Housing configures push, leads will automatically land in the pending queue — no manual sync needed
+- A TEST lead was already inserted via webhook to prove the pipeline works end-to-end (admin will see "TEST LEAD - WEBHOOK WORKING" in the queue)
