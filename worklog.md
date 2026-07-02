@@ -444,3 +444,39 @@ Stage Summary:
 - Build command auto-syncs Prisma schema on every future Vercel deploy
 - Files: prisma/schema.prisma, src/lib/housing-api.ts, src/app/api/portal-leads/settings/route.ts, src/app/api/portal-leads/housing-sync/route.ts, src/components/portal-leads.tsx, vercel.json
 - Live: https://leadsdekho.in → Admin Panel → Import → Portal Leads → "Housing.com Integration" card (top)
+
+---
+Task ID: 16
+Agent: Main Agent
+Task: Fix "fetch failed" error on Housing.com accounts sync (both Royal Aura + Multi-Project accounts were showing fetch failed)
+
+Work Log:
+- User uploaded screenshot showing both Housing accounts had "fetch failed" last-sync status
+- Diagnosed: ran DNS lookups for lead.housing.com, api.housing.com, developer.housing.com — ALL FAIL TO RESOLVE. Only housing.com root exists (HTTP 403). The 4 hardcoded fallback URLs in housing-api.ts are all dead hosts.
+- Root cause: "fetch failed" is Node's generic undici error wrapping ENOTFOUND. The previous error handler just used err.message which only showed "fetch failed" — no useful info.
+- Solution: Add per-account `endpointUrl` field so admin can paste the exact partner API URL provided by Housing.com's account manager.
+- Schema: Added `endpointUrl String?` to HousingAccount model in prisma/schema.prisma
+- Rewrote src/lib/housing-api.ts:
+  * New `explainFetchError()` helper extracts err.cause to show "DNS lookup failed for host" instead of just "fetch failed"
+  * New `buildEndpointCandidates()`: if account.endpointUrl is set, use ONLY that URL (skip dead fallbacks)
+  * New `testHousingConnection()` function for connection testing without importing leads
+  * Richer per-endpoint diagnostics in fetchHousingLeads
+- New API route: /api/portal-leads/housing-accounts/[id]/test/route.ts — POST calls testHousingConnection, returns {ok, status, message, bodyPreview, url}
+- Updated housing-accounts GET/POST/PUT routes to accept/return endpointUrl
+- Updated housing-sync route to pass endpointUrl through to syncHousingLeads and syncAllHousingAccounts
+- Updated src/components/portal-leads.tsx:
+  * Added PlugZap icon import
+  * Added formEndpointUrl, testingAccountId, testResult state
+  * Added Endpoint URL input to Add/Edit form with helper text
+  * Added Test button per account (between Sync and Edit)
+  * Display endpointUrl on each account card with amber warning if not set
+  * Color-coded last-sync message box (red/amber/emerald) instead of muted text
+  * Color-coded test result box per account
+- Deployed to Vercel production (leadsdekho.in) — build log confirms "Your database is now in sync with your Prisma schema. Done in 8.45s"
+
+Stage Summary:
+- "fetch failed" root cause: Housing.com partner API URL is account-specific; the 4 hardcoded fallback URLs (lead.housing.com etc.) do not exist in DNS
+- Each Housing account now has its own `endpointUrl` field — admin pastes the URL from Housing's account manager
+- New "Test" button lets admin verify connectivity BEFORE running a full sync, with detailed error message (DNS error, HTTP status, body preview)
+- Even without endpointUrl set, error messages are now useful — they show the actual cause (e.g. "DNS lookup failed for host lead.housing.com")
+- IMPORTANT: User still needs to ask Housing.com account manager for the exact partner API URL — without it, sync will continue to fail
