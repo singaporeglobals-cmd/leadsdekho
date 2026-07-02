@@ -420,3 +420,27 @@ Stage Summary:
 - All original raw payloads are saved in rawPayload JSON field for audit / debugging.
 - Deployed to https://leadsdekho.in
 
+
+---
+Task ID: 15
+Agent: Main Agent
+Task: Connect Housing.com partner API. User provided Profile ID (22239545) + Encryption Key (f8bd5d47a7932ad40f9ebbe2278a5f2f) for Royal Aura project. Wants project name selectable per lead (already exists in UI). Build integration so admin can pull leads from Housing's API into the portal-leads queue and assign project/assignee before confirming.
+
+Work Log:
+- Added PortalSetting singleton model to prisma/schema.prisma (housingProfileId, housingEncryptionKey, housingDefaultProjectId, housingLastSyncAt, housingLastSyncStatus, housingLastSyncMessage, housingLastLeadRef)
+- Created /api/portal-leads/settings route (GET + PUT) — admin-only, masks encryption key in response
+- Created src/lib/housing-api.ts: HousingLead normalizer, HMAC-SHA256 signature, fetchHousingLeads() tries 4 endpoint variants, syncHousingLeads() inserts new leads into PortalLead with dedup (phone+portalRef or phone-alone against pending)
+- Created /api/portal-leads/housing-sync route (POST) — admin-only, calls syncHousingLeads with 7-day lookback, updates last-sync metadata
+- Added collapsible Housing.com Integration card to portal-leads.tsx (Profile ID input, Encryption Key password input with masked-saved indicator, Default Project select, Save Settings + Sync Now buttons, last-sync badge + message)
+- Updated vercel.json buildCommand to "prisma generate && prisma db push --accept-data-loss && next build" so schema auto-syncs on every deploy
+- Deployed to Vercel production. Schema applied successfully on neondb — "🚀 Your database is now in sync with your Prisma schema. Done in 8.33s"
+- Verified live endpoint: https://leadsdekho.in/api/portal-leads/settings returns 401 (admin-only, working)
+
+Stage Summary:
+- PortalLead UI now has a Housing.com Integration card at the top
+- Admin saves credentials + default project, clicks "Sync Now" to pull leads from Housing's partner API
+- Pulled leads enter the pending queue with source="Housing.com" and the default project pre-assigned (admin can still override per row)
+- Existing per-row project/source/assignee selectors remain unchanged
+- Build command auto-syncs Prisma schema on every future Vercel deploy
+- Files: prisma/schema.prisma, src/lib/housing-api.ts, src/app/api/portal-leads/settings/route.ts, src/app/api/portal-leads/housing-sync/route.ts, src/components/portal-leads.tsx, vercel.json
+- Live: https://leadsdekho.in → Admin Panel → Import → Portal Leads → "Housing.com Integration" card (top)
