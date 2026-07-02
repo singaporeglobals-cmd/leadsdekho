@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
         {
           profileId: account.profileId,
           encryptionKey: account.encryptionKey,
+          endpointUrl: account.endpointUrl,
           defaultProjectId: account.defaultProjectId,
           lastLeadRef: account.lastLeadRef,
         },
@@ -110,6 +111,7 @@ export async function POST(req: NextRequest) {
         label: a.label,
         profileId: a.profileId,
         encryptionKey: a.encryptionKey,
+        endpointUrl: a.endpointUrl,
         defaultProjectId: a.defaultProjectId,
         lastLeadRef: a.lastLeadRef,
       })),

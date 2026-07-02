@@ -7,21 +7,20 @@
  * with a list of leads for the partner's projects.
  *
  * Endpoint pattern (partner lead-pull API):
- *   POST https://lead.housing.com/api/v2/leads/get
+ *   POST <partner-api-url>
  *   Content-Type: application/json
  *   Body: { profile_id, from_date, to_date, signature }
  *   signature = HMAC-SHA256(encryptionKey, profile_id + from_date + to_date)
  *
- * The response shape varies slightly by Housing API version. We parse
- * defensively and accept a few common shapes:
- *   - { leads: [...] }
- *   - { data: [...] }
- *   - { result: [...] }
- *   - [...] (raw array)
+ * IMPORTANT: Housing.com does NOT publicly document a single canonical URL.
+ * The exact endpoint URL varies per partner program and must be confirmed
+ * with the Housing account manager. We support:
+ *   1. An explicit `endpointUrl` per HousingAccount (preferred)
+ *   2. A fallback list of common patterns (rarely useful — most are dead)
  *
- * If Housing pushes leads via webhook instead (recommended), admin can skip
- * the sync button entirely — incoming POSTs land in /api/portal-leads and
- * appear here automatically.
+ * If Housing pushes leads via webhook instead (recommended for production),
+ * admin can skip the sync button entirely — incoming POSTs land in
+ * /api/portal-leads and appear here automatically.
  */
 
 import crypto from "crypto";
@@ -52,6 +51,7 @@ interface SyncResult {
 interface HousingConfig {
   profileId: string;
   encryptionKey: string;
+  endpointUrl?: string | null; // preferred exact URL
   defaultProjectId?: string | null;
   lastLeadRef?: string | null;
 }
@@ -61,6 +61,7 @@ export interface HousingAccountRow {
   label: string;
   profileId: string;
   encryptionKey: string;
+  endpointUrl?: string | null;
   defaultProjectId?: string | null;
   lastLeadRef?: string | null;
 }
@@ -150,18 +151,71 @@ function normalizeLead(raw: Record<string, unknown>): HousingLead | null {
 }
 
 /**
- * Fetch leads from Housing's API. Returns an array of normalized leads.
+ * Extract the underlying error message from a Node fetch error.
+ * Node's undici wraps the real cause in `err.cause` — without this,
+ * the user just sees "fetch failed" which is unhelpful.
+ */
+function explainFetchError(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  // undici's TypeError "fetch failed" wraps the real cause in .cause
+  const cause = (err as { cause?: unknown }).cause;
+  if (cause instanceof Error) {
+    // Common Node syscall errors
+    const code = (cause as { code?: string }).code;
+    if (code === "ENOTFOUND") {
+      return `DNS lookup failed for host — the URL does not exist. ${cause.message}`;
+    }
+    if (code === "ECONNREFUSED") {
+      return `Connection refused by server. ${cause.message}`;
+    }
+    if (code === "ECONNRESET") {
+      return `Connection reset by server. ${cause.message}`;
+    }
+    if (code === "ETIMEDOUT") {
+      return `Connection timed out. ${cause.message}`;
+    }
+    if (code === "CERT_HAS_EXPIRED" || code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE") {
+      return `TLS/SSL certificate error. ${cause.message}`;
+    }
+    return `${cause.name}: ${cause.message}`;
+  }
+  // Sometimes the message itself is useful
+  return err.message;
+}
+
+/**
+ * Build the ordered list of endpoint URLs to try for an account.
  *
- * Strategy:
- *   - Try the documented POST endpoint with HMAC signature first
- *   - Fall back to GET with profile_id + key as query params
- *   - If both fail, throw with the most informative error message
+ * 1. If `endpointUrl` is explicitly set on the account, try it FIRST (and only).
+ *    The admin has confirmed this is the right URL — no point guessing others.
+ * 2. Otherwise, fall back to common patterns (mostly historical / rarely work).
+ */
+function buildEndpointCandidates(config: HousingConfig): string[] {
+  if (config.endpointUrl && config.endpointUrl.trim()) {
+    return [config.endpointUrl.trim()];
+  }
+  return [
+    "https://lead.housing.com/api/v2/leads/get",
+    "https://lead.housing.com/api/v1/leads/get",
+    "https://api.housing.com/api/v2/leads/get",
+    "https://developer.housing.com/api/v1/leads/get",
+  ];
+}
+
+/**
+ * Fetch leads from Housing's API. Returns an array of normalized leads
+ * PLUS per-endpoint diagnostics so the UI can show exactly what happened.
  */
 export async function fetchHousingLeads(
   config: HousingConfig,
   fromDate: string,
   toDate: string
-): Promise<{ leads: HousingLead[]; rawStatus: number; rawBodyPreview: string }> {
+): Promise<{
+  leads: HousingLead[];
+  rawStatus: number;
+  rawBodyPreview: string;
+  diagnostics: Array<{ url: string; ok: boolean; status: number; error?: string; bodyPreview?: string }>;
+}> {
   const { profileId, encryptionKey } = config;
   if (!profileId || !encryptionKey) {
     throw new Error("Housing.com Profile ID and Encryption Key are required");
@@ -172,20 +226,19 @@ export async function fetchHousingLeads(
   const message = `${profileId}${fromDate}${toDate}`;
   const signature = sign(encryptionKey, message);
 
-  // Endpoint candidates — Housing has used different URLs over time.
-  // We try each in order until one returns a parseable response.
-  const endpoints = [
-    "https://lead.housing.com/api/v2/leads/get",
-    "https://lead.housing.com/api/v1/leads/get",
-    "https://api.housing.com/api/v2/leads/get",
-    "https://developer.housing.com/api/v1/leads/get",
-  ];
+  const endpoints = buildEndpointCandidates(config);
 
   let lastErr: Error | null = null;
   let lastStatus = 0;
   let lastBodyPreview = "";
+  const diagnostics: Array<{ url: string; ok: boolean; status: number; error?: string; bodyPreview?: string }> = [];
 
   for (const url of endpoints) {
+    const entry: { url: string; ok: boolean; status: number; error?: string; bodyPreview?: string } = {
+      url,
+      ok: false,
+      status: 0,
+    };
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -206,9 +259,13 @@ export async function fetchHousingLeads(
       lastStatus = res.status;
       const text = await res.text();
       lastBodyPreview = text.slice(0, 500);
+      entry.status = res.status;
+      entry.bodyPreview = lastBodyPreview;
 
       if (!res.ok) {
-        lastErr = new Error(`Housing API ${res.status}: ${lastBodyPreview}`);
+        entry.error = `HTTP ${res.status}: ${lastBodyPreview.slice(0, 200)}`;
+        diagnostics.push(entry);
+        lastErr = new Error(entry.error);
         continue;
       }
 
@@ -217,30 +274,46 @@ export async function fetchHousingLeads(
       try {
         json = JSON.parse(text);
       } catch {
-        lastErr = new Error(`Housing API returned non-JSON: ${lastBodyPreview}`);
+        entry.error = `Non-JSON response: ${lastBodyPreview.slice(0, 200)}`;
+        diagnostics.push(entry);
+        lastErr = new Error(entry.error);
         continue;
       }
 
       // Extract leads array from common response shapes
       const leadsRaw = extractLeadsArray(json);
+      entry.ok = true;
+      diagnostics.push(entry);
+
       if (leadsRaw.length === 0) {
         // Maybe this endpoint is the right one but genuinely has 0 leads
         // in the window — return empty success rather than continuing.
-        return { leads: [], rawStatus: res.status, rawBodyPreview: lastBodyPreview };
+        return { leads: [], rawStatus: res.status, rawBodyPreview: lastBodyPreview, diagnostics };
       }
 
       const normalized = leadsRaw
         .map((r) => normalizeLead(r as Record<string, unknown>))
         .filter((l): l is HousingLead => l !== null);
 
-      return { leads: normalized, rawStatus: res.status, rawBodyPreview: lastBodyPreview };
+      return { leads: normalized, rawStatus: res.status, rawBodyPreview: lastBodyPreview, diagnostics };
     } catch (err) {
-      lastErr = err instanceof Error ? err : new Error(String(err));
+      const explained = explainFetchError(err);
+      entry.error = explained;
+      diagnostics.push(entry);
+      lastErr = new Error(explained);
       continue;
     }
   }
 
-  throw lastErr || new Error("Failed to fetch leads from Housing.com — all endpoints returned errors");
+  // Build a detailed summary of what was tried and what failed
+  const summary = diagnostics
+    .map((d) => `${d.url} → ${d.ok ? "OK" : d.error || "failed"}`)
+    .join(" | ");
+  throw new Error(
+    `Housing API request failed. Tried ${diagnostics.length} endpoint(s): ${summary}. ` +
+    `Last error: ${lastErr?.message || "unknown"}. ` +
+    `If you don't have the exact endpoint URL, ask your Housing.com account manager for the partner API URL.`
+  );
 }
 
 /**
@@ -285,11 +358,13 @@ export async function syncHousingLeads(
   let fetched: HousingLead[] = [];
   let rawStatus = 0;
   let rawBodyPreview = "";
+  let diagnostics: Array<{ url: string; ok: boolean; status: number; error?: string; bodyPreview?: string }> = [];
   try {
     const result = await fetchHousingLeads(config, fmt(from), fmt(now));
     fetched = result.leads;
     rawStatus = result.rawStatus;
     rawBodyPreview = result.rawBodyPreview;
+    diagnostics = result.diagnostics;
   } catch (err) {
     return {
       ok: false,
@@ -309,7 +384,7 @@ export async function syncHousingLeads(
       duplicated: 0,
       failed: 0,
       message: rawBodyPreview
-        ? `Housing API responded OK but no leads found in last ${days} days. Preview: ${rawBodyPreview.slice(0, 200)}`
+        ? `Housing API responded OK (HTTP ${rawStatus}) but no leads found in last ${days} days. Preview: ${rawBodyPreview.slice(0, 200)}`
         : `No leads found in the last ${days} days.`,
     };
   }
@@ -386,6 +461,99 @@ export async function syncHousingLeads(
 }
 
 /**
+ * Lightweight connection test — just one fetch attempt against the
+ * configured endpoint (or first fallback). Used by the "Test Connection"
+ * button in the UI. Returns rich diagnostics so the admin can see exactly
+ * why it failed (DNS, HTTP status, body preview, etc.).
+ */
+export async function testHousingConnection(
+  config: HousingConfig
+): Promise<{
+  ok: boolean;
+  status: number;
+  message: string;
+  bodyPreview: string;
+  url: string;
+}> {
+  const { profileId, encryptionKey } = config;
+  if (!profileId || !encryptionKey) {
+    return {
+      ok: false,
+      status: 0,
+      message: "Profile ID and Encryption Key are required",
+      bodyPreview: "",
+      url: "",
+    };
+  }
+
+  const endpoints = buildEndpointCandidates(config);
+  const url = endpoints[0];
+
+  // Sign with a small recent window
+  const now = new Date();
+  const from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const fmt = (d: Date) => d.toISOString().slice(0, 19).replace("T", " ");
+  const message = `${profileId}${fmt(from)}${fmt(now)}`;
+  const signature = sign(encryptionKey, message);
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        profile_id: profileId,
+        from_date: fmt(from),
+        to_date: fmt(now),
+        signature,
+      }),
+      next: { revalidate: 0 },
+    });
+
+    const text = await res.text();
+    const bodyPreview = text.slice(0, 500);
+
+    if (res.ok) {
+      // Try to parse and count leads
+      let leadCount = 0;
+      try {
+        const json = JSON.parse(text);
+        leadCount = extractLeadsArray(json).length;
+      } catch {
+        // Non-JSON but HTTP 200 — still a good sign the URL exists
+      }
+      return {
+        ok: true,
+        status: res.status,
+        message: `Connection OK (HTTP ${res.status}). ${leadCount} lead(s) in last 7 days. URL is valid.`,
+        bodyPreview,
+        url,
+      };
+    }
+
+    return {
+      ok: false,
+      status: res.status,
+      message: `URL reachable but server returned HTTP ${res.status}. ${bodyPreview.slice(0, 200)}`,
+      bodyPreview,
+      url,
+    };
+  } catch (err) {
+    const explained = explainFetchError(err);
+    return {
+      ok: false,
+      status: 0,
+      message: `Connection failed: ${explained}. ` +
+        `If this is a DNS error, the URL does not exist — ask your Housing.com account manager for the correct partner API URL.`,
+      bodyPreview: "",
+      url,
+    };
+  }
+}
+
+/**
  * Sync multiple Housing accounts in sequence. Returns aggregated stats
  * plus per-account details so the UI can show which accounts succeeded
  * and which failed.
@@ -413,6 +581,7 @@ export async function syncAllHousingAccounts(
       {
         profileId: acct.profileId,
         encryptionKey: acct.encryptionKey,
+        endpointUrl: acct.endpointUrl,
         defaultProjectId: acct.defaultProjectId,
         lastLeadRef: acct.lastLeadRef,
       },

@@ -60,6 +60,10 @@ export async function PUT(
   if (typeof body.encryptionKey === "string" && body.encryptionKey.trim() !== "") {
     updateData.encryptionKey = body.encryptionKey.trim();
   }
+  if (typeof body.endpointUrl === "string") {
+    // Empty string clears the field; non-empty string sets it
+    updateData.endpointUrl = body.endpointUrl.trim() || null;
+  }
   if (typeof body.defaultProjectId === "string") {
     updateData.defaultProjectId = body.defaultProjectId || null;
   }
@@ -80,6 +84,7 @@ export async function PUT(
     encryptionKeyMasked: updated.encryptionKey
       ? updated.encryptionKey.slice(0, 4) + "••••••••" + updated.encryptionKey.slice(-4)
       : "",
+    endpointUrl: updated.endpointUrl || "",
     defaultProjectId: updated.defaultProjectId || "",
     isActive: updated.isActive,
   });

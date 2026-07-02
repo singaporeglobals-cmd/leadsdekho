@@ -255,6 +255,7 @@ model HousingAccount {
   label             String    // admin-friendly name e.g. "Royal Aura", "Multi Project Account"
   profileId         String
   encryptionKey     String
+  endpointUrl       String?   // optional - the EXACT Housing API URL provided by the account manager. If empty, we try a list of common patterns.
   defaultProjectId  String?   // optional - only set when account maps to a single project
   isActive          Boolean   @default(true)
   lastSyncAt        DateTime?

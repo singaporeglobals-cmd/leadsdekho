@@ -38,6 +38,7 @@ import {
   Plus,
   Pencil,
   X,
+  PlugZap,
 } from "lucide-react";
 
 interface PortalLead {
@@ -74,6 +75,7 @@ interface HousingAccount {
   label: string;
   profileId: string;
   encryptionKeyMasked: string;
+  endpointUrl: string;
   defaultProjectId: string;
   isActive: boolean;
   lastSyncAt: string | null;
@@ -120,11 +122,14 @@ export function PortalLeads() {
   const [formLabel, setFormLabel] = useState("");
   const [formProfileId, setFormProfileId] = useState("");
   const [formEncryptionKey, setFormEncryptionKey] = useState("");
+  const [formEndpointUrl, setFormEndpointUrl] = useState("");
   const [formDefaultProjectId, setFormDefaultProjectId] = useState("");
   const [formIsActive, setFormIsActive] = useState(true);
   const [savingAccount, setSavingAccount] = useState(false);
   // Sync state
   const [syncingAccountId, setSyncingAccountId] = useState<string | null>(null); // "all" | "<id>" | null
+  const [testingAccountId, setTestingAccountId] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<Record<string, { ok: boolean; message: string; url: string } | null>>({});
   const [housingMsg, setHousingMsg] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
 
   const apiUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/api/portal-leads`;
@@ -201,6 +206,7 @@ export function PortalLeads() {
     setFormLabel("");
     setFormProfileId("");
     setFormEncryptionKey("");
+    setFormEndpointUrl("");
     setFormDefaultProjectId("");
     setFormIsActive(true);
   };
@@ -216,6 +222,7 @@ export function PortalLeads() {
     setFormLabel(acct.label);
     setFormProfileId(acct.profileId);
     setFormEncryptionKey(""); // never pre-fill the key
+    setFormEndpointUrl(acct.endpointUrl || "");
     setFormDefaultProjectId(acct.defaultProjectId || "");
     setFormIsActive(acct.isActive);
   };
@@ -232,6 +239,7 @@ export function PortalLeads() {
         label: formLabel.trim(),
         profileId: formProfileId.trim(),
         encryptionKey: formEncryptionKey.trim(),
+        endpointUrl: formEndpointUrl.trim() || null,
         defaultProjectId: formDefaultProjectId || null,
         isActive: formIsActive,
       };
@@ -347,6 +355,38 @@ export function PortalLeads() {
       });
     } finally {
       setSyncingAccountId(null);
+    }
+  };
+
+  const testConnection = async (accountId: string) => {
+    setTestingAccountId(accountId);
+    setTestResult((prev) => ({ ...prev, [accountId]: null }));
+    try {
+      const res = await fetch(`/api/portal-leads/housing-accounts/${accountId}/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      setTestResult((prev) => ({
+        ...prev,
+        [accountId]: {
+          ok: !!data.ok,
+          message: data.message || (data.ok ? "Connection OK" : "Connection failed"),
+          url: data.url || "",
+        },
+      }));
+    } catch (err) {
+      setTestResult((prev) => ({
+        ...prev,
+        [accountId]: {
+          ok: false,
+          message: err instanceof Error ? err.message : "Test failed",
+          url: "",
+        },
+      }));
+    } finally {
+      setTestingAccountId(null);
     }
   };
 
@@ -531,22 +571,39 @@ export function PortalLeads() {
                             </Badge>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Profile ID: <code>{acct.profileId}</code>
-                          {" · "}
-                          Key: <code>{acct.encryptionKeyMasked || "—"}</code>
+                        <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                          <div>
+                            Profile ID: <code>{acct.profileId}</code>
+                            {" · "}
+                            Key: <code>{acct.encryptionKeyMasked || "—"}</code>
+                          </div>
+                          <div>
+                            Endpoint URL:{" "}
+                            {acct.endpointUrl ? (
+                              <code className="break-all">{acct.endpointUrl}</code>
+                            ) : (
+                              <span className="text-amber-600 dark:text-amber-400 font-medium">
+                                Not set — using fallback URLs (likely won&apos;t work). Ask your Housing account manager for the exact partner API URL.
+                              </span>
+                            )}
+                          </div>
                           {acct.defaultProjectId && (
-                            <>
-                              {" · "}
+                            <div>
                               Default project:{" "}
                               <span className="font-medium">
                                 {projects.find((p) => p.id === acct.defaultProjectId)?.name || "(deleted project)"}
                               </span>
-                            </>
+                            </div>
                           )}
                         </div>
                         {acct.lastSyncMessage && (
-                          <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
+                          <div className={`text-[11px] mt-1.5 rounded p-1.5 ${
+                            acct.lastSyncStatus === "success"
+                              ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
+                              : acct.lastSyncStatus === "partial"
+                              ? "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300"
+                              : "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300"
+                          }`}>
                             {acct.lastSyncAt && (
                               <span>
                                 Last sync: {new Date(acct.lastSyncAt).toLocaleString("en-IN")}
@@ -556,8 +613,29 @@ export function PortalLeads() {
                             {acct.lastSyncMessage}
                           </div>
                         )}
+                        {testResult[acct.id] && (
+                          <div className={`text-[11px] mt-1.5 rounded p-1.5 ${
+                            testResult[acct.id]?.ok
+                              ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
+                              : "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300"
+                          }`}>
+                            <span className="font-semibold">Test result:</span>{" "}
+                            {testResult[acct.id]?.message}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => testConnection(acct.id)}
+                          disabled={testingAccountId !== null || syncingAccountId !== null || !acct.isActive}
+                          className="h-7 text-xs"
+                          title="Test connectivity to Housing.com (does not import leads)"
+                        >
+                          <PlugZap className={`h-3 w-3 mr-1 ${testingAccountId === acct.id ? "animate-pulse" : ""}`} />
+                          {testingAccountId === acct.id ? "Testing..." : "Test"}
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
@@ -707,6 +785,25 @@ export function PortalLeads() {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium flex items-center gap-2">
+                    Endpoint URL
+                    <span className="text-muted-foreground font-normal">
+                      (optional but recommended — paste the exact partner API URL from your Housing.com account manager)
+                    </span>
+                  </label>
+                  <Input
+                    value={formEndpointUrl}
+                    onChange={(e) => setFormEndpointUrl(e.target.value)}
+                    placeholder="e.g. https://partner.housing.com/api/v1/leads/get"
+                    className="h-8 text-sm font-mono"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    If left blank, we&apos;ll try a few common Housing URL patterns (most don&apos;t exist anymore —
+                    the partner API URL is account-specific and is provided by Housing&apos;s partner team).
+                  </p>
                 </div>
 
                 <label className="flex items-center gap-2 text-xs">

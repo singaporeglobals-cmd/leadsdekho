@@ -24,6 +24,7 @@ export async function GET() {
     encryptionKeyMasked: a.encryptionKey
       ? a.encryptionKey.slice(0, 4) + "••••••••" + a.encryptionKey.slice(-4)
       : "",
+    endpointUrl: a.endpointUrl || "",
     defaultProjectId: a.defaultProjectId || "",
     isActive: a.isActive,
     lastSyncAt: a.lastSyncAt,
@@ -43,6 +44,7 @@ export async function GET() {
  *   label: string,             // admin-friendly name (required)
  *   profileId: string,         // Housing Profile ID (required)
  *   encryptionKey: string,     // Housing Encryption Key (required)
+ *   endpointUrl?: string,      // optional - exact Housing API URL (ask account manager)
  *   defaultProjectId?: string, // optional default project
  *   isActive?: boolean         // optional, default true
  * }
@@ -69,6 +71,10 @@ export async function POST(req: NextRequest) {
   if (!profileId) return NextResponse.json({ error: "Profile ID is required" }, { status: 400 });
   if (!encryptionKey) return NextResponse.json({ error: "Encryption Key is required" }, { status: 400 });
 
+  const endpointUrl =
+    typeof body.endpointUrl === "string" && body.endpointUrl.trim()
+      ? body.endpointUrl.trim()
+      : null;
   const defaultProjectId =
     typeof body.defaultProjectId === "string" && body.defaultProjectId
       ? body.defaultProjectId
@@ -92,6 +98,7 @@ export async function POST(req: NextRequest) {
       label,
       profileId,
       encryptionKey,
+      endpointUrl,
       defaultProjectId,
       isActive,
     },
@@ -102,6 +109,7 @@ export async function POST(req: NextRequest) {
       id: created.id,
       label: created.label,
       profileId: created.profileId,
+      endpointUrl: created.endpointUrl || "",
       defaultProjectId: created.defaultProjectId || "",
       isActive: created.isActive,
     },
