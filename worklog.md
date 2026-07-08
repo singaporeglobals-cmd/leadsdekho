@@ -606,3 +606,51 @@ Stage Summary:
 - Fix: Follow-up filters now use ONLY currentOwnerId; lead list / dashboard counts still use OR for visibility
 - Verified: counts match DB-level expectations for both telecalling and sales users
 - Deployed to https://leadsdekho.in
+
+---
+Task ID: 18
+Agent: Main Agent
+Task: Two new fixes from user — (1) Super admin panel's "Import Lead" feature was not working, should work same as admin panel. (2) MagicBricks API has been set up by sales manager per integration PDF — verify and ensure integration is in place.
+
+Work Log:
+- Issue 1: Import Lead not working for super_admin
+  * Root cause: `src/components/lead-import.tsx` had `user?.role === "admin"` checks in 3 places — only allowed admin role, blocked super_admin
+    - useEffect to fetch users/projects: only ran if role === "admin"
+    - useEffect to redirect: kicked out anyone not "admin" (including super_admin)
+    - Render guard: `if (user?.role !== "admin") return null`
+  * Also `src/app/api/leads/import/route.ts` and `src/app/api/leads/import/confirm/route.ts` both had `if (user.role !== "admin") return 403` — server-side block too
+  * Fixed all 5 locations to accept both admin AND super_admin
+    - lead-import.tsx: 3 locations changed to `user?.role === "admin" || user?.role === "super_admin"`
+    - /api/leads/import/route.ts: changed to `user.role !== "admin" && user.role !== "super_admin"`
+    - /api/leads/import/confirm/route.ts: same change
+  * Note: Kept the assignee-dropdown filter that excludes admin & super_admin from being assigned leads — that's intentional (admins assign TO sales/telecalling users, not to themselves)
+
+- Issue 2: MagicBricks API integration
+  * Created dedicated webhook endpoint: `src/app/api/portal-leads/magicbricks/route.ts`
+    - URL: POST https://leadsdekho.in/api/portal-leads/magicbricks
+    - Handles MagicBricks-specific PascalCase payload format: BuyerName, ContactNo, EmailID, CityName, ProjectName, Budget, Remark, RequirementID, LeadSource, etc.
+    - Also accepts lowercase aliases (name, phone, email, etc.) for flexibility
+    - Supports nested payloads ({lead:{...}} or {data:{...}})
+    - Phone normalization: strips +91, leading 0, takes last 10 digits
+    - Deduplication: by (phone + portalRef) if portalRef present, else by phone for pending leads
+    - Saves to PortalLead table with source="MagicBricks" so admin can filter/report on it
+    - GET endpoint returns integration instructions for MagicBricks partner team
+  * Updated `src/components/portal-leads.tsx` UI:
+    - Added new emerald-colored callout box right below the existing generic endpoint box
+    - Shows MagicBricks webhook URL with copy button
+    - Lists required fields (BuyerName, ContactNo) and optional fields (EmailID, CityName, ProjectName, Budget, Remark, RequirementID, LeadSource)
+    - Tells admin to share URL with MagicBricks account manager
+    - Notes that incoming leads appear in pending queue with source="MagicBricks"
+
+- Built locally: npx next build — success, /api/portal-leads/magicbricks route registered
+- Deployed to Vercel production: my-project-if9kes00v-singaporeglobals-5246s-projects.vercel.app → aliased to leadsdekho.in
+- Verified live:
+  * GET https://leadsdekho.in/api/portal-leads/magicbricks → 200 with integration instructions
+  * POST test MagicBricks lead (BuyerName=TEST MB LEAD, ContactNo=9999988888, EmailID, CityName=Kolkata, ProjectName=Royal Aura, Budget, Remark, RequirementID=MB-TEST-001) → 201 Created, lead inserted into pending queue
+
+Stage Summary:
+- Import Lead now works for super_admin (was admin-only before)
+- MagicBricks webhook endpoint is LIVE at: POST https://leadsdekho.in/api/portal-leads/magicbricks
+- MagicBricks webhook URL is now visible in the admin/super_admin portal-leads UI with copy button
+- A TEST lead was inserted via webhook to prove the pipeline works end-to-end (admin will see "TEST MB LEAD" in the pending queue)
+- User needs to share this URL with their MagicBricks account manager: https://leadsdekho.in/api/portal-leads/magicbricks

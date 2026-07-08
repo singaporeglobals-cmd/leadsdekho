@@ -95,7 +95,7 @@ export function LeadImport() {
 
   // Fetch users, projects, and lead sources
   useEffect(() => {
-    if (user?.role === "admin") {
+    if (user?.role === "admin" || user?.role === "super_admin") {
       fetch("/api/users")
         .then((r) => r.json())
         .then((data) => setUsers(data))
@@ -124,9 +124,9 @@ export function LeadImport() {
       });
   }, [user?.role]);
 
-  // Redirect non-admin users
+  // Redirect non-admin users (both admin and super_admin can use import)
   useEffect(() => {
-    if (user && user.role !== "admin") {
+    if (user && user.role !== "admin" && user.role !== "super_admin") {
       setPage("leads");
     }
   }, [user, setPage]);
@@ -322,8 +322,8 @@ export function LeadImport() {
     return u ? u.name : "Unknown";
   };
 
-  // If not admin, don't render
-  if (user?.role !== "admin") return null;
+  // If not admin or super_admin, don't render
+  if (user?.role !== "admin" && user?.role !== "super_admin") return null;
 
   return (
     <div className="space-y-4 max-w-7xl mx-auto">

@@ -8,8 +8,8 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Only admin can import
-  if (user.role !== "admin") {
+  // Only admin or super_admin can import
+  if (user.role !== "admin" && user.role !== "super_admin") {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 

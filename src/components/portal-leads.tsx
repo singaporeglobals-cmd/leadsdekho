@@ -113,6 +113,7 @@ export function PortalLeads() {
   // Copy API URL state
   const [copied, setCopied] = useState(false);
   const [copiedWebhook, setCopiedWebhook] = useState<string | null>(null);
+  const [copiedMagic, setCopiedMagic] = useState(false);
 
   // Housing.com multi-account integration state
   const [showHousing, setShowHousing] = useState(false);
@@ -134,6 +135,7 @@ export function PortalLeads() {
   const [housingMsg, setHousingMsg] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
 
   const apiUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/api/portal-leads`;
+  const magicbricksUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/api/portal-leads/magicbricks`;
 
   const fetchPortalLeads = useCallback(async (status: "pending" | "confirmed" | "discarded") => {
     setLoading(true);
@@ -499,6 +501,12 @@ export function PortalLeads() {
     navigator.clipboard.writeText(apiUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyMagicbricksUrl = () => {
+    navigator.clipboard.writeText(magicbricksUrl);
+    setCopiedMagic(true);
+    setTimeout(() => setCopiedMagic(false), 2000);
   };
 
   if (user?.role !== "admin" && user?.role !== "super_admin") return null;
@@ -915,6 +923,33 @@ export function PortalLeads() {
             </div>
             <p className="text-xs text-blue-700 dark:text-blue-300">
               Send leads from Housing.com, MagicBricks, 99acres, or any portal to this endpoint. Required fields: <code>name</code>, <code>phone</code>. Optional: <code>email</code>, <code>source</code>, <code>budget</code>, <code>notes</code>, <code>projectName</code>, <code>portalRef</code>.
+            </p>
+          </div>
+
+          {/* MagicBricks dedicated webhook URL */}
+          <div className="rounded-md bg-emerald-50 dark:bg-emerald-950 p-3 text-sm space-y-2 border border-emerald-200 dark:border-emerald-900">
+            <div className="font-medium text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+              <PlugZap className="h-4 w-4" />
+              MagicBricks Webhook URL (dedicated)
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 px-2 py-1 bg-white dark:bg-gray-900 rounded border text-xs">
+                POST {magicbricksUrl}
+              </code>
+              <Button size="sm" variant="outline" onClick={copyMagicbricksUrl} className="h-8">
+                {copiedMagic ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                {copiedMagic ? "Copied" : "Copy"}
+              </Button>
+            </div>
+            <p className="text-xs text-emerald-700 dark:text-emerald-300">
+              Share this URL with your MagicBricks account manager. MagicBricks will POST leads here in JSON format.
+              Required fields: <code>BuyerName</code> (or <code>Name</code>), <code>ContactNo</code> (or <code>Mobile</code>/<code>Phone</code>).
+              Optional: <code>EmailID</code>, <code>CityName</code>, <code>ProjectName</code>, <code>Budget</code>, <code>Remark</code>, <code>RequirementID</code>, <code>LeadSource</code>.
+              Both PascalCase (MagicBricks style) and lowercase field names are accepted.
+            </p>
+            <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">
+              Incoming MagicBricks leads will appear in the pending queue below with source = <code>MagicBricks</code>.
+              Admin can then assign project + assignee and confirm them into the main lead list.
             </p>
           </div>
 
