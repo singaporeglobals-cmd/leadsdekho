@@ -37,28 +37,30 @@ export async function GET(req: NextRequest) {
   const where: Record<string, unknown> = {};
 
   // Role-based filtering
-  // Telecalling & Sales both see only leads CURRENTLY assigned to them (currentOwnerId)
-  // primaryOwnerId is NOT used because once a lead is reassigned, the original creator
-  // should no longer see it in their lists.
-  // Admin/super_admin see ALL leads
+  // Telecalling & Sales see leads where they are EITHER the current owner (assigned to them)
+  // OR the primary owner (they originally created the lead). This ensures that if a lead
+  // gets reassigned, the original creator can still see and follow up on it.
+  // Admin/super_admin see ALL leads.
+  // We build a reusable OR condition so all the user-scoped filters below stay consistent.
+  const userOwnedCondition = {
+    OR: [{ currentOwnerId: user.id }, { primaryOwnerId: user.id }],
+  };
+
   if (user.role === "telecalling" || user.role === "sales") {
-    where.currentOwnerId = user.id;
+    where.OR = userOwnedCondition.OR;
   }
 
-  // My Leads filter - show only leads CURRENTLY assigned to current user
+  // My Leads filter - show leads where user is current OR primary owner
   if (myLeads) {
-    where.currentOwnerId = user.id;
+    where.OR = userOwnedCondition.OR;
   }
 
-  // Fresh Leads filter - new leads (pipelineStatus=New) assigned to current user
+  // Fresh Leads filter - new leads (pipelineStatus=New) owned by current user (current OR primary)
   // Once feedback is given, pipelineStatus auto-changes to "Contacted" so they disappear from here
   if (fresh) {
-    where.AND = [
-      { currentOwnerId: user.id },
-      { pipelineStatus: "New" },
-    ];
-    // Remove the top-level currentOwnerId if it conflicts with AND
-    delete where.currentOwnerId;
+    where.AND = [userOwnedCondition, { pipelineStatus: "New" }];
+    // Remove the top-level OR if it conflicts with AND
+    delete where.OR;
     delete where.pipelineStatus; // Already in AND
   }
 
@@ -89,7 +91,7 @@ export async function GET(req: NextRequest) {
   // the person who CREATED it (e.g., a telecaller who called the lead), not the person
   // currently responsible for the lead. Visibility is controlled by lead ownership:
   //   - admin/super_admin: see ALL leads with pending follow-ups
-  //   - telecalling/sales: only leads where currentOwnerId == user.id
+  //   - telecalling/sales: leads where user is current OR primary owner
   // LOST leads are EXCLUDED from follow-up views (they still appear in My Leads,
   // but should not surface as pending follow-up reminders).
   if (pendingFollowUps) {
@@ -100,7 +102,7 @@ export async function GET(req: NextRequest) {
     };
     andConditions.push({ pipelineStatus: { not: "Lost" } });
     if (user.role === "telecalling" || user.role === "sales") {
-      where.currentOwnerId = user.id;
+      where.OR = userOwnedCondition.OR;
     }
   }
 
@@ -124,7 +126,7 @@ export async function GET(req: NextRequest) {
     };
     andConditions.push({ pipelineStatus: { not: "Lost" } });
     if (user.role === "telecalling" || user.role === "sales") {
-      where.currentOwnerId = user.id;
+      where.OR = userOwnedCondition.OR;
     }
   }
   if ((dateFrom || dateTo) && !fresh) {
@@ -143,12 +145,15 @@ export async function GET(req: NextRequest) {
       { email: { contains: search } },
     ];
     if (user.role === "telecalling" || user.role === "sales" || myLeads) {
-      // Restrict search to leads currently owned by the user
+      // Restrict search to leads where user is current OR primary owner
       andConditions.push({
         OR: [
           { currentOwnerId: user.id, name: { contains: search } },
           { currentOwnerId: user.id, phone: { contains: search } },
           { currentOwnerId: user.id, email: { contains: search } },
+          { primaryOwnerId: user.id, name: { contains: search } },
+          { primaryOwnerId: user.id, phone: { contains: search } },
+          { primaryOwnerId: user.id, email: { contains: search } },
         ],
       });
     } else {
@@ -175,13 +180,14 @@ export async function GET(req: NextRequest) {
   const includeBadgeCounts = searchParams.get("includeBadgeCounts") === "true";
 
   // Build the count queries for My Leads and Fresh Leads
-  // Use only currentOwnerId so that reassigned leads disappear from the original creator's counts.
+  // Use OR(currentOwnerId, primaryOwnerId) so leads a user originally created stay visible
+  // even after reassignment.
   const myLeadsWhere = {
-    currentOwnerId: user.id,
+    OR: [{ currentOwnerId: user.id }, { primaryOwnerId: user.id }],
   };
   const freshLeadsWhere = {
     AND: [
-      { currentOwnerId: user.id },
+      { OR: [{ currentOwnerId: user.id }, { primaryOwnerId: user.id }] },
       { pipelineStatus: "New" },
     ],
   };
