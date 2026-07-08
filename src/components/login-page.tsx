@@ -24,10 +24,11 @@ export function LoginPage() {
     try {
       const success = await login(email, password);
       if (!success) {
-        setError("Invalid email or password");
+        setError("Invalid email or password. Please check your credentials and try again.");
       }
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Something went wrong. Please check your internet connection and try again.");
     } finally {
       setLoading(false);
     }

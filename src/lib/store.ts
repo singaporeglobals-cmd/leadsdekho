@@ -95,6 +95,13 @@ export const useAppStore = create<AppState>((set) => ({
         password,
       });
 
+      // result?.ok is true ONLY when credentials are valid AND a session cookie was set.
+      // result?.error is "CredentialsSignin" when email/password is wrong OR user is inactive.
+      if (result?.error === "CredentialsSignin") {
+        console.warn("[login] CredentialsSignin error — invalid credentials or inactive user");
+        return false;
+      }
+
       if (result?.ok) {
         // Fetch session to get user info
         const sessionRes = await fetch("/api/auth/session");
@@ -110,9 +117,11 @@ export const useAppStore = create<AppState>((set) => ({
           set({ user: userInfo, isAuthenticated: true, currentPage: "dashboard" });
           return true;
         }
+        console.warn("[login] signIn ok but no session user — possible cookie/CSRF issue");
       }
       return false;
-    } catch {
+    } catch (err) {
+      console.error("[login] unexpected error:", err);
       return false;
     }
   },
