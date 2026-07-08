@@ -144,19 +144,16 @@ async function getAdminDashboard(combinedFilter: { createdAt?: { gte?: Date; lte
 }
 
 async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?: { gte?: Date; lte?: Date } }) {
-  // Use OR(currentOwnerId, primaryOwnerId) so leads a user originally created stay visible
-  // even after reassignment.
+  // For lead list / counts: use OR(currentOwnerId, primaryOwnerId) so users see leads
+  // they originally created even after reassignment.
   const userWhere = {
     OR: [{ currentOwnerId: userId }, { primaryOwnerId: userId }],
     ...dateFilter,
   };
-  // For follow-up queries, we want leads owned by this user (current OR primary).
-  const userLeadFilter = {
-    OR: [
-      { currentOwnerId: userId },
-      { primaryOwnerId: userId },
-    ],
-  };
+  // For follow-up queries: use ONLY currentOwnerId. Follow-ups are action items for the
+  // CURRENT owner of the lead, not the original creator. Otherwise a re-assigned lead's
+  // follow-up reminders would show up on BOTH the old and new owner's dashboards.
+  const followUpLeadFilter = { currentOwnerId: userId, pipelineStatus: { not: "Lost" } as const };
 
   const [
     myLeadsCount,
@@ -174,11 +171,11 @@ async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?:
       where: userWhere,
       _count: true,
     }),
-    // Count today's follow-ups on leads owned by this user (current OR primary), regardless of who created the follow-up
+    // Count today's follow-ups on leads CURRENTLY owned by this user (regardless of who created the follow-up)
     // LOST leads are EXCLUDED from follow-up counts.
     db.followUp.count({
       where: {
-        lead: { ...userLeadFilter, pipelineStatus: { not: "Lost" } },
+        lead: followUpLeadFilter,
         scheduledAt: {
           gte: new Date(new Date().setHours(0, 0, 0, 0)),
           lte: new Date(new Date().setHours(23, 59, 59, 999)),
@@ -188,13 +185,13 @@ async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?:
     }),
     db.followUp.count({
       where: {
-        lead: { ...userLeadFilter, pipelineStatus: { not: "Lost" } },
+        lead: followUpLeadFilter,
         completed: false,
       },
     }),
     db.followUp.findMany({
       where: {
-        lead: { ...userLeadFilter, pipelineStatus: { not: "Lost" } },
+        lead: followUpLeadFilter,
         completed: false,
       },
       include: { lead: { select: { id: true, name: true, phone: true } } },
@@ -230,18 +227,14 @@ async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?:
 }
 
 async function getSalesDashboard(userId: string, dateFilter: { createdAt?: { gte?: Date; lte?: Date } }) {
-  // Use OR(currentOwnerId, primaryOwnerId) so leads a user originally created stay visible
-  // even after reassignment.
+  // For lead list / counts: use OR(currentOwnerId, primaryOwnerId) so users see leads
+  // they originally created even after reassignment.
   const userWhere = {
     OR: [{ currentOwnerId: userId }, { primaryOwnerId: userId }],
     ...dateFilter,
   };
-  const userLeadFilter = {
-    OR: [
-      { currentOwnerId: userId },
-      { primaryOwnerId: userId },
-    ],
-  };
+  // For follow-up queries: use ONLY currentOwnerId (same rationale as telecalling).
+  const followUpLeadFilter = { currentOwnerId: userId, pipelineStatus: { not: "Lost" } as const };
 
   const [
     myLeadsCount,
@@ -285,11 +278,11 @@ async function getSalesDashboard(userId: string, dateFilter: { createdAt?: { gte
         primaryOwner: { select: { name: true } },
       },
     }),
-    // Count today's follow-ups on leads owned by this user (current OR primary)
+    // Count today's follow-ups on leads CURRENTLY owned by this user (regardless of who created the follow-up)
     // LOST leads are EXCLUDED from follow-up counts.
     db.followUp.count({
       where: {
-        lead: { ...userLeadFilter, pipelineStatus: { not: "Lost" } },
+        lead: followUpLeadFilter,
         scheduledAt: {
           gte: new Date(new Date().setHours(0, 0, 0, 0)),
           lte: new Date(new Date().setHours(23, 59, 59, 999)),
@@ -299,13 +292,13 @@ async function getSalesDashboard(userId: string, dateFilter: { createdAt?: { gte
     }),
     db.followUp.count({
       where: {
-        lead: { ...userLeadFilter, pipelineStatus: { not: "Lost" } },
+        lead: followUpLeadFilter,
         completed: false,
       },
     }),
     db.followUp.findMany({
       where: {
-        lead: { ...userLeadFilter, pipelineStatus: { not: "Lost" } },
+        lead: followUpLeadFilter,
         completed: false,
       },
       include: { lead: { select: { id: true, name: true, phone: true } } },

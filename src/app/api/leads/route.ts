@@ -91,7 +91,10 @@ export async function GET(req: NextRequest) {
   // the person who CREATED it (e.g., a telecaller who called the lead), not the person
   // currently responsible for the lead. Visibility is controlled by lead ownership:
   //   - admin/super_admin: see ALL leads with pending follow-ups
-  //   - telecalling/sales: leads where user is current OR primary owner
+  //   - telecalling/sales: ONLY leads where currentOwnerId == user.id
+  //     (NOT primaryOwnerId — follow-ups are action items for the CURRENT owner only,
+  //      not the original creator. Otherwise a re-assigned lead's follow-up reminders
+  //      would show up on BOTH the old and new owner's dashboards.)
   // LOST leads are EXCLUDED from follow-up views (they still appear in My Leads,
   // but should not surface as pending follow-up reminders).
   if (pendingFollowUps) {
@@ -102,14 +105,16 @@ export async function GET(req: NextRequest) {
     };
     andConditions.push({ pipelineStatus: { not: "Lost" } });
     if (user.role === "telecalling" || user.role === "sales") {
-      where.OR = userOwnedCondition.OR;
+      where.currentOwnerId = user.id;
+      // Make sure no OR from role-based filtering leaks primary-owner leads into follow-ups
+      delete where.OR;
     }
   }
 
   // Today's Follow-ups (or specific date) - leads with incomplete follow-ups
   // scheduled on the given date (defaults to today).
   // Same visibility rule as pendingFollowUps above: do NOT filter followUps by userId,
-  // only restrict by lead ownership for telecalling/sales.
+  // only restrict by CURRENT lead ownership for telecalling/sales.
   // LOST leads are EXCLUDED from follow-up views.
   if (todayFollowUps) {
     const targetDate = followUpDate ? new Date(followUpDate) : new Date();
@@ -126,7 +131,8 @@ export async function GET(req: NextRequest) {
     };
     andConditions.push({ pipelineStatus: { not: "Lost" } });
     if (user.role === "telecalling" || user.role === "sales") {
-      where.OR = userOwnedCondition.OR;
+      where.currentOwnerId = user.id;
+      delete where.OR;
     }
   }
   if ((dateFrom || dateTo) && !fresh) {
