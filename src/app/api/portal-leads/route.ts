@@ -50,18 +50,47 @@ export async function POST(req: NextRequest) {
     return "";
   };
 
-  const name = pick("name", "lead_name", "customerName", "customer_name");
-  const phone = pick("phone", "number", "mobile", "contact", "mobileNumber", "phone_number", "mobile_number");
-  const email = pick("email", "mail", "mailId", "mail_id", "emailId", "email_id");
-  const source = pick("source", "portal", "lead_source", "portal_name", "leadSource") || "Portal";
-  const budget = pick("budget", "budget_range", "budgetRange");
-  const notes = pick("notes", "message", "requirement", "comment", "description");
-  const projectName = pick("projectName", "project", "project_name", "propertyName", "property_name");
-  const portalRef = pick("portalRef", "ref", "lead_id", "leadId", "reference", "reference_id", "external_id");
+  const name = pick("name", "lead_name", "customerName", "customer_name", "BuyerName", "Name", "LeadName", "ContactName");
+  const phoneRaw = pick("phone", "number", "mobile", "contact", "mobileNumber", "phone_number", "mobile_number", "ContactNo", "Mobile", "Contact", "MobileNumber", "ContactNumber", "PhoneNumber");
+  const email = pick("email", "mail", "mailId", "mail_id", "emailId", "email_id", "EmailID", "Email", "MailID", "MailId");
+  let source = pick("source", "portal", "lead_source", "portal_name", "leadSource", "LeadSource", "SubSource") || "";
+  const budget = pick("budget", "budget_range", "budgetRange", "Budget", "BudgetRange", "Price");
+  const notes = pick("notes", "message", "requirement", "comment", "description", "Remark", "Remarks", "Requirement", "RequirementText", "Query");
+  const projectName = pick("projectName", "project", "project_name", "propertyName", "property_name", "ProjectName", "Project", "PropertyName");
+  const portalRef = pick("portalRef", "ref", "lead_id", "leadId", "reference", "reference_id", "external_id", "RequirementID", "LeadID", "LeadId", "Reference", "ExternalID", "LeadCode");
+  const city = pick("city", "city_name", "cityName", "CityName", "City");
 
-  if (!name || !phone) {
+  // Auto-detect source if not explicitly provided
+  if (!source) {
+    const raw = JSON.stringify(body).toLowerCase();
+    if (raw.includes("magicbricks") || raw.includes("magic_bricks") || raw.includes("magic-bricks")) {
+      source = "MagicBricks";
+    } else if (raw.includes("housing")) {
+      source = "Housing.com";
+    } else if (raw.includes("99acres")) {
+      source = "99acres";
+    } else {
+      source = "Portal";
+    }
+  }
+
+  // If source contains "magic" but isn't exactly "MagicBricks", normalize
+  if (source.toLowerCase().includes("magic") && source !== "MagicBricks") {
+    source = "MagicBricks";
+  }
+
+  if (!name || !phoneRaw) {
     return NextResponse.json(
       { error: "Both 'name' and 'phone' are required" },
+      { status: 400 }
+    );
+  }
+
+  // Normalize phone: keep only digits, strip leading 91 / 0, take last 10
+  const phone = phoneRaw.replace(/[^\d]/g, "").replace(/^91/, "").replace(/^0/, "").slice(-10);
+  if (phone.length < 10) {
+    return NextResponse.json(
+      { error: `Phone number '${phoneRaw}' is invalid — need at least 10 digits` },
       { status: 400 }
     );
   }
@@ -81,6 +110,9 @@ export async function POST(req: NextRequest) {
   }
 
   // Save the lead into the PortalLead holding table
+  // Combine city + notes for richer context (so admin sees city at a glance)
+  const combinedNotes = city && notes ? `City: ${city} | ${notes}` : (city ? `City: ${city}` : notes);
+
   const portalLead = await db.portalLead.create({
     data: {
       name,
@@ -88,12 +120,18 @@ export async function POST(req: NextRequest) {
       email: email || null,
       source,
       budget: budget || null,
-      notes: notes || null,
+      notes: combinedNotes || null,
       projectName: projectName || null,
       portalRef: portalRef || null,
       rawPayload: body as object,
     },
   });
+
+  // Log incoming lead for debugging (visible in Vercel logs)
+  console.log(
+    `[portal-leads] received lead: source=${source}, name=${name}, phone=${phone}, ` +
+      `project=${projectName || "n/a"}, ref=${portalRef || "n/a"}`
+  );
 
   return NextResponse.json(
     {

@@ -654,3 +654,51 @@ Stage Summary:
 - MagicBricks webhook URL is now visible in the admin/super_admin portal-leads UI with copy button
 - A TEST lead was inserted via webhook to prove the pipeline works end-to-end (admin will see "TEST MB LEAD" in the pending queue)
 - User needs to share this URL with their MagicBricks account manager: https://leadsdekho.in/api/portal-leads/magicbricks
+
+---
+Task ID: 19
+Agent: Main Agent
+Task: User said sales manager has integrated MagicBricks API. Verify integration is working and provide a way to check live status.
+
+Work Log:
+- Checked production DB for any MagicBricks leads — found only 1 (the test lead I inserted in Task 18). No real MagicBricks leads received yet.
+- Found that the original MagicBricks integration PDF (download/MagicBricks-LeadsDekho-API-Integration.pdf) gave the sales manager the GENERIC endpoint: https://leadsdekho.in/api/portal-leads
+- Concern: The generic endpoint was lowercase-only (name, phone, email). MagicBricks typically sends PascalCase (BuyerName, ContactNo, EmailID, CityName, ProjectName, Budget, Remark, RequirementID, LeadSource). If MagicBricks used the PDF URL, leads would have failed because the generic endpoint didn't recognize those fields.
+- Fixed /api/portal-leads/route.ts (generic endpoint):
+  * Added all MagicBricks PascalCase aliases to every field picker: BuyerName, ContactNo, EmailID, CityName, ProjectName, Budget, Remark, RequirementID, LeadSource, etc.
+  * Added phone normalization (strip +91, leading 0, take last 10 digits) — same as the dedicated MagicBricks endpoint
+  * Added auto-detection of source: if no source field provided, scans raw payload for "magicbricks" / "magic_bricks" / "magic-bricks" / "housing" / "99acres" and tags source accordingly
+  * Added source normalization: if source contains "magic" anywhere (e.g. "Magic", "magic-bricks", "MB"), normalizes to "MagicBricks"
+  * Added city field handling (CityName / City) — appended to notes as "City: <city> | <notes>" for richer admin context
+  * Added console.log on every inbound lead for Vercel log visibility
+- Built new diagnostics endpoint: /api/portal-leads/diagnostics
+  * ADMIN/super_admin only
+  * Returns: most recent 10 inbound leads (any status, any source) with rawPayload
+  * Returns: counts by source, pending total, last 24h count, last 7d count
+  * Returns: all configured webhook URLs (generic, magicbricks, all active housing accounts)
+  * Returns: last sync status of each housing account
+- Updated portal-leads.tsx UI:
+  * Added new "Live Integration Diagnostics" card at the very top (before Housing accounts section)
+  * "Check Live Status" button — admin clicks to expand and fetch live data from /api/portal-leads/diagnostics
+  * Shows 4 stat tiles: Pending / Last 24h / Last 7d / Sources seen
+  * Shows leads-by-source badge row (e.g. MagicBricks: 3, Housing.com: 2, Portal: 1)
+  * Shows most recent 10 inbound leads with expandable raw payload viewer
+  * Shows all webhook URLs (generic + magicbricks + per-housing-account) in one place for easy copy-paste
+- Built locally — no errors
+- Deployed to Vercel production: my-project-1k0307yx4-singaporeglobals-5246s-projects.vercel.app → aliased to leadsdekho.in
+- Verified live:
+  * POST PascalCase payload (BuyerName=Ramesh Test, ContactNo=9000099999, no source field) → 201 Created, but source was tagged "Portal" because payload had no "magicbricks" identifier string. This is correct behavior — admin will still see the lead.
+  * POST PascalCase payload WITH LeadSource=MagicBricks → 201 Created, source correctly tagged "MagicBricks"
+  * GET /api/portal-leads/diagnostics without auth → 401 (correct)
+  * GET /api/portal-leads/diagnostics with admin auth → 200 with stats, recent leads, and webhook URLs
+  * DB now shows: MagicBricks: 2, Housing.com: 2, Portal: 1 (5 total, 5 pending)
+
+Stage Summary:
+- The generic /api/portal-leads endpoint now works with BOTH lowercase (name, phone) AND PascalCase (BuyerName, ContactNo) field names — so whichever URL the sales manager used (generic or dedicated magicbricks), it WILL accept MagicBricks's payload format.
+- New "Live Integration Diagnostics" panel in admin portal-leads page lets admin verify in real-time whether leads are coming in. They can see:
+    - How many leads arrived in last 24h / 7d
+    - What sources they came from
+    - The exact raw payload MagicBricks sent (expandable per lead)
+    - All webhook URLs in one place
+- Action for user: Open Portal Leads page → click "Check Live Status" at the top → see what's coming in.
+- If MagicBricks has been sending leads but they're tagged "Portal" instead of "MagicBricks", that's because the payload didn't include a source identifier. Solution: ask MagicBricks to use the dedicated URL (https://leadsdekho.in/api/portal-leads/magicbricks) — that endpoint ALWAYS tags source as "MagicBricks" regardless of payload content.

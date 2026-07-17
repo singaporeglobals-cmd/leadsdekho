@@ -39,6 +39,7 @@ import {
   Pencil,
   X,
   PlugZap,
+  Activity,
 } from "lucide-react";
 
 interface PortalLead {
@@ -114,6 +115,22 @@ export function PortalLeads() {
   const [copied, setCopied] = useState(false);
   const [copiedWebhook, setCopiedWebhook] = useState<string | null>(null);
   const [copiedMagic, setCopiedMagic] = useState(false);
+
+  // Diagnostics panel state
+  const [showDiag, setShowDiag] = useState(false);
+  const [diag, setDiag] = useState<null | {
+    recent: Array<{ id: string; name: string; phone: string; source: string; projectName: string | null; portalRef: string | null; status: string; createdAt: string; rawPayload: unknown }>;
+    bySource: Array<{ source: string; count: number }>;
+    pendingTotal: number;
+    last24h: number;
+    last7d: number;
+    endpoints: {
+      generic: string;
+      magicbricks: string;
+      housing: Array<{ label: string; profileId: string; url: string; lastSyncAt: string | null; lastSyncStatus: string | null; lastSyncMessage: string | null }>;
+    };
+  }>(null);
+  const [diagLoading, setDiagLoading] = useState(false);
 
   // Housing.com multi-account integration state
   const [showHousing, setShowHousing] = useState(false);
@@ -509,10 +526,164 @@ export function PortalLeads() {
     setTimeout(() => setCopiedMagic(false), 2000);
   };
 
+  const fetchDiag = useCallback(async () => {
+    setDiagLoading(true);
+    try {
+      const res = await fetch("/api/portal-leads/diagnostics?limit=10");
+      if (!res.ok) throw new Error("Failed to load diagnostics");
+      const data = await res.json();
+      setDiag(data);
+    } catch (err) {
+      console.error("Diagnostics fetch failed", err);
+    } finally {
+      setDiagLoading(false);
+    }
+  }, []);
+
   if (user?.role !== "admin" && user?.role !== "super_admin") return null;
 
   return (
     <div className="space-y-4">
+      {/* Live Integration Diagnostics */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Live Integration Diagnostics
+              {diag && (
+                <Badge className="ml-2 text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+                  {diag.last24h} in 24h · {diag.last7d} in 7d
+                </Badge>
+              )}
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={() => {
+                  if (!showDiag) {
+                    fetchDiag();
+                  }
+                  setShowDiag((v) => !v);
+                }}
+              >
+                {showDiag ? "Hide" : "Check Live Status"}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        {showDiag && (
+          <CardContent className="space-y-3">
+            {diagLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
+            {!diagLoading && diag && (
+              <>
+                {/* Counts row */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="rounded-md border p-3">
+                    <div className="text-xs text-muted-foreground">Pending</div>
+                    <div className="text-xl font-semibold text-amber-600">{diag.pendingTotal}</div>
+                  </div>
+                  <div className="rounded-md border p-3">
+                    <div className="text-xs text-muted-foreground">Last 24h</div>
+                    <div className="text-xl font-semibold text-emerald-600">{diag.last24h}</div>
+                  </div>
+                  <div className="rounded-md border p-3">
+                    <div className="text-xs text-muted-foreground">Last 7d</div>
+                    <div className="text-xl font-semibold text-blue-600">{diag.last7d}</div>
+                  </div>
+                  <div className="rounded-md border p-3">
+                    <div className="text-xs text-muted-foreground">Sources seen</div>
+                    <div className="text-xl font-semibold">{diag.bySource.length}</div>
+                  </div>
+                </div>
+
+                {/* Counts by source */}
+                {diag.bySource.length > 0 ? (
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground mb-1.5">Leads by source (all time)</div>
+                    <div className="flex flex-wrap gap-2">
+                      {diag.bySource.map((s) => (
+                        <Badge key={s.source} variant="outline" className="text-xs">
+                          {s.source}: <span className="ml-1 font-semibold">{s.count}</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-md bg-amber-50 dark:bg-amber-950 p-3 text-sm text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900">
+                    No inbound leads yet. Once MagicBricks / Housing starts pushing, they will appear here.
+                  </div>
+                )}
+
+                {/* Recent inbound leads */}
+                <div>
+                  <div className="text-xs font-medium text-muted-foreground mb-1.5">
+                    Most recent {diag.recent.length} inbound leads (any status)
+                  </div>
+                  {diag.recent.length === 0 ? (
+                    <div className="text-xs text-muted-foreground italic">No leads received yet.</div>
+                  ) : (
+                    <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                      {diag.recent.map((r) => (
+                        <div key={r.id} className="rounded border p-2 text-xs">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge className="text-[10px]" variant="outline">{r.source}</Badge>
+                            <span className="font-medium">{r.name}</span>
+                            <span className="text-muted-foreground">{r.phone}</span>
+                            <span className="text-muted-foreground ml-auto">
+                              {new Date(r.createdAt).toLocaleString("en-IN")}
+                            </span>
+                          </div>
+                          {(r.projectName || r.portalRef) && (
+                            <div className="mt-0.5 text-muted-foreground">
+                              {r.projectName && <>Project: {r.projectName}</>}
+                              {r.projectName && r.portalRef && " · "}
+                              {r.portalRef && <>Ref: {r.portalRef}</>}
+                            </div>
+                          )}
+                          {r.rawPayload && (
+                            <details className="mt-1">
+                              <summary className="cursor-pointer text-[10px] text-blue-600 hover:underline">
+                                View raw payload
+                              </summary>
+                              <pre className="mt-1 p-1.5 bg-muted rounded text-[10px] overflow-x-auto">
+                                {JSON.stringify(r.rawPayload, null, 2)}
+                              </pre>
+                            </details>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Webhook URLs summary */}
+                <div className="rounded-md bg-blue-50 dark:bg-blue-950 p-3 text-xs space-y-1.5 border border-blue-200 dark:border-blue-900">
+                  <div className="font-medium text-blue-700 dark:text-blue-300">Webhook URLs (share with portal partners)</div>
+                  <div className="space-y-1">
+                    <div><span className="text-muted-foreground">Generic:</span> <code className="bg-white dark:bg-gray-900 px-1.5 py-0.5 rounded">POST {diag.endpoints.generic}</code></div>
+                    <div><span className="text-muted-foreground">MagicBricks:</span> <code className="bg-white dark:bg-gray-900 px-1.5 py-0.5 rounded">POST {diag.endpoints.magicbricks}</code></div>
+                    {diag.endpoints.housing.map((h) => (
+                      <div key={h.profileId}>
+                        <span className="text-muted-foreground">Housing ({h.label}):</span>{" "}
+                        <code className="bg-white dark:bg-gray-900 px-1.5 py-0.5 rounded">POST {h.url}</code>
+                        {h.lastSyncAt && (
+                          <span className="ml-2 text-[10px] text-muted-foreground">
+                            Last push: {new Date(h.lastSyncAt).toLocaleString("en-IN")}
+                            {h.lastSyncMessage && ` · ${h.lastSyncMessage}`}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        )}
+      </Card>
       {/* Housing.com multi-account integration card */}
       <Card>
         <CardHeader className="pb-3">
