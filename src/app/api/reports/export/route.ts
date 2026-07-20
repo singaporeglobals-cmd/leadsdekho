@@ -121,10 +121,12 @@ export async function GET(req: NextRequest) {
         project: { select: { name: true } },
         callLogs: {
           select: { notes: true, createdAt: true },
-          orderBy: { createdAt: "desc" },
+          // Chronological order: 1st feedback, 2nd, 3rd ... (oldest first)
+          orderBy: { createdAt: "asc" },
         },
       },
-      orderBy: { createdAt: "desc" },
+      // Ascending: 1, 2, 3 ... 20 (oldest first, matches the from→to date range)
+      orderBy: { createdAt: "asc" },
     });
 
     // Build CSV with feedback in one cell
@@ -134,7 +136,8 @@ export async function GET(req: NextRequest) {
       const [y, m, d] = date.split("-");
       const formattedDate = `${d}.${m}.${y.slice(2)}`;
 
-      // Concatenate all feedback notes with dates
+      // Concatenate all feedback notes in chronological order
+      // e.g. RINGING...01.07 DISC...03.07 NOT CONNECTED...10.07
       const feedbackParts = lead.callLogs.map((log) => {
         const logDate = log.createdAt.toISOString().split("T")[0];
         const [ly, lm, ld] = logDate.split("-");

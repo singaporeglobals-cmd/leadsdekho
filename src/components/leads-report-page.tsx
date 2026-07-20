@@ -167,8 +167,14 @@ export function LeadsReportPage() {
     return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   };
 
-  const paginatedLeads = leads.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const totalPages = Math.ceil(leads.length / PAGE_SIZE);
+  // Sort leads ascending by createdAt (oldest first) so the preview matches the
+  // exported CSV exactly. Also sort each lead's callLogs ascending so feedback
+  // shows chronologically: 1st feedback, 2nd, 3rd ...
+  const sortedLeads = [...leads].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+  const paginatedLeads = sortedLeads.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalPages = Math.ceil(sortedLeads.length / PAGE_SIZE);
 
   return (
     <div className="space-y-4">
@@ -331,7 +337,12 @@ export function LeadsReportPage() {
                   </TableHeader>
                   <TableBody>
                     {paginatedLeads.map((lead, idx) => {
-                      const feedbackParts = lead.callLogs.map((log) => {
+                      // Sort callLogs ascending so feedback reads chronologically:
+                      // 1st feedback, 2nd, 3rd ... (oldest first)
+                      const sortedLogs = [...lead.callLogs].sort(
+                        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                      );
+                      const feedbackParts = sortedLogs.map((log) => {
                         const logDate = new Date(log.createdAt).toISOString().split("T")[0];
                         const [ly, lm, ld] = logDate.split("-");
                         const shortDate = `${ld}.${lm}`;
