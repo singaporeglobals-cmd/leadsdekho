@@ -72,6 +72,12 @@ export async function GET(req: NextRequest) {
       v ? v.split(",").map((s) => s.trim()).filter(Boolean) : [];
     const sourceList = splitList(searchParams.get("source"));
     const projectList = splitList(searchParams.get("project"));
+    // Lead status + sub-stage filters — admin & super_admin only
+    const leadStatusList = splitList(searchParams.get("leadStatus"));
+    const subStageList = splitList(searchParams.get("subStage"));
+    // The special value "__none__" matches leads where subStage IS NULL.
+    const realSubStages = subStageList.filter((s) => s !== "__none__");
+    const includeNullSubStage = subStageList.includes("__none__");
 
     // Build where clause
     const leadsWhere: Record<string, unknown> = {};
@@ -84,8 +90,27 @@ export async function GET(req: NextRequest) {
     if (sourceList.length > 0) leadsWhere.source = { in: sourceList };
     if (projectList.length > 0) leadsWhere.projectId = { in: projectList };
 
-    // Admin only
-    if (user.role !== "admin") {
+    // Lead status filter (only applied for admin / super_admin — other roles get
+    // their own-lead filter instead, see below).
+    const isAdminLike = user.role === "admin" || user.role === "super_admin";
+    if (isAdminLike && leadStatusList.length > 0) {
+      leadsWhere.leadStatus = { in: leadStatusList };
+    }
+
+    // Sub-stage filter (also admin / super_admin only). Build OR group so we
+    // can include NULL when "__none__" is selected.
+    if (isAdminLike && subStageList.length > 0) {
+      if (realSubStages.length > 0 && includeNullSubStage) {
+        leadsWhere.OR = [{ subStage: { in: realSubStages } }, { subStage: null }];
+      } else if (realSubStages.length > 0) {
+        leadsWhere.subStage = { in: realSubStages };
+      } else if (includeNullSubStage) {
+        leadsWhere.subStage = null;
+      }
+    }
+
+    // Non-admin/super_admin: restrict to leads they own
+    if (!isAdminLike) {
       leadsWhere.OR = [{ currentOwnerId: user.id }, { primaryOwnerId: user.id }];
     }
 

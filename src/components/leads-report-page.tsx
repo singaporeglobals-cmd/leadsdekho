@@ -17,6 +17,9 @@ import {
   Download, Calendar, BarChart3, Filter, FileSpreadsheet, Users, Phone, Mail,
   Building2, Clock,
 } from "lucide-react";
+import { useAppStore } from "@/lib/store";
+import { LEAD_STATUSES } from "@/components/lead-list";
+import { getSubStagesForStatus } from "@/lib/lead-sub-stages";
 
 // Sources are fetched dynamically from the database - no hardcoded fallback
 
@@ -45,18 +48,44 @@ function getDefaultDates() {
 }
 
 export function LeadsReportPage() {
+  const { user } = useAppStore();
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const { firstDay: defaultFrom, lastDay: defaultTo } = getDefaultDates();
   const [fromDate, setFromDate] = useState(defaultFrom);
   const [toDate, setToDate] = useState(defaultTo);
   const [sourceFilter, setSourceFilter] = useState<string[]>([]);
   const [projectFilter, setProjectFilter] = useState<string[]>([]);
+  const [leadStatusFilter, setLeadStatusFilter] = useState<string[]>([]);
+  const [subStageFilter, setSubStageFilter] = useState<string[]>([]);
   const [leads, setLeads] = useState<LeadReportItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [page, setPage] = useState(0);
   const [sources, setSources] = useState<string[]>([]);
   const PAGE_SIZE = 25;
+
+  // Whether the lead status + sub-stage filters should be visible (admin & super_admin only)
+  const canFilterByStatus = user?.role === "admin" || user?.role === "super_admin";
+
+  // When user removes a lead status from the filter, drop any sub-stage selections
+  // that no longer belong to any of the selected statuses. Prevents sending stale
+  // sub-stage values to the backend.
+  useEffect(() => {
+    if (leadStatusFilter.length === 0) {
+      if (subStageFilter.length > 0) setSubStageFilter([]);
+      return;
+    }
+    // Collect all valid sub-stages for the currently selected lead statuses
+    const validSubStages = new Set<string>();
+    validSubStages.add("__none__"); // always allow "uncategorized"
+    leadStatusFilter.forEach((s) => {
+      getSubStagesForStatus(s).forEach((sub) => validSubStages.add(sub));
+    });
+    const next = subStageFilter.filter((s) => validSubStages.has(s));
+    if (next.length !== subStageFilter.length) {
+      setSubStageFilter(next);
+    }
+  }, [leadStatusFilter, subStageFilter]);
 
   // Fetch projects and lead sources for dropdown
   useEffect(() => {
@@ -89,6 +118,8 @@ export function LeadsReportPage() {
         if (toDate) params.set("to", toDate);
         if (sourceFilter.length > 0) params.set("source", sourceFilter.join(","));
         if (projectFilter.length > 0) params.set("project", projectFilter.join(","));
+        if (canFilterByStatus && leadStatusFilter.length > 0) params.set("leadStatus", leadStatusFilter.join(","));
+        if (canFilterByStatus && subStageFilter.length > 0) params.set("subStage", subStageFilter.join(","));
         params.set("limit", "100");
         params.set("allCallLogs", "true");
 
@@ -102,7 +133,7 @@ export function LeadsReportPage() {
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [fromDate, toDate, sourceFilter, projectFilter]);
+  }, [fromDate, toDate, sourceFilter, projectFilter, leadStatusFilter, subStageFilter, canFilterByStatus]);
 
   // Export to CSV
   const handleExport = async () => {
@@ -113,6 +144,8 @@ export function LeadsReportPage() {
       if (toDate) params.set("to", toDate);
       if (sourceFilter.length > 0) params.set("source", sourceFilter.join(","));
       if (projectFilter.length > 0) params.set("project", projectFilter.join(","));
+      if (canFilterByStatus && leadStatusFilter.length > 0) params.set("leadStatus", leadStatusFilter.join(","));
+      if (canFilterByStatus && subStageFilter.length > 0) params.set("subStage", subStageFilter.join(","));
 
       const res = await fetch(`/api/reports/export?${params}`);
       if (res.ok) {
@@ -191,6 +224,41 @@ export function LeadsReportPage() {
                 className="w-48"
               />
             </div>
+            {/* Lead Status filter — admin & super_admin only */}
+            {canFilterByStatus && (
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground">Lead Status</Label>
+                <MultiSelect
+                  options={LEAD_STATUSES.map((s) => ({ value: s, label: s }))}
+                  value={leadStatusFilter}
+                  onChange={setLeadStatusFilter}
+                  placeholder="Lead Status"
+                  allLabel="All Lead Status"
+                  className="w-[170px]"
+                />
+              </div>
+            )}
+            {/* Sub-stage filter — only shown when at least one status with sub-stages is selected */}
+            {canFilterByStatus && (leadStatusFilter.includes("Not Interested") || leadStatusFilter.includes("Not Connected")) && (
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground">Sub-stage</Label>
+                <MultiSelect
+                  options={[
+                    // Uncategorized option (matches leads with subStage = null)
+                    { value: "__none__", label: "— Uncategorized —" },
+                    // Show sub-stages from every selected status that has sub-stages
+                    ...Array.from(new Set(
+                      leadStatusFilter.flatMap((s) => getSubStagesForStatus(s))
+                    )).map((s) => ({ value: s, label: s })),
+                  ]}
+                  value={subStageFilter}
+                  onChange={setSubStageFilter}
+                  placeholder="Sub-stage"
+                  allLabel="All Sub-stages"
+                  className="w-[180px]"
+                />
+              </div>
+            )}
           </div>
 
           {/* Active filter indicators */}
@@ -206,6 +274,16 @@ export function LeadsReportPage() {
             {projectFilter.length > 0 && (
               <Badge variant="secondary" className="text-xs gap-1">
                 <Building2 className="h-3 w-3" /> {projectFilter.length} project{projectFilter.length > 1 ? "s" : ""}
+              </Badge>
+            )}
+            {canFilterByStatus && leadStatusFilter.length > 0 && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                <Filter className="h-3 w-3" /> {leadStatusFilter.length} status{leadStatusFilter.length > 1 ? "es" : ""}: {leadStatusFilter.join(", ")}
+              </Badge>
+            )}
+            {canFilterByStatus && subStageFilter.length > 0 && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                <Filter className="h-3 w-3" /> {subStageFilter.length} sub-stage{subStageFilter.length > 1 ? "s" : ""}
               </Badge>
             )}
             <Badge variant="secondary" className="text-xs gap-1">

@@ -20,6 +20,7 @@ export const NOT_CONNECTED_SUB_STAGES = [
   "Incoming Call Not Available",
   "Disconnected",
   "Ringing",
+  "Busy",
   "Out of Network Service",
 ] as const;
 

@@ -702,3 +702,46 @@ Stage Summary:
     - All webhook URLs in one place
 - Action for user: Open Portal Leads page → click "Check Live Status" at the top → see what's coming in.
 - If MagicBricks has been sending leads but they're tagged "Portal" instead of "MagicBricks", that's because the payload didn't include a source identifier. Solution: ask MagicBricks to use the dedicated URL (https://leadsdekho.in/api/portal-leads/magicbricks) — that endpoint ALWAYS tags source as "MagicBricks" regardless of payload content.
+
+---
+Task ID: 20
+Agent: Main Agent
+Task: Two changes from user — (1) Add Lead Status + Sub-Stage cascading filter to Leads Report page (admin & super_admin only). (2) Add "Busy" sub-stage under "Not Connected" status.
+
+Work Log:
+- Issue 1: Leads Report page only had From/To/Source/Project filters. User wanted a Lead Status filter that, when a status with sub-stages (Not Interested / Not Connected) is selected, also shows a Sub-Stage filter — same pattern as the lead-list.tsx page.
+
+- Updated `src/lib/lead-sub-stages.ts`:
+  * Added "Busy" to NOT_CONNECTED_SUB_STAGES array (between "Ringing" and "Out of Network Service")
+  * Now Not Connected sub-stages = Switch Off, Incoming Call Not Available, Disconnected, Ringing, Busy, Out of Network Service
+
+- Updated `src/components/lead-list.tsx`:
+  * Exported the `LEAD_STATUSES` const (was internal-only) so other components can import it
+
+- Updated `src/components/leads-report-page.tsx`:
+  * Imported useAppStore, LEAD_STATUSES, getSubStagesForStatus
+  * Added `user` from store
+  * Added `leadStatusFilter` and `subStageFilter` state (string[])
+  * Added `canFilterByStatus` = admin OR super_admin (controls visibility of new filters)
+  * Added useEffect that auto-prunes sub-stage selections when user removes the parent lead status (prevents stale sub-stage values being sent to API)
+  * Added Lead Status MultiSelect to filter bar (only for admin/super_admin) — options: Not Connected, Site Visit Done, Prospect, Not Interested, Site Visit Promised, Booked
+  * Added Sub-Stage MultiSelect that appears ONLY when at least one selected status has sub-stages (Not Interested / Not Connected) — options dynamically built from selected statuses, includes "— Uncategorized —" option for leads with subStage=null
+  * Added active-filter badges showing selected statuses + sub-stages count
+  * Updated preview fetch effect to send leadStatus + subStage params (only when canFilterByStatus)
+  * Updated export-to-CSV handler to send leadStatus + subStage params too
+
+- Updated `src/app/api/reports/export/route.ts` (leadsReport branch):
+  * Added leadStatusList and subStageList parsing (comma-separated, same convention as /api/leads)
+  * Applied leadStatus filter ONLY for admin/super_admin (sales/telecalling users can't see other users' leads by status)
+  * Built sub-stage OR group supporting "__none__" special value (matches leads where subStage IS NULL)
+  * Changed role check from `user.role !== "admin"` (which blocked super_admin) to `!isAdminLike` where isAdminLike = admin OR super_admin. This is the same bug pattern from Task 18 — super_admin was being treated like a regular user when exporting CSV reports. Now both admin and super_admin get full data.
+
+- Built locally: npx next build — first run failed because LEAD_STATUSES wasn't exported, fixed by adding `export` keyword. Second build succeeded.
+- Deployed to Vercel production: my-project-myn7tuybc-singaporeglobals-5246s-projects.vercel.app → aliased to leadsdekho.in
+
+Stage Summary:
+- Leads Report page now has 2 new filter dropdowns (visible only to admin & super_admin): "Lead Status" and "Sub-stage" (cascading).
+- Sub-stage dropdown only appears when user picks "Not Interested" or "Not Connected" as a lead status.
+- Both filters work in both the preview table AND the CSV export.
+- "Busy" sub-stage is now available everywhere Not Connected sub-stages are listed: lead detail feedback form, lead-list inline edit, leads-report filter, and backend validation.
+- Super admin can now export leads report CSVs (was previously blocked — only admin could).

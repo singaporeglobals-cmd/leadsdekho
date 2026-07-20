@@ -66,7 +66,7 @@ const PIPELINE_STAGES = [
   "Lost",
 ];
 
-const LEAD_STATUSES = [
+export const LEAD_STATUSES = [
   "Not Connected",
   "Site Visit Done",
   "Prospect",
