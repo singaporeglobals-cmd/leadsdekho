@@ -48,6 +48,9 @@ export async function GET(req: NextRequest) {
   }
 
   // Get all leads in range with project info
+  // Include siteVisits filtered by the date range so we only count visits
+  // that happened in this period (not visits from a different month on a
+  // lead that was created in this range).
   const leads = await db.lead.findMany({
     where,
     include: {
@@ -56,7 +59,12 @@ export async function GET(req: NextRequest) {
       project: { select: { name: true, location: true } },
       callLogs: { select: { id: true } },
       followUps: { select: { id: true, completed: true } },
-      siteVisits: { select: { id: true, status: true } },
+      siteVisits: {
+        where: {
+          scheduledAt: { gte: startDate, lte: endDate },
+        },
+        select: { id: true, status: true },
+      },
     },
     orderBy: { createdAt: "desc" },
   });

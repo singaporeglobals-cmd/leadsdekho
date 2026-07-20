@@ -16,12 +16,21 @@ export async function GET(req: NextRequest) {
   const startOfMonth = new Date(year, mon - 1, 1);
   const endOfMonth = new Date(year, mon, 0, 23, 59, 59, 999);
 
+  // For lead-creation metrics: filter by createdAt.
   const where: Record<string, unknown> = {
     createdAt: { gte: startOfMonth, lte: endOfMonth },
   };
 
+  // For status-change metrics (won/lost): filter by updatedAt so a lead
+  // created in a previous month but won/lost this month is counted in
+  // this month, not the month it was created.
+  const statusChangedWhere: Record<string, unknown> = {
+    updatedAt: { gte: startOfMonth, lte: endOfMonth },
+  };
+
   if (user.role === "sales") {
     where.OR = [{ currentOwnerId: user.id }, { primaryOwnerId: user.id }];
+    statusChangedWhere.OR = [{ currentOwnerId: user.id }, { primaryOwnerId: user.id }];
   }
 
   const [leadsCreated, leadsByStatus, leadsBySource, callLogsCount, wonLeads, lostLeads] = await Promise.all([
@@ -34,15 +43,17 @@ export async function GET(req: NextRequest) {
         ...(user.role === "sales" ? { userId: user.id } : {}),
       },
     }),
+    // Booked in this month: status was set to "Booked" during this month
     db.lead.count({
       where: {
-        ...where,
+        ...statusChangedWhere,
         leadStatus: "Booked",
       },
     }),
+    // Lost in this month: pipelineStatus was set to "Lost" during this month
     db.lead.count({
       where: {
-        ...where,
+        ...statusChangedWhere,
         pipelineStatus: "Lost",
       },
     }),

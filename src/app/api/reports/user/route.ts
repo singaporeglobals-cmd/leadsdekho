@@ -17,15 +17,30 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
   }
 
-  const dateFilter: Record<string, unknown> = {};
+  // Date filter for lead-creation metrics (fresh leads, total leads):
+  // uses Lead.createdAt — i.e. when the lead entered the system.
+  const createdFilter: Record<string, unknown> = {};
   if (from || to) {
-    dateFilter.createdAt = {
+    createdFilter.createdAt = {
       ...(from ? { gte: new Date(from + "T00:00:00.000Z") } : {}),
       ...(to ? { lte: new Date(to + "T23:59:59.999Z") } : {}),
     };
   }
 
-  const userWhere = { currentOwnerId: userId, ...dateFilter };
+  // Date filter for STATUS-based metrics (visit done, visit arranged, booked,
+  // connected, not connected): uses Lead.updatedAt — i.e. when the status was
+  // last changed. This is critical so that, e.g. a lead created in June whose
+  // site visit happened in July shows up in July's "Visit Done" count, not
+  // June's. (Status changes always bump updatedAt via Prisma @updatedAt.)
+  const statusChangedFilter: Record<string, unknown> = {};
+  if (from || to) {
+    statusChangedFilter.updatedAt = {
+      ...(from ? { gte: new Date(from + "T00:00:00.000Z") } : {}),
+      ...(to ? { lte: new Date(to + "T23:59:59.999Z") } : {}),
+    };
+  }
+
+  const userWhere = { currentOwnerId: userId, ...createdFilter };
 
   // Compute today's window once
   const todayStart = new Date();
@@ -58,46 +73,58 @@ export async function GET(req: NextRequest) {
         createdAt: { gte: todayStart, lte: todayEnd },
       },
     }),
-    // Total fresh leads (newly created) assigned to user in the date range
+    // Total fresh leads (newly created) assigned to user in the date range.
+    // Uses createdAt — when the lead entered the system.
     db.lead.count({
       where: {
         currentOwnerId: userId,
-        ...dateFilter,
+        ...createdFilter,
       },
     }),
+    // Connected: status was set to a "connected" state in this date range.
+    // Uses updatedAt so leads created earlier but connected this month are
+    // attributed to the month the connection actually happened.
     db.lead.count({
       where: {
         currentOwnerId: userId,
         leadStatus: { in: ["Site Visit Done", "Prospect", "Not Interested", "Site Visit Promised", "Booked"] },
-        ...dateFilter,
+        ...statusChangedFilter,
       },
     }),
+    // Not Connected: status changed to "Not Connected" in this date range.
     db.lead.count({
       where: {
         currentOwnerId: userId,
         leadStatus: "Not Connected",
-        ...dateFilter,
+        ...statusChangedFilter,
       },
     }),
+    // Site Visit Arranged: status changed to "Site Visit Promised" in this
+    // date range (i.e. the visit was arranged this month, not when lead was
+    // created).
     db.lead.count({
       where: {
         currentOwnerId: userId,
         leadStatus: "Site Visit Promised",
-        ...dateFilter,
+        ...statusChangedFilter,
       },
     }),
+    // Visit Done: status changed to "Site Visit Done" in this date range.
+    // i.e. the visit actually happened in this month, regardless of when
+    // the lead was originally created.
     db.lead.count({
       where: {
         currentOwnerId: userId,
         leadStatus: "Site Visit Done",
-        ...dateFilter,
+        ...statusChangedFilter,
       },
     }),
+    // Booked: status changed to "Booked" in this date range.
     db.lead.count({
       where: {
         currentOwnerId: userId,
         leadStatus: "Booked",
-        ...dateFilter,
+        ...statusChangedFilter,
       },
     }),
   ]);
