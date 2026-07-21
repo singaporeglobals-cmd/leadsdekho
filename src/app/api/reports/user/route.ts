@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
       where: {
         currentOwnerId: userId,
         followUps: { some: { completed: false } },
-        ...dateFilter,
+        ...createdFilter,
       },
     }),
     db.lead.count({

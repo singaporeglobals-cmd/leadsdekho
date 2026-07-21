@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
     statusCounts,
     sourceCounts,
     callLogsCount,
-    bookedLeads,
+    bookedLeads: wonLeads,
     lostLeads,
   });
 }
