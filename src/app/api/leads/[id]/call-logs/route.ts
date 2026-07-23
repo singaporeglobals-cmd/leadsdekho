@@ -60,8 +60,10 @@ export async function POST(
   const lead = await db.lead.findUnique({ where: { id } });
   if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
 
-  // Only currentOwner or Admin can log calls
-  if (user.role !== "admin" && lead.currentOwnerId !== user.id) {
+  // Only currentOwner, admin, or super_admin can log calls.
+  // Same access rule for admin / super_admin / sales / telecalling when it
+  // comes to the mandatory-project-for-Visit-Done behavior.
+  if (user.role !== "admin" && user.role !== "super_admin" && lead.currentOwnerId !== user.id) {
     return NextResponse.json({ error: "Only current owner or admin can log calls" }, { status: 403 });
   }
 
