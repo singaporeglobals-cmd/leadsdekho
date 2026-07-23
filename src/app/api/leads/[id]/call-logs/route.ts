@@ -30,7 +30,7 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const { notes, callType, callDate, assignTo, leadStatus, subStage } = await req.json();
+  const { notes, callType, callDate, assignTo, leadStatus, subStage, projectId } = await req.json();
 
   if (!notes) {
     return NextResponse.json({ error: "Notes are required" }, { status: 400 });
@@ -45,6 +45,16 @@ export async function POST(
         { status: 400 }
       );
     }
+  }
+
+  // Project validation: if leadStatus is "Site Visit Done", a projectId MUST be
+  // provided. Same rule for every role (admin / super_admin / sales / telecalling).
+  // Without a project, the lead status cannot be updated to "Site Visit Done".
+  if (leadStatus === "Site Visit Done" && !projectId) {
+    return NextResponse.json(
+      { error: "Project is required for \"Site Visit Done\" status" },
+      { status: 400 }
+    );
   }
 
   const lead = await db.lead.findUnique({ where: { id } });
@@ -67,15 +77,37 @@ export async function POST(
     include: { user: { select: { id: true, name: true } } },
   });
 
-  // If leadStatus / subStage provided, update the lead too (so the new status
-  // sticks on the lead, not just on this call log entry)
-  if (leadStatus || subStage !== undefined) {
+  // If leadStatus / subStage / projectId provided, update the lead too
+  // (so the new status sticks on the lead, not just on this call log entry).
+  // For "Site Visit Done", projectId is mandatory and gets persisted here too.
+  if (leadStatus || subStage !== undefined || projectId) {
     const leadUpdate: Record<string, unknown> = {};
     if (leadStatus) leadUpdate.leadStatus = leadStatus;
     if (subStage !== undefined) leadUpdate.subStage = subStage || null;
     // Auto-clear subStage if leadStatus changed to a non-sub-stage value
     if (leadStatus && leadStatus !== "Not Interested" && leadStatus !== "Not Connected") {
       leadUpdate.subStage = null;
+    }
+    // Persist projectId when provided (only sent for "Site Visit Done").
+    if (projectId) {
+      leadUpdate.projectId = projectId;
+      // Timeline event for the project assignment (only if it changed)
+      if (projectId !== lead.projectId) {
+        const project = await db.project.findUnique({
+          where: { id: projectId },
+          select: { name: true },
+        });
+        if (project) {
+          await db.timelineEvent.create({
+            data: {
+              leadId: id,
+              userId: user.id,
+              eventType: "ProjectAssigned",
+              description: `Project set to "${project.name}" via Site Visit Done feedback`,
+            },
+          });
+        }
+      }
     }
     await db.lead.update({ where: { id }, data: leadUpdate });
   }

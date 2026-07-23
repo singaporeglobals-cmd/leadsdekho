@@ -271,12 +271,14 @@ export function LeadDetail() {
     }
   };
 
-  const handleLogCall = async (notes: string, callType: string, followUpDate?: string, dropLead?: boolean, leadStatus?: string, subStage?: string) => {
+  const handleLogCall = async (notes: string, callType: string, followUpDate?: string, dropLead?: boolean, leadStatus?: string, subStage?: string, projectId?: string) => {
     if (!lead) return;
     // Send notes, callType, leadStatus AND subStage together.
     // The /api/leads/[id]/call-logs route will:
     //   1. create the CallLog with subStage
-    //   2. update the Lead's leadStatus + subStage in the same transaction
+    //   2. update the Lead's leadStatus + subStage + projectId (for Visit Done) in the same transaction
+    // For "Site Visit Done", projectId is MANDATORY — the backend will reject
+    // the request if it's missing.
     const res = await fetch(`/api/leads/${lead.id}/call-logs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -285,6 +287,9 @@ export function LeadDetail() {
         callType,
         leadStatus: leadStatus || undefined,
         subStage: subStage || undefined,
+        // Only forward projectId when the user picked "Site Visit Done" so
+        // the backend's mandatory-project validation kicks in for that status.
+        projectId: leadStatus === "Site Visit Done" ? projectId : undefined,
       }),
     });
     if (res.ok) {
@@ -653,7 +658,12 @@ export function LeadDetail() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCallLogOpen(true)}
+                onClick={() => {
+                  // Pre-fetch projects so the project dropdown inside the
+                  // Visit-Done sub-stage is populated when the dialog opens.
+                  fetchAvailableProjects();
+                  setCallLogOpen(true);
+                }}
               >
                 <Phone className="mr-1 h-3 w-3" /> Log Call
               </Button>
@@ -941,6 +951,8 @@ export function LeadDetail() {
             currentStatus={lead?.pipelineStatus}
             currentLeadStatus={lead?.leadStatus}
             currentSubStage={(lead as any)?.subStage}
+            currentProjectId={(lead as any)?.projectId ?? null}
+            availableProjects={availableProjects}
           />
         </DialogContent>
       </Dialog>
@@ -1034,11 +1046,15 @@ function CallLogForm({
   currentStatus,
   currentLeadStatus,
   currentSubStage,
+  currentProjectId,
+  availableProjects,
 }: {
-  onSubmit: (notes: string, callType: string, followUpDate?: string, dropLead?: boolean, leadStatus?: string, subStage?: string) => void;
+  onSubmit: (notes: string, callType: string, followUpDate?: string, dropLead?: boolean, leadStatus?: string, subStage?: string, projectId?: string) => void;
   currentStatus?: string;
   currentLeadStatus?: string | null;
   currentSubStage?: string | null;
+  currentProjectId?: string | null;
+  availableProjects?: Array<{ id: string; name: string; location?: string | null }>;
 }) {
   const [notes, setNotes] = useState("");
   const [callType] = useState("Feedback");
@@ -1046,6 +1062,9 @@ function CallLogForm({
   const [dropLead, setDropLead] = useState(false);
   const [leadStatus, setLeadStatus] = useState(currentLeadStatus || "");
   const [subStage, setSubStage] = useState<string>(currentSubStage || "");
+  // Project state — pre-populated with the lead's current project so the user
+  // doesn't have to re-select it if the lead already has one.
+  const [projectId, setProjectId] = useState<string>(currentProjectId || "");
 
   const LEAD_STATUS_OPTIONS = [
     "Not Connected",
@@ -1081,11 +1100,23 @@ function CallLogForm({
     : leadStatus === "Not Connected" ? NOT_CONNECTED_SUB_STAGES
     : [];
 
-  // When user changes leadStatus, auto-clear subStage if the new status doesn't support sub-stages
+  // Whether a project must be selected (only for "Site Visit Done" status).
+  // Same rule for admin, super_admin, sales, telecalling — no exceptions.
+  const requiresProject = leadStatus === "Site Visit Done";
+  const projectMissing = requiresProject && !projectId;
+
+  // When user changes leadStatus, auto-clear subStage if the new status doesn't support sub-stages.
+  // Also auto-clear project when the new status is NOT "Site Visit Done".
   const handleStatusChange = (newStatus: string) => {
     setLeadStatus(newStatus);
     if (newStatus !== "Not Interested" && newStatus !== "Not Connected") {
       setSubStage("");
+    }
+    if (newStatus !== "Site Visit Done") {
+      setProjectId("");
+    } else if (currentProjectId && !projectId) {
+      // Pre-fill with the lead's current project when entering Visit Done mode
+      setProjectId(currentProjectId);
     }
   };
 
@@ -1155,16 +1186,54 @@ function CallLogForm({
         </div>
       )}
 
+      {/*
+        Project dropdown — shown ONLY when leadStatus is "Site Visit Done".
+        The project is MANDATORY: the Log Call button stays disabled and the
+        backend will reject the request without a project.
+        Same behavior for every role (admin / super_admin / sales / telecalling).
+      */}
+      {requiresProject && (
+        <div className="space-y-1 rounded-lg border border-brand/30 bg-brand/5 p-3">
+          <Label className="text-xs font-medium text-brand">
+            Project for &quot;Site Visit Done&quot; <span className="text-red-500">*</span>
+          </Label>
+          <Select
+            value={projectId || "__none__"}
+            onValueChange={(v) => setProjectId(v === "__none__" ? "" : v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a project..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">— Select project —</SelectItem>
+              {(availableProjects || []).map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}{p.location ? ` - ${p.location}` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground">
+            Project is mandatory to save a Site Visit Done status.
+          </p>
+        </div>
+      )}
+
       <Button
-        onClick={() => onSubmit(notes, callType, followUpDate || undefined, dropLead, leadStatus || undefined, subStage || undefined)}
+        onClick={() => onSubmit(notes, callType, followUpDate || undefined, dropLead, leadStatus || undefined, subStage || undefined, projectId || undefined)}
         className="w-full bg-brand hover:bg-brand-dark"
-        disabled={!notes || (visibleSubStages.length > 0 && !subStage)}
+        disabled={!notes || (visibleSubStages.length > 0 && !subStage) || projectMissing}
       >
         Log Call
       </Button>
       {visibleSubStages.length > 0 && !subStage && (
         <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center">
           Please select a sub-stage above to enable Log Call.
+        </p>
+      )}
+      {projectMissing && (
+        <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center">
+          Please select a project above to enable Log Call.
         </p>
       )}
     </div>
