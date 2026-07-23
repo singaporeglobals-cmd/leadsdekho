@@ -25,8 +25,8 @@ export async function POST(
   });
   if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
 
-  // Only currentOwner, primaryOwner, or Admin can assign
-  if (user.role !== "admin" && lead.currentOwnerId !== user.id && lead.primaryOwnerId !== user.id) {
+  // Only currentOwner, primaryOwner, or Admin/Super Admin can assign
+  if (user.role !== "admin" && user.role !== "super_admin" && lead.currentOwnerId !== user.id && lead.primaryOwnerId !== user.id) {
     return NextResponse.json({ error: "Only current owner, primary owner or admin can assign leads" }, { status: 403 });
   }
 
@@ -46,9 +46,9 @@ export async function POST(
   });
 
   // Determine if primaryOwner should also be updated
-  // If current primaryOwner is admin, update primaryOwner to new assignee
+  // If current primaryOwner is admin or super_admin, update primaryOwner to new assignee
   const updateData: Record<string, string> = { currentOwnerId: toUserId };
-  if (lead.primaryOwner.role === "admin") {
+  if (lead.primaryOwner.role === "admin" || lead.primaryOwner.role === "super_admin") {
     updateData.primaryOwnerId = toUserId;
   }
 

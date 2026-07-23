@@ -634,29 +634,29 @@ export function LeadList() {
 
   const canEdit = (lead: Lead) => {
     if (!user) return false;
-    return user.role === "admin" || lead.currentOwnerId === user.id;
+    return user.role === "admin" || user.role === "super_admin" || lead.currentOwnerId === user.id;
   };
 
   const canViewOnly = (lead: Lead) => {
     if (!user) return false;
-    if (user.role === "admin") return false;
+    if (user.role === "admin" || user.role === "super_admin") return false;
     if (user.role === "telecalling") return false;
     return lead.primaryOwnerId === user.id && lead.currentOwnerId !== user.id;
   };
 
-  // Whether current user can assign this lead (admin always can, current owner can, primary owner can reassign)
+  // Whether current user can assign this lead (admin/super_admin always can, current owner can, primary owner can reassign)
   const canAssign = (lead: Lead) => {
     if (!user) return false;
-    if (user.role === "admin") return true;
+    if (user.role === "admin" || user.role === "super_admin") return true;
     if (lead.currentOwnerId === user.id) return true;
     // Primary owner who is not current owner can also assign
     if (lead.primaryOwnerId === user.id) return true;
     return false;
   };
 
-  // Filter users for assign dropdown based on role
+  // Filter users for assign dropdown based on role (exclude admin and super_admin — they shouldn't be assignees)
   const getAssignableUsers = (excludeUserId?: string) => {
-    return users.filter((u) => u.isActive && u.id !== excludeUserId && u.role !== "admin");
+    return users.filter((u) => u.isActive && u.id !== excludeUserId && u.role !== "admin" && u.role !== "super_admin");
   };
 
   // Open feedback dialog for a lead
@@ -704,7 +704,7 @@ export function LeadList() {
           {isAdminRole(user?.role || "") && (
             <MultiSelect
               options={users
-                .filter((u) => u.isActive && u.role !== "admin")
+                .filter((u) => u.isActive && u.role !== "admin" && u.role !== "super_admin")
                 .map((u) => ({ value: u.id, label: `${u.name} (${u.role})` }))}
               value={userFilter}
               onChange={setUserFilter}
@@ -1048,7 +1048,7 @@ export function LeadList() {
                       </SelectTrigger>
                       <SelectContent>
                         {users
-                          .filter((u) => u.isActive && u.role !== "admin")
+                          .filter((u) => u.isActive && u.role !== "admin" && u.role !== "super_admin")
                           .map((u) => (
                             <SelectItem key={u.id} value={u.id}>
                               {u.name} ({u.role})
@@ -1742,7 +1742,7 @@ export function LeadList() {
                 </SelectTrigger>
                 <SelectContent>
                   {users
-                    .filter((u) => u.isActive && u.role !== "admin")
+                    .filter((u) => u.isActive && u.role !== "admin" && u.role !== "super_admin")
                     .map((u) => (
                       <SelectItem key={u.id} value={u.id}>
                         {u.name} ({u.role})

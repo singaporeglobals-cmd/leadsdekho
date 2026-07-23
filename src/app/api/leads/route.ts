@@ -292,8 +292,8 @@ export async function POST(req: NextRequest) {
   let primaryOwnerId: string;
   let currentOwnerId: string;
 
-  if (user.role === "admin" && assignTo) {
-    // Admin assigns to someone else - that person becomes primaryOwner
+  if ((user.role === "admin" || user.role === "super_admin") && assignTo) {
+    // Admin/Super Admin assigns to someone else - that person becomes primaryOwner
     primaryOwnerId = assignTo;
     currentOwnerId = assignTo;
   } else {
@@ -331,8 +331,8 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // If admin assigned to someone, create assignment record
-  if (user.role === "admin" && assignTo && assignTo !== user.id) {
+  // If admin/super_admin assigned to someone, create assignment record
+  if ((user.role === "admin" || user.role === "super_admin") && assignTo && assignTo !== user.id) {
     await db.leadAssignment.create({
       data: {
         leadId: lead.id,

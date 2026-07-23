@@ -1237,7 +1237,7 @@ export function PortalLeads() {
                       </SelectTrigger>
                       <SelectContent>
                         {users
-                          .filter((u) => u.isActive && u.role !== "admin")
+                          .filter((u) => u.isActive && u.role !== "admin" && u.role !== "super_admin")
                           .map((u) => (
                             <SelectItem key={u.id} value={u.id}>
                               {u.name} ({u.role})
@@ -1381,7 +1381,7 @@ export function PortalLeads() {
                               </SelectTrigger>
                               <SelectContent>
                                 {users
-                                  .filter((u) => u.isActive && u.role !== "admin")
+                                  .filter((u) => u.isActive && u.role !== "admin" && u.role !== "super_admin")
                                   .map((u) => (
                                     <SelectItem key={u.id} value={u.id}>
                                       {u.name}

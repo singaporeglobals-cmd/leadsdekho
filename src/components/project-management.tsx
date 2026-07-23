@@ -120,7 +120,7 @@ export function ProjectManagement() {
     }
   };
 
-  if (user?.role !== "admin") {
+  if (user?.role !== "admin" && user?.role !== "super_admin") {
     return (
       <Card>
         <CardContent className="py-12 text-center">

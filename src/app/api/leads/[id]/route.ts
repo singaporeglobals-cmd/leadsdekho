@@ -70,8 +70,8 @@ export async function PUT(
   const lead = await db.lead.findUnique({ where: { id } });
   if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
 
-  // Only currentOwner or Admin can edit
-  if (user.role !== "admin" && lead.currentOwnerId !== user.id) {
+  // Only currentOwner or Admin/Super Admin can edit
+  if (user.role !== "admin" && user.role !== "super_admin" && lead.currentOwnerId !== user.id) {
     return NextResponse.json({ error: "You can only edit leads you currently own" }, { status: 403 });
   }
 
@@ -131,7 +131,7 @@ export async function DELETE(
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (user.role !== "admin") {
+  if (user.role !== "admin" && user.role !== "super_admin") {
     return NextResponse.json({ error: "Only admin can delete leads" }, { status: 403 });
   }
 
