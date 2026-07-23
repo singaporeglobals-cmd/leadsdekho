@@ -247,6 +247,7 @@ export function LeadList() {
     dropLead: boolean;
     leadStatus: string;
     subStage: string;
+    projectId: string;
   }>({
     notes: "",
     callType: "Feedback",
@@ -256,6 +257,7 @@ export function LeadList() {
     dropLead: false,
     leadStatus: "",
     subStage: "",
+    projectId: "",
   });
 
   // Assign dialog (for dropdown menu + direct button)
@@ -470,8 +472,10 @@ export function LeadList() {
   const handleFeedback = async () => {
     if (!feedbackLead) return;
 
-    // Send notes + callType + leadStatus + subStage in ONE call-log POST.
-    // Backend will: 1) create the CallLog with subStage, 2) update Lead's leadStatus + subStage.
+    // Send notes + callType + leadStatus + subStage + projectId in ONE call-log POST.
+    // Backend will: 1) create the CallLog with subStage, 2) update Lead's leadStatus + subStage + projectId.
+    // For "Site Visit Done", projectId is MANDATORY — the backend will reject
+    // the request if it's missing.
     const res = await fetch(`/api/leads/${feedbackLead.id}/call-logs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -482,6 +486,9 @@ export function LeadList() {
         assignTo: feedbackForm.assignTo || undefined,
         leadStatus: feedbackForm.leadStatus || undefined,
         subStage: feedbackForm.subStage || undefined,
+        // Only forward projectId when the user picked "Site Visit Done" so
+        // the backend's mandatory-project validation kicks in for that status.
+        projectId: feedbackForm.leadStatus === "Site Visit Done" ? feedbackForm.projectId : undefined,
       }),
     });
 
@@ -521,6 +528,7 @@ export function LeadList() {
         dropLead: false,
         leadStatus: "",
         subStage: "",
+        projectId: "",
       });
       doRefresh();
     }
@@ -663,6 +671,9 @@ export function LeadList() {
       dropLead: false,
       leadStatus: (lead as any).leadStatus || "",
       subStage: (lead as any).subStage || "",
+      // Pre-fill with the lead's current project so the user doesn't have
+      // to re-select it if the lead already has one (esp. for Visit Done).
+      projectId: (lead as any).projectId || "",
     });
     setFeedbackOpen(true);
   };
@@ -1340,6 +1351,7 @@ export function LeadList() {
                           dropLead: false,
                           leadStatus: (lead as any).leadStatus || "",
                           subStage: (lead as any).subStage || "",
+                          projectId: (lead as any).projectId || "",
                         });
                         setFeedbackOpen(true);
                       }}
@@ -1409,6 +1421,7 @@ export function LeadList() {
                                 dropLead: false,
                                 leadStatus: (lead as any).leadStatus || "",
                                 subStage: (lead as any).subStage || "",
+                                projectId: (lead as any).projectId || "",
                               });
                               setFeedbackOpen(true);
                             }}
@@ -1483,10 +1496,17 @@ export function LeadList() {
                   const newStatus = v === "__none__" ? "" : v;
                   // Auto-clear subStage when status changes to a non-sub-stage value
                   const needsClear = newStatus !== "Not Interested" && newStatus !== "Not Connected";
+                  // Auto-clear projectId when status is NOT "Site Visit Done".
+                  // When switching to "Site Visit Done", pre-fill with the lead's
+                  // current project (if any) so the user doesn't have to re-pick it.
+                  const needsClearProject = newStatus !== "Site Visit Done";
                   setFeedbackForm({
                     ...feedbackForm,
                     leadStatus: newStatus,
                     subStage: needsClear ? "" : feedbackForm.subStage,
+                    projectId: needsClearProject
+                      ? ""
+                      : (feedbackForm.projectId || (feedbackLead as any)?.projectId || ""),
                   });
                 }}
               >
@@ -1530,6 +1550,47 @@ export function LeadList() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {/*
+              Project dropdown — shown ONLY when leadStatus is "Site Visit Done".
+              The project is MANDATORY: the Submit button stays disabled and the
+              backend will reject the request without a project.
+              Same behavior for every role (admin / super_admin / sales / telecalling).
+              Reason: a lead may originally come from Project A, but the actual site
+              visit may happen at Project B — the visit must be attributed to Project B
+              in reports, not Project A.
+            */}
+            {feedbackForm.leadStatus === "Site Visit Done" && (
+              <div className="space-y-1 rounded-lg border border-brand/30 bg-brand/5 p-3">
+                <Label className="text-xs font-medium text-brand">
+                  Project for &quot;Site Visit Done&quot; <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={feedbackForm.projectId || "__none__"}
+                  onValueChange={(v) =>
+                    setFeedbackForm({
+                      ...feedbackForm,
+                      projectId: v === "__none__" ? "" : v,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a project..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Select project —</SelectItem>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Project is mandatory to save a Site Visit Done status. The visit will be attributed to this project in reports.
+                </p>
               </div>
             )}
 
@@ -1601,7 +1662,8 @@ export function LeadList() {
               className="w-full bg-brand hover:bg-brand-dark"
               disabled={
                 !feedbackForm.notes ||
-                ((feedbackForm.leadStatus === "Not Interested" || feedbackForm.leadStatus === "Not Connected") && !feedbackForm.subStage)
+                ((feedbackForm.leadStatus === "Not Interested" || feedbackForm.leadStatus === "Not Connected") && !feedbackForm.subStage) ||
+                (feedbackForm.leadStatus === "Site Visit Done" && !feedbackForm.projectId)
               }
             >
               Submit {feedbackForm.callType === "Follow-up" ? "Follow Up" : "Feedback"}
@@ -1609,6 +1671,11 @@ export function LeadList() {
             {(feedbackForm.leadStatus === "Not Interested" || feedbackForm.leadStatus === "Not Connected") && !feedbackForm.subStage && (
               <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center">
                 Please select a sub-stage above to enable Submit.
+              </p>
+            )}
+            {feedbackForm.leadStatus === "Site Visit Done" && !feedbackForm.projectId && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center">
+                Please select a project above to enable Submit.
               </p>
             )}
           </div>
