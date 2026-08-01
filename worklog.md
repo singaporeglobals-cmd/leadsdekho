@@ -745,3 +745,41 @@ Stage Summary:
 - Both filters work in both the preview table AND the CSV export.
 - "Busy" sub-stage is now available everywhere Not Connected sub-stages are listed: lead detail feedback form, lead-list inline edit, leads-report filter, and backend validation.
 - Super admin can now export leads report CSVs (was previously blocked — only admin could).
+
+---
+Task ID: 21
+Agent: Main Agent
+Task: Move VideoBanner to bottom of dashboard and make wrapper transparent — per user's blue-mark annotation on screenshot (nne.PNG)
+
+Work Log:
+- User uploaded screenshot (nne.PNG) showing the Leads Dekho dashboard with a blue horizontal line marking the bottom portion of the dashboard content area (where the "All task complete? take a break" illustration sits) and a blue arrow pointing to the bottom-right refresh button area.
+- User instruction (Bengali): "blue diye mention korechi oi vabe hobe, bakground transparent hobe" → "I've marked with blue, do it that way, background will be transparent".
+- Analyzed screenshot via VLM — confirmed blue marking is at the BOTTOM of the dashboard content area, not the top.
+- Existing state: VideoBanner component was already created (Task 20 prep) and was placed at line 206 of dashboard.tsx — right after filter controls, BEFORE the summary cards (i.e. near the top). The wrapper had a non-transparent gradient background (from-amber-50 via-orange-50 to-amber-100) with border-brand/20 and shadow-lg.
+
+- Updated src/components/video-banner.tsx:
+  * Removed gradient background `bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 dark:from-amber-950/30 dark:via-orange-950/30 dark:to-amber-900/20`
+  * Removed `border border-brand/20 shadow-lg`
+  * Removed `rounded-2xl overflow-hidden`
+  * Container is now `<div className="relative w-full bg-transparent">` — fully transparent wrapper
+  * Changed video element from `object-cover` (crops video to fill frame) to `object-contain` (full frame visible, no cropping) with `h-auto bg-transparent`
+  * Close (dismiss) button and Replay button kept functional but made subtle: 35% default opacity, 100% on hover/focus. Buttons retain black/30 backdrop-blur for visibility over any video content.
+  * Caption "Replays every 5 min" kept (bottom-left, bg-black/30 backdrop-blur)
+  * All existing behavior preserved: 5-minute replay interval, dismissible per session, autoplay muted, loop, playsInline
+
+- Updated src/components/dashboard.tsx:
+  * Removed `<VideoBanner />` from its old position at line ~206 (after filter controls, before "Summary Cards")
+  * Inserted `<VideoBanner />` at the very bottom of the dashboard's main container — after the last `</Card>` (Recent Leads card) and just before the closing `</div>` of the main `<div className="space-y-6">` wrapper
+  * Added clarifying comment explaining placement and transparency
+  * Import statement on line 6 unchanged — `import { VideoBanner } from "@/components/video-banner"`
+
+- Verified single source of truth: only one dashboard.tsx file in the project, and it serves all roles (admin / super_admin / sales / telecalling) by reading the role from useAppStore. So this single placement covers all roles as the user originally required ("sob user , admin , super admin sob dashboard a show korbe").
+
+- Committed (91967f4) and pushed to GitHub `singaporeglobals-cmd/leadsdekho` main branch. Vercel will auto-deploy to leadsdekho.in.
+
+Stage Summary:
+- VideoBanner now sits at the BOTTOM of the dashboard (matching the blue-marked position in the user's screenshot), directly under the last card.
+- Wrapper is fully transparent — no gradient, no border, no shadow. Only the video frame itself is visible on the page background.
+- Video uses object-contain so the full 1280×720 cat animation is visible without cropping.
+- Dismiss and Replay buttons are still there but become nearly invisible (35% opacity) until the user hovers over them — keeps the transparent aesthetic while preserving functionality.
+- All previously-implemented behavior intact: auto-play muted, loops, replays every 5 minutes, dismissible for the session, visible to all 4 roles.
