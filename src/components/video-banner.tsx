@@ -13,6 +13,8 @@ import { useEffect, useRef, useState } from "react";
  *  - Loops internally while playing
  *  - Every 5 minutes, the video restarts from the beginning
  *  - Dismissible: user can hide it for the current session
+ *  - Transparent wrapper — no card / border / background, the video
+ *    sits directly on the page background
  *  - Visible to all roles (admin, super_admin, sales, telecalling)
  */
 export function VideoBanner() {
@@ -43,11 +45,14 @@ export function VideoBanner() {
   if (hidden) return null;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-brand/20 shadow-lg bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 dark:from-amber-950/30 dark:via-orange-950/30 dark:to-amber-900/20">
-      {/* Close / dismiss button */}
+    <div className="relative w-full bg-transparent">
+      {/* Close / dismiss button — top right, only visible on hover */}
       <button
         onClick={() => setHidden(true)}
-        className="absolute right-2 top-2 z-10 rounded-full bg-black/40 hover:bg-black/60 text-white p-1.5 backdrop-blur-sm transition"
+        className="absolute right-2 top-2 z-10 rounded-full bg-black/30 hover:bg-black/50 text-white p-1.5 backdrop-blur-sm transition opacity-0 hover:opacity-100 focus:opacity-100"
+        style={{ opacity: 0.35 }}
+        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
         aria-label="Hide video"
         title="Hide video for this session"
       >
@@ -66,10 +71,13 @@ export function VideoBanner() {
         </svg>
       </button>
 
-      {/* "Replay now" button — bottom right */}
+      {/* "Replay now" button — bottom right, only visible on hover */}
       <button
         onClick={() => setReplayKey((k) => k + 1)}
-        className="absolute right-2 bottom-2 z-10 rounded-full bg-black/40 hover:bg-black/60 text-white p-1.5 backdrop-blur-sm transition"
+        className="absolute right-2 bottom-2 z-10 rounded-full bg-black/30 hover:bg-black/50 text-white p-1.5 backdrop-blur-sm transition"
+        style={{ opacity: 0.35 }}
+        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.35")}
         aria-label="Replay video"
         title="Replay video now"
       >
@@ -89,11 +97,13 @@ export function VideoBanner() {
         </svg>
       </button>
 
-      {/* The video — 16:9, muted, looping, auto-playing */}
+      {/* The video — muted, looping, auto-playing.
+          object-contain so the full frame is visible (no cropping).
+          Transparent wrapper means the video sits directly on the page. */}
       <video
         key={replayKey}
         ref={videoRef}
-        className="w-full aspect-video object-cover"
+        className="w-full h-auto object-contain bg-transparent"
         src="/cat-animation.mp4"
         autoPlay
         muted
@@ -102,7 +112,7 @@ export function VideoBanner() {
         preload="auto"
       />
 
-      {/* Small caption */}
+      {/* Small caption — bottom left, subtle */}
       <div className="absolute left-3 bottom-2 z-10 text-[11px] bg-black/30 text-white px-2 py-0.5 rounded backdrop-blur-sm">
         Replays every 5 min
       </div>
