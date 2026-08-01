@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #FFE4B5 0%, #FFD89B 40%, #F5C68A 70%, #E0B080 100%);
+    font-family: 'Comic Sans MS', 'Trebuchet MS', sans-serif;
+  }
+  .stage { position: relative; width: 1280px; height: 720px; overflow: hidden; }
+
+  /* Sun */
+  .sun {
+    position: absolute;
+    top: 70px;
+    right: 120px;
+    width: 110px;
+    height: 110px;
+    background: radial-gradient(circle, #FFE066 30%, #FFD93D 70%);
+    border-radius: 50%;
+    box-shadow: 0 0 80px rgba(255, 217, 61, 0.6);
+    animation: sunPulse 4s ease-in-out infinite;
+  }
+  @keyframes sunPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+
+  /* Clouds */
+  .cloud {
+    position: absolute;
+    background: #fff;
+    border-radius: 60px;
+    opacity: 0.9;
+  }
+  .cloud::before, .cloud::after {
+    content: ''; position: absolute; background: #fff; border-radius: 50%;
+  }
+  .c1 { top: 80px; left: 180px; width: 140px; height: 40px; animation: drift1 30s linear infinite; }
+  .c1::before { width: 60px; height: 60px; top: -28px; left: 20px; }
+  .c1::after  { width: 80px; height: 80px; top: -50px; left: 50px; }
+  .c2 { top: 140px; left: 700px; width: 100px; height: 30px; animation: drift2 35s linear infinite; }
+  .c2::before { width: 50px; height: 50px; top: -22px; left: 10px; }
+  .c2::after  { width: 65px; height: 65px; top: -40px; left: 35px; }
+  @keyframes drift1 { from{transform:translateX(0)} to{transform:translateX(1000px)} }
+  @keyframes drift2 { from{transform:translateX(0)} to{transform:translateX(-700px)} }
+
+  /* Ground */
+  .ground {
+    position: absolute;
+    bottom: 0;
+    width: 1280px;
+    height: 220px;
+    background: linear-gradient(180deg, #7CC576 0%, #5BA85A 50%, #3D8B3D 100%);
+  }
+  .grass-blade {
+    position: absolute;
+    bottom: 200px;
+    width: 4px;
+    height: 14px;
+    background: #3D8B3D;
+    border-radius: 2px 2px 0 0;
+  }
+
+  /* Trees in background */
+  .tree {
+    position: absolute;
+    bottom: 180px;
+  }
+  .tree-trunk {
+    width: 18px; height: 70px;
+    background: linear-gradient(90deg, #5D3A1A 0%, #8B5A2B 50%, #5D3A1A 100%);
+    margin: 0 auto;
+  }
+  .tree-leaves {
+    width: 90px; height: 90px;
+    background: radial-gradient(circle, #4CAF50 30%, #2E7D32 80%);
+    border-radius: 50%;
+    margin-bottom: -10px;
+    box-shadow: -25px 10px 0 -10px #4CAF50, 25px 10px 0 -10px #4CAF50;
+  }
+  .t1 { left: 90px; transform: scale(0.8); }
+  .t2 { left: 1080px; transform: scale(0.9); }
+
+  /* Sign Board */
+  .board-wrap {
+    position: absolute;
+    bottom: 180px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 3;
+    animation: boardSway 3s ease-in-out infinite;
+  }
+  @keyframes boardSway {
+    0%, 100% { transform: translateX(-50%) rotate(-1deg); }
+    50% { transform: translateX(-50%) rotate(1deg); }
+  }
+  .board {
+    background: linear-gradient(180deg, #FFF8DC 0%, #FAEBD7 100%);
+    border: 6px solid #8B4513;
+    border-radius: 8px;
+    padding: 30px 50px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25), inset 0 0 0 3px #DEB887;
+    min-width: 480px;
+  }
+  .board-text {
+    font-size: 52px;
+    font-weight: 900;
+    color: #2C3E50;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 0 #ECB46A, 4px 4px 8px rgba(0,0,0,0.15);
+    font-family: 'Comic Sans MS', 'Trebuchet MS', sans-serif;
+  }
+  .board-subtext {
+    font-size: 18px;
+    color: #8B4513;
+    margin-top: 8px;
+    font-style: italic;
+  }
+  .board-post {
+    width: 14px;
+    height: 80px;
+    background: linear-gradient(90deg, #5D3A1A 0%, #8B5A2B 50%, #5D3A1A 100%);
+    margin: 0 auto;
+    border-radius: 0 0 4px 4px;
+  }
+
+  /* CAT */
+  .cat {
+    position: absolute;
+    bottom: 170px;
+    width: 180px;
+    height: 200px;
+    z-index: 5;
+  }
+
+  /* Phase 1: walk left to right (0-4s) */
+  .cat-phase1 {
+    animation: catWalkRight 4s linear forwards;
+  }
+  @keyframes catWalkRight {
+    0%   { left: -200px; transform: scaleX(1); }
+    100% { left: 460px;  transform: scaleX(1); }
+  }
+
+  /* Phase 2: pause and look at board (4-6.5s) */
+  .cat-phase2 {
+    left: 460px;
+    animation: catLookUp 2.5s ease-in-out forwards;
+  }
+  @keyframes catLookUp {
+    0%   { transform: scaleX(1) translateY(0) rotate(0); }
+    30%  { transform: scaleX(1) translateY(-3px) rotate(0); }
+    60%  { transform: scaleX(1) translateY(0) rotate(-2deg); }
+    100% { transform: scaleX(1) translateY(0) rotate(0); }
+  }
+
+  /* Phase 3: walk away to the right (6.5-10s) */
+  .cat-phase3 {
+    animation: catWalkAway 3.5s linear forwards;
+  }
+  @keyframes catWalkAway {
+    0%   { left: 460px;  transform: scaleX(1); }
+    100% { left: 1400px; transform: scaleX(1); }
+  }
+
+  /* Cat body parts - walking bob */
+  .cat-inner {
+    width: 100%; height: 100%;
+    animation: catBob 0.4s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+  @keyframes catBob {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    50% { transform: translateY(-4px) rotate(-0.5deg); }
+  }
+
+  /* SVG cat - cute orange tabby */
+  .cat svg { width: 100%; height: 100%; display: block; }
+
+  /* Tail wag */
+  .tail {
+    transform-origin: 25px 130px;
+    animation: tailWag 0.6s ease-in-out infinite alternate;
+  }
+  @keyframes tailWag {
+    0%   { transform: rotate(-15deg); }
+    100% { transform: rotate(15deg); }
+  }
+
+  /* Legs animation */
+  .leg-front, .leg-back {
+    transform-origin: top center;
+  }
+  .leg-front { animation: legFront 0.4s ease-in-out infinite; }
+  .leg-back  { animation: legBack 0.4s ease-in-out infinite; }
+  @keyframes legFront { 0%,100%{transform:rotate(15deg)} 50%{transform:rotate(-15deg)} }
+  @keyframes legBack  { 0%,100%{transform:rotate(-15deg)} 50%{transform:rotate(15deg)} }
+
+  /* Sparkles when cat looks at board */
+  .sparkle {
+    position: absolute;
+    color: #FFD700;
+    font-size: 24px;
+    opacity: 0;
+    z-index: 4;
+    animation: sparkleAnim 1s ease-out infinite;
+  }
+  .sparkle.s1 { top: 280px; left: 540px; animation-delay: 5s; }
+  .sparkle.s2 { top: 300px; left: 660px; animation-delay: 5.3s; }
+  .sparkle.s3 { top: 260px; left: 600px; animation-delay: 5.6s; }
+  @keyframes sparkleAnim {
+    0%   { opacity: 0; transform: scale(0) rotate(0); }
+    50%  { opacity: 1; transform: scale(1.2) rotate(180deg); }
+    100% { opacity: 0; transform: scale(0.5) rotate(360deg); }
+  }
+
+  /* Question mark pop */
+  .qmark {
+    position: absolute;
+    top: 220px;
+    left: 520px;
+    font-size: 80px;
+    font-weight: 900;
+    color: #FF6B35;
+    opacity: 0;
+    z-index: 6;
+    text-shadow: 3px 3px 0 #fff, -2px -2px 0 #fff;
+    animation: qPop 0.8s ease-out forwards;
+    animation-delay: 5s;
+  }
+  @keyframes qPop {
+    0%   { opacity: 0; transform: scale(0) translateY(20px); }
+    60%  { opacity: 1; transform: scale(1.3) translateY(-10px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* Title overlay (subtle, top-left) */
+  .brand {
+    position: absolute;
+    top: 30px;
+    left: 40px;
+    font-size: 22px;
+    font-weight: bold;
+    color: #8B4513;
+    text-shadow: 1px 1px 0 rgba(255,255,255,0.6);
+    z-index: 10;
+  }
+  .brand small { font-size: 14px; color: #A0522D; font-weight: normal; }
+
+  /* Tiny flowers */
+  .flower {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    bottom: 175px;
+  }
+  .flower::before {
+    content: ''; position: absolute; width: 12px; height: 12px;
+    background: currentColor;
+    border-radius: 50%;
+    box-shadow: -7px 0 0 currentColor, 7px 0 0 currentColor,
+                0 -7px 0 currentColor, 0 7px 0 currentColor;
+  }
+  .flower::after {
+    content: ''; position: absolute; width: 6px; height: 6px;
+    background: #FFD700; border-radius: 50%;
+    top: 3px; left: 3px;
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="brand">🐱 Leads Dekho<small> · motivation corner</small></div>
+
+  <!-- Sky -->
+  <div class="sun"></div>
+  <div class="cloud c1"></div>
+  <div class="cloud c2"></div>
+
+  <!-- Background trees -->
+  <div class="tree t1"><div class="tree-leaves"></div><div class="tree-trunk"></div></div>
+  <div class="tree t2"><div class="tree-leaves"></div><div class="tree-trunk"></div></div>
+
+  <!-- Sign Board -->
+  <div class="board-wrap">
+    <div class="board">
+      <div class="board-text">All task complete?</div>
+      <div class="board-subtext">~ take a break, you earned it ~</div>
+    </div>
+    <div class="board-post"></div>
+  </div>
+
+  <!-- Sparkles and question mark -->
+  <div class="qmark">?</div>
+  <div class="sparkle s1">✦</div>
+  <div class="sparkle s2">✦</div>
+  <div class="sparkle s3">✦</div>
+
+  <!-- Tiny flowers near ground -->
+  <div class="flower" style="left: 200px; color: #FF69B4;"></div>
+  <div class="flower" style="left: 1050px; color: #FF6B6B;"></div>
+  <div class="flower" style="left: 320px; color: #9B59B6;"></div>
+  <div class="flower" style="left: 950px; color: #3498DB;"></div>
+
+  <!-- Ground -->
+  <div class="ground"></div>
+
+  <!-- CAT - animated sequence -->
+  <div id="cat" class="cat cat-phase1">
+    <div class="cat-inner">
+      <svg viewBox="0 0 180 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Tail -->
+        <g class="tail">
+          <path d="M 25 130 Q 0 110 5 80 Q 10 60 25 70"
+                stroke="#E67E22" stroke-width="14" stroke-linecap="round" fill="none"/>
+          <path d="M 25 130 Q 0 110 5 80 Q 10 60 25 70"
+                stroke="#FFA85C" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.6"/>
+        </g>
+
+        <!-- Back legs -->
+        <g class="leg-back" style="transform-origin: 60px 150px;">
+          <rect x="55" y="150" width="12" height="40" rx="6" fill="#E67E22"/>
+          <ellipse cx="61" cy="190" rx="10" ry="5" fill="#5D3A1A"/>
+        </g>
+        <g class="leg-back" style="transform-origin: 75px 150px; animation-delay: 0.2s;">
+          <rect x="70" y="150" width="12" height="40" rx="6" fill="#D35400"/>
+          <ellipse cx="76" cy="190" rx="10" ry="5" fill="#5D3A1A"/>
+        </g>
+
+        <!-- Body -->
+        <ellipse cx="90" cy="130" rx="55" ry="38" fill="#E67E22"/>
+        <ellipse cx="90" cy="125" rx="48" ry="32" fill="#F39C12" opacity="0.6"/>
+        <!-- Stripes -->
+        <path d="M 60 110 Q 70 105 75 115" stroke="#D35400" stroke-width="3" fill="none"/>
+        <path d="M 80 105 Q 90 100 95 110" stroke="#D35400" stroke-width="3" fill="none"/>
+        <path d="M 100 110 Q 110 105 115 115" stroke="#D35400" stroke-width="3" fill="none"/>
+        <path d="M 120 115 Q 130 110 132 122" stroke="#D35400" stroke-width="3" fill="none"/>
+
+        <!-- Front legs -->
+        <g class="leg-front" style="transform-origin: 105px 155px;">
+          <rect x="100" y="150" width="12" height="42" rx="6" fill="#E67E22"/>
+          <ellipse cx="106" cy="192" rx="10" ry="5" fill="#5D3A1A"/>
+        </g>
+        <g class="leg-front" style="transform-origin: 120px 155px; animation-delay: 0.2s;">
+          <rect x="115" y="150" width="12" height="42" rx="6" fill="#D35400"/>
+          <ellipse cx="121" cy="192" rx="10" ry="5" fill="#5D3A1A"/>
+        </g>
+
+        <!-- Head -->
+        <g>
+          <!-- Ears -->
+          <polygon points="115,65 130,40 145,70" fill="#E67E22"/>
+          <polygon points="120,60 130,48 138,68" fill="#FFB6C1"/>
+          <polygon points="155,65 170,40 175,75" fill="#E67E22"/>
+          <polygon points="158,60 168,48 172,70" fill="#FFB6C1"/>
+
+          <!-- Head circle -->
+          <circle cx="145" cy="85" r="32" fill="#E67E22"/>
+          <circle cx="145" cy="80" r="28" fill="#F39C12" opacity="0.5"/>
+
+          <!-- Cheek tuft -->
+          <path d="M 118 95 Q 113 100 116 108" stroke="#E67E22" stroke-width="3" fill="none"/>
+          <path d="M 172 95 Q 177 100 174 108" stroke="#E67E22" stroke-width="3" fill="none"/>
+
+          <!-- Eyes (looking up at board) -->
+          <ellipse cx="135" cy="82" rx="5" ry="6" fill="#2C3E50"/>
+          <ellipse cx="155" cy="82" rx="5" ry="6" fill="#2C3E50"/>
+          <circle cx="135" cy="80" r="1.5" fill="#fff"/>
+          <circle cx="155" cy="80" r="1.5" fill="#fff"/>
+          <!-- Eyebrows (curious expression) -->
+          <path d="M 128 73 Q 135 70 140 74" stroke="#5D3A1A" stroke-width="1.5" fill="none"/>
+          <path d="M 150 74 Q 155 70 162 73" stroke="#5D3A1A" stroke-width="1.5" fill="none"/>
+
+          <!-- Nose -->
+          <path d="M 142 92 L 148 92 L 145 96 Z" fill="#FF69B4"/>
+
+          <!-- Mouth -->
+          <path d="M 145 96 Q 140 100 137 99" stroke="#5D3A1A" stroke-width="1.5" fill="none"/>
+          <path d="M 145 96 Q 150 100 153 99" stroke="#5D3A1A" stroke-width="1.5" fill="none"/>
+
+          <!-- Whiskers -->
+          <line x1="118" y1="93" x2="100" y2="90" stroke="#5D3A1A" stroke-width="1"/>
+          <line x1="118" y1="97" x2="100" y2="98" stroke="#5D3A1A" stroke-width="1"/>
+          <line x1="172" y1="93" x2="190" y2="90" stroke="#5D3A1A" stroke-width="1"/>
+          <line x1="172" y1="97" x2="190" y2="98" stroke="#5D3A1A" stroke-width="1"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Animate cat phases
+  const cat = document.getElementById('cat');
+  let startTime = Date.now();
+  const PHASE1 = 4000; // walk in
+  const PHASE2 = 2500; // pause + look
+  const PHASE3 = 3500; // walk away
+  const TOTAL  = PHASE1 + PHASE2 + PHASE3; // 10s
+
+  function loop() {
+    const t = (Date.now() - startTime) % TOTAL;
+    cat.className = 'cat';
+    if (t < PHASE1) {
+      cat.classList.add('cat-phase1');
+    } else if (t < PHASE1 + PHASE2) {
+      cat.classList.add('cat-phase2');
+    } else {
+      cat.classList.add('cat-phase3');
+    }
+    requestAnimationFrame(loop);
+  }
+  loop();
+</script>
+</body>
+</html>

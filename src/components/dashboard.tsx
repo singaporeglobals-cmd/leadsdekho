@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { VideoBanner } from "@/components/video-banner";
 import {
   Users,
   Phone,
@@ -199,6 +200,10 @@ export function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Video Banner — shown to all roles (admin / super_admin / sales / telecalling).
+          Muted auto-play, replays every 5 minutes. Dismissible for the session. */}
+      <VideoBanner />
 
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
