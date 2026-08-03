@@ -348,8 +348,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Floating cat video widget — visible on every authenticated page.
-          Green-screen cat with browser-side chroma keying (transparent background),
-          fixed bottom-right, draggable, dismissible, replays every 5 min. */}
+          Green-screen cat with browser-side chroma keying (transparent background).
+          FIXED bottom-right (not draggable). Pointer-events pass-through so all
+          CRM features behind the widget remain clickable. Shows for 10s, hides,
+          then re-appears every 5 min. */}
       <FloatingCatWidget />
     </div>
   );

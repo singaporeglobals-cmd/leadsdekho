@@ -10,15 +10,19 @@ import { useEffect, useRef, useState } from "react";
  * with the green keyed out in real-time via a hidden <canvas> (browser-side
  * chroma keying), so the cat appears to float directly on the page background.
  *
- * Behavior:
- *  - Fixed position bottom-right; visible on every page (admin / sales / telecalling)
- *  - Auto-plays muted (browser-policy compliant)
- *  - Loops internally while playing
- *  - Replays from the beginning every 5 minutes (300s)
- *  - Dismissible for the current session (close button top-right of widget)
- *  - "Replay now" button (bottom-right of widget)
- *  - Draggable (user can drag to reposition anywhere on screen)
- *  - Pause/Play toggle on click
+ * Behavior (as of 2026-08-03 — user-requested changes):
+ *  - FIXED position bottom-right (NO dragging). Position is locked on every
+ *    screen size (desktop / tablet / mobile).
+ *  - POINTER EVENTS PASS-THROUGH: the entire widget container has
+ *    `pointer-events: none`, so clicks on the transparent rectangle area
+ *    fall through to the CRM features underneath. Only the small control
+ *    buttons (close / replay / play-pause) have `pointer-events: auto` and
+ *    are interactive. This means users can click any CRM button, link, or
+ *    table row that sits behind the widget area.
+ *  - 5-MINUTE SHOW CYCLE: the widget is NOT always visible. It plays the
+ *    10-second cat video once, hides itself, waits 5 minutes, then plays
+ *    again. On page load it plays immediately; afterwards it cycles:
+ *      show 10s → hide 5min → show 10s → hide 5min → ...
  *
  * Implementation notes:
  *  - Server-side ffmpeg build cannot encode VP9 alpha on this Debian system,
@@ -26,39 +30,77 @@ import { useEffect, useRef, useState } from "react";
  *    browser via canvas 2D API. This works in Chrome, Edge, Firefox, Safari.
  *  - Canvas runs at 30 FPS for performance; video runs at native 24 fps.
  *  - The <video> element is hidden; only the <canvas> is visible.
+ *  - `loop` is REMOVED from the video — we want it to end naturally after
+ *    10s so we can hide the widget and start the 5-min wait timer.
  */
 
 const VIDEO_SRC = "/cat-greenscreen.mp4";
-const REPLAY_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-const CANVAS_WIDTH = 320;  // displayed width of the cat widget
-const CANVAS_HEIGHT = 180; // 16:9 aspect ratio
+const SHOW_DURATION_MS = 10_000;          // video is 10s — show widget for this long
+const HIDE_INTERVAL_MS = 5 * 60 * 1000;    // 5 minutes between shows
+const CANVAS_WIDTH = 320;                  // displayed width of the cat widget
+const CANVAS_HEIGHT = 180;                 // 16:9 aspect ratio
 
 export function FloatingCatWidget() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
-  const [hidden, setHidden] = useState(false);
-  const [replayKey, setReplayKey] = useState(0);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // `visible` controls whether the widget is currently shown.
+  // On mount it is `true` (play immediately). After video ends it becomes
+  // `false` and a 5-min timer sets it back to `true`.
+  const [visible, setVisible] = useState(true);
+  const [dismissed, setDismissed] = useState(false); // user clicked close → stop cycling
+  const [replayKey, setReplayKey] = useState(0);     // bump to force video reload
   const [isPlaying, setIsPlaying] = useState(true);
-  const [position, setPosition] = useState({ x: 0, y: 0 }); // 0,0 = bottom-right default
-  const draggingRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
 
   // ----------------------------------------------------------------
-  // Replay every 5 minutes
+  // Schedule the show / hide cycle.
+  //
+  // When `visible` becomes true:
+  //   - Set a timer for SHOW_DURATION_MS (10s) to hide the widget.
+  //   - When that fires, set visible=false. The effect below will then
+  //     schedule a 5-min timer to set visible=true again.
+  //
+  // When `visible` becomes false (and not dismissed):
+  //   - Set a timer for HIDE_INTERVAL_MS (5min) to show the widget.
+  //
   // ----------------------------------------------------------------
   useEffect(() => {
-    if (hidden) return;
-    const interval = setInterval(() => {
-      setReplayKey((k) => k + 1);
-    }, REPLAY_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [hidden]);
+    if (dismissed) return;
+
+    if (visible) {
+      // Currently showing — schedule auto-hide after video plays
+      hideTimerRef.current = setTimeout(() => {
+        setVisible(false);
+      }, SHOW_DURATION_MS);
+      return () => {
+        if (hideTimerRef.current) {
+          clearTimeout(hideTimerRef.current);
+          hideTimerRef.current = null;
+        }
+      };
+    } else {
+      // Currently hidden — schedule next show in 5 min
+      showTimerRef.current = setTimeout(() => {
+        setReplayKey((k) => k + 1); // force video to reload from start
+        setVisible(true);
+      }, HIDE_INTERVAL_MS);
+      return () => {
+        if (showTimerRef.current) {
+          clearTimeout(showTimerRef.current);
+          showTimerRef.current = null;
+        }
+      };
+    }
+  }, [visible, dismissed]);
 
   // ----------------------------------------------------------------
-  // Auto-play on mount / replayKey change
+  // Auto-play on mount / replayKey change (when visible)
   // ----------------------------------------------------------------
   useEffect(() => {
-    if (hidden) return;
+    if (!visible || dismissed) return;
     const v = videoRef.current;
     if (!v) return;
     v.currentTime = 0;
@@ -68,13 +110,13 @@ export function FloatingCatWidget() {
         // Autoplay blocked — user will need to click play
         setIsPlaying(false);
       });
-  }, [replayKey, hidden]);
+  }, [replayKey, visible, dismissed]);
 
   // ----------------------------------------------------------------
   // Canvas chroma-key rendering loop
   // ----------------------------------------------------------------
   useEffect(() => {
-    if (hidden) return;
+    if (!visible || dismissed) return;
     const v = videoRef.current;
     const c = canvasRef.current;
     if (!v || !c) return;
@@ -102,7 +144,7 @@ export function FloatingCatWidget() {
           const b = data[i + 2];
 
           // If pixel is predominantly green, make it transparent
-          // Tolerance: G > R*1.4 AND G > B*1.4 AND G > 60
+          // Tolerance: G > R*1.35 AND G > B*1.35 AND G > 60
           if (g > 60 && g > r * 1.35 && g > b * 1.35) {
             data[i + 3] = 0; // alpha = 0 (transparent)
           }
@@ -125,41 +167,17 @@ export function FloatingCatWidget() {
         cancelAnimationFrame(rafRef.current);
       }
     };
-  }, [hidden, replayKey]);
+  }, [visible, dismissed, replayKey]);
 
   // ----------------------------------------------------------------
-  // Drag handling
+  // Cleanup all timers on unmount
   // ----------------------------------------------------------------
-  const onPointerDown = (e: React.PointerEvent) => {
-    // Don't drag if clicking on a button
-    if ((e.target as HTMLElement).closest("button")) return;
-    draggingRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      origX: position.x,
-      origY: position.y,
+  useEffect(() => {
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      if (showTimerRef.current) clearTimeout(showTimerRef.current);
     };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  };
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!draggingRef.current) return;
-    const dx = e.clientX - draggingRef.current.startX;
-    const dy = e.clientY - draggingRef.current.startY;
-    setPosition({
-      x: draggingRef.current.origX + dx,
-      y: draggingRef.current.origY + dy,
-    });
-  };
-
-  const onPointerUp = (e: React.PointerEvent) => {
-    if (draggingRef.current) {
-      draggingRef.current = null;
-      try {
-        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-      } catch {}
-    }
-  };
+  }, []);
 
   // ----------------------------------------------------------------
   // Pause / play toggle
@@ -175,46 +193,67 @@ export function FloatingCatWidget() {
     }
   };
 
-  if (hidden) return null;
+  // ----------------------------------------------------------------
+  // Manual replay from start
+  // ----------------------------------------------------------------
+  const replayNow = () => {
+    setReplayKey((k) => k + 1);
+    // Also reset the show-timer so the widget stays visible for another
+    // full SHOW_DURATION_MS after this manual replay.
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = setTimeout(() => setVisible(false), SHOW_DURATION_MS);
+    }
+  };
 
-  // Compute position style
-  // Default (0,0) = bottom-right with 16px margin
-  // Negative X = move left, Negative Y = move up
+  // ----------------------------------------------------------------
+  // Dismiss — stops the show/hide cycle entirely for this session
+  // ----------------------------------------------------------------
+  const dismiss = () => {
+    setDismissed(true);
+    setVisible(false);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    if (showTimerRef.current) clearTimeout(showTimerRef.current);
+  };
+
+  if (dismissed || !visible) return null;
+
+  // ----------------------------------------------------------------
+  // Render
+  // ----------------------------------------------------------------
+  // CRITICAL: container has `pointerEvents: "none"` so all clicks pass
+  // through to the CRM features underneath. Only the control buttons
+  // (close / replay / play-pause) override this with `pointerEvents: "auto"`.
+  // The canvas itself does NOT need to be interactive.
+  // ----------------------------------------------------------------
   const style: React.CSSProperties = {
     position: "fixed",
-    right: position.x === 0 ? "16px" : undefined,
-    bottom: position.y === 0 ? "16px" : undefined,
-    left: position.x !== 0 ? `calc(100vw - ${CANVAS_WIDTH + 16 - position.x}px)` : undefined,
-    top: position.y !== 0 ? `calc(100vh - ${CANVAS_HEIGHT + 16 - position.y}px)` : undefined,
+    right: "16px",
+    bottom: "16px",
     zIndex: 9999,
-    cursor: draggingRef.current ? "grabbing" : "grab",
-    touchAction: "none",
+    pointerEvents: "none", // container is click-through
   };
 
   return (
-    <div
-      style={style}
-      className="select-none"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-    >
-      {/* Hidden video element — source of frames for canvas */}
+    <div style={style} className="select-none">
+      {/* Hidden video element — source of frames for canvas.
+          NOTE: `loop` is intentionally NOT set — we want the video to end
+          naturally after 10s so the show/hide cycle can proceed. */}
       <video
         key={replayKey}
         ref={videoRef}
         src={VIDEO_SRC}
         autoPlay
         muted
-        loop
         playsInline
         preload="auto"
         style={{ display: "none" }}
         crossOrigin="anonymous"
       />
 
-      {/* Visible canvas — shows the cat with green keyed out */}
+      {/* Visible canvas — shows the cat with green keyed out.
+          `pointerEvents: "none"` so clicks pass through to CRM features
+          behind the widget area. */}
       <canvas
         ref={canvasRef}
         width={CANVAS_WIDTH}
@@ -224,17 +263,23 @@ export function FloatingCatWidget() {
           width: `${CANVAS_WIDTH}px`,
           height: `${CANVAS_HEIGHT}px`,
           background: "transparent",
+          pointerEvents: "none",
         }}
       />
 
-      {/* Top-right: dismiss button (visible on hover) */}
+      {/* Top-right: dismiss button (visible on hover).
+          `pointerEvents: "auto"` so it stays clickable. */}
       <button
         onClick={(e) => {
           e.stopPropagation();
-          setHidden(true);
+          dismiss();
         }}
         className="absolute -top-2 -right-2 z-10 rounded-full bg-red-500 hover:bg-red-600 text-white p-1 shadow-lg transition"
-        style={{ opacity: 0, transition: "opacity 0.2s" }}
+        style={{
+          opacity: 0,
+          transition: "opacity 0.2s",
+          pointerEvents: "auto",
+        }}
         onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
         onMouseLeave={(e) => (e.currentTarget.style.opacity = "0")}
         aria-label="Hide cat widget"
@@ -255,19 +300,29 @@ export function FloatingCatWidget() {
         </svg>
       </button>
 
-      {/* Bottom-left: small caption (visible on hover) */}
+      {/* Bottom-left: small caption (visible on hover).
+          Purely informational — `pointerEvents: "none"`. */}
       <div
-        className="absolute left-1 bottom-1 z-10 text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded backdrop-blur-sm pointer-events-none"
-        style={{ opacity: 0, transition: "opacity 0.2s" }}
+        className="absolute left-1 bottom-1 z-10 text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded backdrop-blur-sm"
+        style={{
+          opacity: 0,
+          transition: "opacity 0.2s",
+          pointerEvents: "none",
+        }}
         onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
       >
-        Replays every 5 min · drag to move
+        Replays every 5 min
       </div>
 
-      {/* Bottom-right: replay + play/pause buttons (visible on hover) */}
+      {/* Bottom-right: replay + play/pause buttons (visible on hover).
+          Wrapper stays click-through; buttons themselves opt back in. */}
       <div
         className="absolute right-1 bottom-1 z-10 flex gap-1"
-        style={{ opacity: 0, transition: "opacity 0.2s" }}
+        style={{
+          opacity: 0,
+          transition: "opacity 0.2s",
+          pointerEvents: "none",
+        }}
         onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
         onMouseLeave={(e) => (e.currentTarget.style.opacity = "0")}
       >
@@ -277,6 +332,7 @@ export function FloatingCatWidget() {
             togglePlayPause();
           }}
           className="rounded-full bg-black/60 hover:bg-black/80 text-white p-1 backdrop-blur-sm transition"
+          style={{ pointerEvents: "auto" }}
           aria-label={isPlaying ? "Pause" : "Play"}
           title={isPlaying ? "Pause" : "Play"}
         >
@@ -306,9 +362,10 @@ export function FloatingCatWidget() {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setReplayKey((k) => k + 1);
+            replayNow();
           }}
           className="rounded-full bg-black/60 hover:bg-black/80 text-white p-1 backdrop-blur-sm transition"
+          style={{ pointerEvents: "auto" }}
           aria-label="Replay"
           title="Replay from start"
         >
