@@ -25,6 +25,7 @@ import {
   Radio,
   Mail,
 } from "lucide-react";
+import { FloatingCatWidget } from "@/components/floating-cat-widget";
 
 interface NavItem {
   id: AppPage;
@@ -345,6 +346,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* Floating cat video widget — visible on every authenticated page.
+          Green-screen cat with browser-side chroma keying (transparent background),
+          fixed bottom-right, draggable, dismissible, replays every 5 min. */}
+      <FloatingCatWidget />
     </div>
   );
 }

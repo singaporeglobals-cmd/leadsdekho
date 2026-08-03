@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { VideoBanner } from "@/components/video-banner";
 import {
   Users,
   Phone,
@@ -440,9 +439,6 @@ export function AdminDashboard() {
         </CardContent>
       </Card>
 
-      {/* Video Banner — shown to all roles. Transparent wrapper, muted auto-play,
-          replays every 5 minutes. Dismissible for the session. Bottom of dashboard. */}
-      <VideoBanner />
     </div>
   );
 }
@@ -702,9 +698,6 @@ export function TelecallingDashboard() {
         </CardContent>
       </Card>
 
-      {/* Video Banner — shown to all roles. Transparent wrapper, muted auto-play,
-          replays every 5 minutes. Dismissible for the session. Bottom of dashboard. */}
-      <VideoBanner />
     </div>
   );
 }
@@ -984,10 +977,6 @@ export function SalesDashboard() {
         </CardContent>
       </Card>
 
-      {/* Video Banner — shown to all roles (admin / super_admin / sales / telecalling).
-          Transparent wrapper, muted auto-play, replays every 5 minutes.
-          Dismissible for the session. Placed at the bottom of the dashboard. */}
-      <VideoBanner />
     </div>
   );
 }
