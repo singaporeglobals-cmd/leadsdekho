@@ -884,3 +884,65 @@ Stage Summary:
 - Widget is draggable, dismissible, and has hover-visible controls (pause/play, replay).
 - Old embedded VideoBanner approach is fully removed.
 - Deployment is live. User should hard-refresh (Ctrl+Shift+R) to bypass browser cache and see the new floating widget.
+
+---
+Task ID: 24
+Agent: Main Agent
+Task: FloatingCatWidget — (1) fix position for desktop (no drag), (2) make CRM features behind widget clickable, (3) show widget every 5 min instead of always visible. User instruction (Bengali): "computer er jonno ei place ta fix rakho..r etar background crm er ja ja features ache ogulo jeno click kora jay..5min por por eta show eta korbe".
+
+Work Log:
+- User feedback: previous widget was always visible + draggable. User wants:
+  1. Fixed position (no dragging) on desktop
+  2. Background CRM features (table rows, buttons, filters) behind the widget must remain clickable
+  3. Widget should NOT be always visible — show it every 5 minutes
+
+- Updated src/components/floating-cat-widget.tsx with three major changes:
+
+  * REMOVED drag functionality:
+    - Deleted `position` state, `draggingRef`, `onPointerDown`, `onPointerMove`, `onPointerUp` handlers
+    - Position is now always fixed: right=16px, bottom=16px (locked for all screen sizes — desktop, tablet, mobile)
+
+  * POINTER EVENTS PASS-THROUGH (CRM features stay clickable):
+    - Container div: `pointerEvents: "none"` — clicks fall through to whatever is behind the widget (table rows, action buttons, filter dropdowns, etc.)
+    - Canvas (cat video): `pointerEvents: "none"` — cat itself doesn't need to be interactive
+    - Close button, Play/Pause button, Replay button: each has `pointerEvents: "auto"` — they remain interactive
+    - Result: the entire 320×180 rectangle of the widget passes clicks through to the CRM underneath, except for the small ~14×14 px control buttons in the corners
+
+  * 5-MINUTE SHOW CYCLE:
+    - Video `loop` attribute REMOVED — video ends naturally after 10s
+    - New `visible` state (starts `true` — plays immediately on page load)
+    - New `dismissed` state (starts `false` — set to `true` when user clicks close)
+    - New useEffect that schedules the cycle:
+        when visible=true:  setTimeout(10s) → setVisible(false)
+        when visible=false: setTimeout(5min) → setVisible(true) + bump replayKey
+    - On unmount: clear both timers
+    - Manual "replay now" button resets the 10s show-timer so user gets full 10s after manual replay
+    - Dismiss button stops the cycle entirely for the session (no more auto-shows)
+
+- Constants (verified in deployed bundle):
+    SHOW_DURATION_MS = 10_000   (1e4 in minified output)
+    HIDE_INTERVAL_MS = 5 * 60 * 1000 = 300_000   (3e5 in minified output)
+
+- Updated src/components/app-layout.tsx comment to reflect new behavior.
+
+- Built locally: `npx next build` — ✓ Compiled successfully in 12.2s.
+- Committed (aa4b496) and pushed to GitHub main. Vercel auto-deployed.
+
+- Verified production deployment (https://leadsdekho.in):
+  * HTTP 200, site reachable
+  * Found cat-greenscreen.mp4 reference in chunk 570d862b5aadadc1.js
+  * Verified bundle contains:
+      - position:"fixed" + pointerEvents:"none" on container
+      - pointerEvents:"none" on canvas (cat click-through)
+      - pointerEvents:"auto" on each control button
+      - setTimeout(...,1e4) — 10s show timer
+      - setTimeout(...,3e5) — 5-min wait timer
+      - "Replays every 5 min" caption
+      - Video element: autoPlay, muted, playsInline (NO loop attribute)
+
+Stage Summary:
+- Widget is now FIXED at bottom-right (not draggable).
+- Widget is click-through — users can click any CRM element behind it (leads table rows, action buttons, filter dropdowns, pagination, etc.). Only the small close/replay/play-pause buttons in the corners are interactive.
+- Widget is NOT always visible — it plays the 10s cat animation, hides, waits 5 min, then plays again. On page load it plays immediately, then cycles.
+- User can still dismiss it permanently for the session via the close button (top-right).
+- Deployment is live on leadsdekho.in. User should hard-refresh (Ctrl+Shift+R) to bypass browser cache.
