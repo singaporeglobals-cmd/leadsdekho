@@ -825,3 +825,62 @@ Stage Summary:
 - Root cause was missing VideoBanner in 2 of 3 dashboard components (TelecallingDashboard and SalesDashboard). The user is likely logged in as a sales or telecalling user (or was viewing one of those dashboards) — which is why they didn't see the video.
 - Now ALL THREE dashboards (admin / sales / telecalling) render VideoBanner at the bottom with transparent wrapper, muted autoplay, 5-min replay, dismissible.
 - Deployment is live on leadsdekho.in. User should hard-refresh (Ctrl+Shift+R) to bypass browser cache.
+
+---
+Task ID: 23
+Agent: Main Agent
+Task: Replace bottom-embedded VideoBanner with a FLOATING website widget/overlay animation — user uploaded new green-screen cat video (asol_biral_na_graphics_wala_bi.mp4) and screenshot (entire full.PNG) showing desired position at the bottom of the website.
+
+Work Log:
+- User feedback: previous "embedded at bottom of dashboard" approach was not what they wanted. They want a FLOATING widget that overlays the page at the bottom of the website, persistent across all pages.
+
+- New assets uploaded:
+  * entire full.PNG — screenshot showing dashboard with blue scribble annotation at bottom (marking where the floating widget should appear)
+  * asol_biral_na_graphics_wala_bi.mp4 — 1280×720, 10s, 24fps, H.264 + AAC, 2.6MB. Contains cartoon orange tabby cat with red bandana on chroma-key green background.
+
+- Analyzed new video via VLM (frame extraction + vision model): confirmed green-screen background suitable for chroma keying.
+
+- Conversion attempts (multiple):
+  1. libvpx-vp9 with -pix_fmt yuva420p + -auto-alt-ref 0 — produced WebM with AlphaMode=1 marker but NO actual transparent pixels. ffprobe reports pix_fmt=yuv420p.
+  2. libvpx-vp9 via two-step (extract RGBA PNGs, then encode) — same result, no alpha preserved.
+  3. libvpx (VP8) — same result, no alpha.
+  4. libaom-av1 (AV1) — same result, no alpha.
+  5. libwebp_anim — encoder hung indefinitely, produced empty file.
+  Conclusion: this Debian build's libvpx-vp9 / libaom-av1 silently drop the alpha channel even with explicit yuva420p. The AlphaMode=1 marker is written to the WebM container, but the actual encoded bitstream has no alpha plane.
+
+- Final solution: browser-side chroma keying via HTML5 Canvas.
+  * Created /home/z/my-project/public/cat-greenscreen.mp4 — small (167KB, 480×270, H.264, no audio) version of the original 2.6MB green-screen video.
+  * Created /home/z/my-project/src/components/floating-cat-widget.tsx — a React component that:
+    - Renders a hidden <video> element playing cat-greenscreen.mp4 (muted, autoplay, loop)
+    - Renders a visible <canvas> at 320×180 (16:9)
+    - Uses requestAnimationFrame at 30 FPS to: drawImage(video) → getImageData → loop pixels → set alpha=0 where pixel is "green enough" (G>60 && G>R*1.35 && G>B*1.35) → putImageData back. Edge softening: partial alpha=80 for near-threshold pixels.
+    - Position: fixed bottom-right with 16px margin, z-index 9999
+    - Draggable via pointer events (user can move it anywhere on screen)
+    - Dismissible: close button (top-right) hides for session
+    - Pause/Play button + Replay-from-start button (bottom-right, visible on hover)
+    - Replays from the beginning every 5 minutes (300s) automatically
+  * Wired FloatingCatWidget into src/components/app-layout.tsx so it renders ONCE on every authenticated page (admin / sales / telecalling — all roles, all pages, not just dashboard).
+
+- Cleanup:
+  * Removed <VideoBanner /> from all 3 dashboards (AdminDashboard, TelecallingDashboard, SalesDashboard) in src/components/dashboard.tsx via scripts/remove-video-banner-from-dashboards.py.
+  * Deleted src/components/video-banner.tsx (no longer imported anywhere).
+  * Deleted public/cat-animation.mp4 (replaced by cat-greenscreen.mp4 — 4× smaller, 167KB vs 624KB).
+
+- Committed (0869dd3) and pushed to GitHub main. Vercel deploy dpl_8dkecfiDKshDPHgp66snCnUojZ9K is READY. Aliases: leadsdekho.in, www.leadsdekho.in, my-project-tau-ten-86.vercel.app.
+
+- Verified production bundle contains all expected code:
+  * Chunk /_next/static/chunks/5775e5568c396459.js contains:
+    - "cat-greenscreen.mp4" (video src)
+    - getImageData, putImageData, requestAnimationFrame (canvas chroma key loop)
+    - Pixel loop: `n>60 && n>1.35*t && n>1.35*a ? r[e+3]=0 : (n>50 && n>1.2*t && n>1.2*a && (r[e+3]=80))`
+    - "Replays every 5 min", "Hide for this session", "drag to move"
+    - position:"fixed" with bottom-right default placement
+
+- Verified cat-greenscreen.mp4 is served from Vercel CDN with HTTP 200, content-type: video/mp4, 167KB.
+
+Stage Summary:
+- The cat video now floats at the bottom-right corner of the screen on EVERY authenticated page of leadsdekho.in (admin / sales / telecalling).
+- The green background is keyed out in real-time in the browser via HTML5 Canvas — the cat appears to float directly on the page background with no visible box or container.
+- Widget is draggable, dismissible, and has hover-visible controls (pause/play, replay).
+- Old embedded VideoBanner approach is fully removed.
+- Deployment is live. User should hard-refresh (Ctrl+Shift+R) to bypass browser cache and see the new floating widget.
