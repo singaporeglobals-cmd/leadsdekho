@@ -439,6 +439,10 @@ export function AdminDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Video Banner — shown to all roles. Transparent wrapper, muted auto-play,
+          replays every 5 minutes. Dismissible for the session. Bottom of dashboard. */}
+      <VideoBanner />
     </div>
   );
 }
@@ -697,6 +701,10 @@ export function TelecallingDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Video Banner — shown to all roles. Transparent wrapper, muted auto-play,
+          replays every 5 minutes. Dismissible for the session. Bottom of dashboard. */}
+      <VideoBanner />
     </div>
   );
 }
