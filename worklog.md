@@ -783,3 +783,45 @@ Stage Summary:
 - Video uses object-contain so the full 1280×720 cat animation is visible without cropping.
 - Dismiss and Replay buttons are still there but become nearly invisible (35% opacity) until the user hovers over them — keeps the transparent aesthetic while preserving functionality.
 - All previously-implemented behavior intact: auto-play muted, loops, replays every 5 minutes, dismissible for the session, visible to all 4 roles.
+
+---
+Task ID: 22
+Agent: Main Agent
+Task: VideoBanner not showing on production — user reported "eta hoini ekhono"
+
+Work Log:
+- Verified Vercel deployment via API: latest deploy (dpl_J8xEWfHvfjSBBY92rgctdQCj4CVC) is READY, aliased to leadsdekho.in, www.leadsdekho.in.
+- Verified production bundle contains the new transparent VideoBanner code: `className:"w-full h-auto object-contain bg-transparent", src:"/cat-animation.mp4"`. Old gradient classes (from-amber-50, border-brand/20 shadow-lg) are completely GONE from the bundle.
+- Verified `/cat-animation.mp4` is served from Vercel CDN with HTTP 200, content-type: video/mp4, 624KB.
+
+- ROOT CAUSE FOUND: `src/components/dashboard.tsx` actually exports THREE separate dashboard components, but the previous Task 21 only added `<VideoBanner />` to ONE of them:
+  * `AdminDashboard` (line 61) — for admin / super_admin — ✅ had VideoBanner
+  * `TelecallingDashboard` (line 446) — for telecalling role — ❌ was MISSING VideoBanner
+  * `SalesDashboard` (line 704) — for sales role — ❌ was MISSING VideoBanner
+
+  Routing logic in `src/app/page.tsx` lines 66-72:
+    case "dashboard":
+      if (isAdminRole(role)) return <AdminDashboard />;
+      if (role === "telecalling") return <TelecallingDashboard />;
+      if (role === "sales") return <SalesDashboard />;
+      return <AdminDashboard />;
+
+  So users logging in as sales or telecalling saw a dashboard WITHOUT the video banner — confirming the user's report.
+
+- FIX: Created `/home/z/my-project/scripts/add-video-banner-to-other-dashboards.py` to programmatically insert `<VideoBanner />` before the closing `</div>` of TelecallingDashboard (now at line 445) and SalesDashboard (now at line 707).
+
+- Verification of final source:
+    $ grep -n "VideoBanner" src/components/dashboard.tsx
+    6:   import { VideoBanner } from "@/components/video-banner";
+    445:   <VideoBanner />     # TelecallingDashboard
+    707:   <VideoBanner />     # SalesDashboard
+    990:   <VideoBanner />     # AdminDashboard (already there from Task 21)
+
+- Committed (bd3dfd4) and pushed to GitHub main. Vercel deployed automatically: state=READY, UID=dpl_4AnCyRmKgfsjKTCFXPgyV5gRQEC7. Aliases: leadsdekho.in, www.leadsdekho.in, my-project-tau-ten-86.vercel.app.
+
+- Verified deployed bundle: the minified VideoBanner function is referenced 4 times (1 definition + 3 calls). All 3 dashboard components now render VideoBanner. String `cat-animation.mp4` appears once (in the function definition), which is correct — React renders the function 3 times but the source string is shared.
+
+Stage Summary:
+- Root cause was missing VideoBanner in 2 of 3 dashboard components (TelecallingDashboard and SalesDashboard). The user is likely logged in as a sales or telecalling user (or was viewing one of those dashboards) — which is why they didn't see the video.
+- Now ALL THREE dashboards (admin / sales / telecalling) render VideoBanner at the bottom with transparent wrapper, muted autoplay, 5-min replay, dismissible.
+- Deployment is live on leadsdekho.in. User should hard-refresh (Ctrl+Shift+R) to bypass browser cache.
