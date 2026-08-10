@@ -18,7 +18,9 @@ export type AppPage =
   | "leads-report"
   | "user-report"
   | "users"
-  | "enquiries";
+  | "enquiries"
+  | "blog"
+  | "blog-detail";
 
 export interface UserInfo {
   id: string;
@@ -55,6 +57,9 @@ interface AppState {
   todayFollowUpsFilter: boolean;
   followUpDate: string; // YYYY-MM-DD for follow-up filter
 
+  // Blog (selected slug for blog-detail page)
+  selectedBlogSlug: string | null;
+
   // Actions
   setPage: (page: AppPage) => void;
   setUser: (user: UserInfo | null) => void;
@@ -66,6 +71,7 @@ interface AppState {
   setPendingFollowUpsFilter: (v: boolean) => void;
   setTodayFollowUpsFilter: (v: boolean) => void;
   setFollowUpDate: (date: string) => void;
+  setSelectedBlogSlug: (slug: string | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -78,6 +84,7 @@ export const useAppStore = create<AppState>((set) => ({
   pendingFollowUpsFilter: false,
   todayFollowUpsFilter: false,
   followUpDate: "",
+  selectedBlogSlug: null,
 
   setPage: (page) => set({ currentPage: page }),
   setUser: (user) => set({ user, isAuthenticated: !!user }),
@@ -86,6 +93,7 @@ export const useAppStore = create<AppState>((set) => ({
   setPendingFollowUpsFilter: (v) => set({ pendingFollowUpsFilter: v }),
   setTodayFollowUpsFilter: (v) => set({ todayFollowUpsFilter: v }),
   setFollowUpDate: (date) => set({ followUpDate: date }),
+  setSelectedBlogSlug: (slug) => set({ selectedBlogSlug: slug }),
 
   login: async (email, password) => {
     try {

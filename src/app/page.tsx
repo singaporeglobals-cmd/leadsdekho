@@ -23,6 +23,8 @@ import { UserManagement } from "@/components/user-management";
 import { LeadSourceManagement } from "@/components/lead-source-management";
 import { EnquiryManagement } from "@/components/enquiry-management";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { BlogListPage } from "@/components/blog-list-page";
+import { BlogDetailPage } from "@/components/blog-detail-page";
 
 export default function Home() {
   const { currentPage, isAuthenticated, isLoading, checkAuth } = useAppStore();
@@ -49,6 +51,18 @@ export default function Home() {
         return (
           <ErrorBoundary>
             <LoginPage />
+          </ErrorBoundary>
+        );
+      case "blog":
+        return (
+          <ErrorBoundary>
+            <BlogListPage />
+          </ErrorBoundary>
+        );
+      case "blog-detail":
+        return (
+          <ErrorBoundary>
+            <BlogDetailPage />
           </ErrorBoundary>
         );
       default:
@@ -94,6 +108,10 @@ export default function Home() {
         return <UserManagement />;
       case "enquiries":
         return <EnquiryManagement />;
+      case "blog":
+        return <BlogListPage />;
+      case "blog-detail":
+        return <BlogDetailPage />;
       default:
         return <AdminDashboard />;
     }
