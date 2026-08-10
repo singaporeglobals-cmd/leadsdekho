@@ -97,9 +97,9 @@ export const metadata: Metadata = {
     images: ["/og-image.png"],
     creator: "@leadsdekho",
   },
-  verification: {
-    google: "google-site-verification=PLACEHOLDER_REPLACE_IN_SEARCH_CONSOLE",
-  },
+  // NOTE: After the user verifies leadsdekho.in in Google Search Console,
+  // we can add the `verification: { google: "<code>" }` field back here.
+  // Until then, ownership is best verified via DNS TXT record at the registrar.
   other: {
     "theme-color": "#0F4C81",
     "msapplication-TileColor": "#0F4C81",
