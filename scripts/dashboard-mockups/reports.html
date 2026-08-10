@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Leads Dekho - Reports</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  body { background: #f4f5f7; display: flex; height: 100vh; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar { width: 256px; background: #111827; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-logo { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid #374151; }
+  .sidebar-logo img { width: 32px; height: 32px; border-radius: 6px; }
+  .sidebar-logo span { font-size: 18px; font-weight: 700; }
+  .sidebar-nav { flex: 1; padding: 12px; overflow-y: auto; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #d1d5db; font-size: 14px; font-weight: 500; margin-bottom: 4px; cursor: pointer; }
+  .nav-item:hover { background: #1f2937; color: #fff; }
+  .nav-item.active { background: #dfb338; color: #fff; }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sidebar-user { padding: 16px; border-top: 1px solid #374151; }
+  .user-row { display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: #dfb338; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { color: #fff; font-size: 14px; font-weight: 500; }
+  .user-role { display: inline-block; background: #636d82; color: #c8cdd6; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; margin-top: 2px; }
+
+  /* Main */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .header { height: 64px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 24px; }
+  .header h1 { font-size: 18px; font-weight: 600; color: #111827; flex: 1; }
+  .header-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6b7280; }
+  .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+  /* Filter bar */
+  .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
+  .filter-btn { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 12px; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .filter-btn:hover { background: #f9fafb; }
+  .btn-export { margin-left: auto; background: #dfb338; color: #fff; border: 1px solid #dfb338; border-radius: 6px; padding: 8px 14px; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+  .btn-export:hover { background: #c49a20; }
+
+  /* KPI cards */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; }
+  .kpi-label { font-size: 13px; color: #6b7280; margin-bottom: 8px; }
+  .kpi-value { font-size: 28px; font-weight: 700; color: #111827; }
+  .kpi-change { font-size: 13px; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+  .change-up { color: #10b981; }
+  .change-down { color: #ef4444; }
+  .kpi-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; float: right; margin-top: -8px; }
+  .icon-blue { background: #eff6ff; color: #3b82f6; }
+  .icon-amber { background: #fffbeb; color: #f59e0b; }
+  .icon-emerald { background: #ecfdf5; color: #10b981; }
+  .icon-purple { background: #f5f3ff; color: #8b5cf6; }
+
+  /* Chart grid */
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+  .chart-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; }
+  .chart-title { font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 16px; }
+
+  /* Bar chart */
+  .bar-chart { display: flex; align-items: flex-end; gap: 12px; height: 200px; padding-top: 20px; }
+  .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .bar-stack { display: flex; flex-direction: column; width: 100%; max-width: 40px; gap: 2px; }
+  .bar { width: 100%; border-radius: 4px 4px 0 0; }
+  .bar-1 { background: #dfb338; }
+  .bar-2 { background: #3b82f6; }
+  .bar-label { font-size: 11px; color: #6b7280; }
+  .legend { display: flex; gap: 16px; margin-top: 12px; font-size: 12px; color: #6b7280; }
+  .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+
+  /* Line chart (SVG) */
+  .line-chart { width: 100%; height: 200px; }
+
+  /* Pie chart */
+  .pie-row { display: flex; align-items: center; gap: 24px; }
+  .pie-svg { width: 160px; height: 160px; flex-shrink: 0; }
+  .pie-legend { flex: 1; }
+  .pie-legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; color: #374151; }
+  .pie-legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .pie-legend-val { margin-left: auto; font-weight: 600; color: #111827; }
+
+  /* Table */
+  .table-wrap { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: #f9fafb; }
+  th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 12px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover { background: #f9fafb; }
+  .num { font-weight: 600; color: #111827; }
+  .pct { color: #10b981; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23dfb338'/%3E%3Ctext x='50' y='68' font-size='52' font-weight='bold' text-anchor='middle' fill='white' font-family='Arial'%3ELD%3C/text%3E%3C/svg%3E" alt="Leads Dekho">
+    <span>Leads Dekho</span>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      Leads
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Site Visits
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+      Bookings
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Projects
+    </div>
+    <div class="nav-item active">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Reports
+    </div>
+  </div>
+  <div class="sidebar-user">
+    <div class="user-row">
+      <div class="avatar">PU</div>
+      <div class="user-info">
+        <div class="user-name">PUJA</div>
+        <div class="user-role">Admin</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="header">
+    <h1>Reports & Analytics</h1>
+    <div class="header-icon">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/></svg>
+    </div>
+  </div>
+  <div class="content">
+    <!-- Filters -->
+    <div class="filter-bar">
+      <div class="filter-btn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Last 30 Days
+      </div>
+      <div class="filter-btn">All Sources ▾</div>
+      <div class="filter-btn">All Projects ▾</div>
+      <div class="filter-btn">All Users ▾</div>
+      <button class="btn-export">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
+    </div>
+
+    <!-- KPI cards -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-icon icon-blue">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        </div>
+        <div class="kpi-label">Total Leads</div>
+        <div class="kpi-value">3,368</div>
+        <div class="kpi-change change-up">▲ 18.2% vs last month</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon icon-amber">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="kpi-label">Site Visits</div>
+        <div class="kpi-value">421</div>
+        <div class="kpi-change change-up">▲ 12.5% vs last month</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon icon-emerald">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
+        <div class="kpi-label">Bookings</div>
+        <div class="kpi-value">87</div>
+        <div class="kpi-change change-up">▲ 24.1% vs last month</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon icon-purple">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <div class="kpi-label">Conversion Rate</div>
+        <div class="kpi-value">2.58%</div>
+        <div class="kpi-change change-up">▲ 0.4% vs last month</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-grid">
+      <!-- Monthly comparison bar chart -->
+      <div class="chart-card">
+        <div class="chart-title">Monthly Leads vs Bookings</div>
+        <div class="bar-chart">
+          <div class="bar-group">
+            <div class="bar-stack">
+              <div class="bar bar-1" style="height: 120px;"></div>
+              <div class="bar bar-2" style="height: 18px;"></div>
+            </div>
+            <span class="bar-label">Jan</span>
+          </div>
+          <div class="bar-group">
+            <div class="bar-stack">
+              <div class="bar bar-1" style="height: 150px;"></div>
+              <div class="bar bar-2" style="height: 22px;"></div>
+            </div>
+            <span class="bar-label">Feb</span>
+          </div>
+          <div class="bar-group">
+            <div class="bar-stack">
+              <div class="bar bar-1" style="height: 140px;"></div>
+              <div class="bar bar-2" style="height: 25px;"></div>
+            </div>
+            <span class="bar-label">Mar</span>
+          </div>
+          <div class="bar-group">
+            <div class="bar-stack">
+              <div class="bar bar-1" style="height: 170px;"></div>
+              <div class="bar bar-2" style="height: 30px;"></div>
+            </div>
+            <span class="bar-label">Apr</span>
+          </div>
+          <div class="bar-group">
+            <div class="bar-stack">
+              <div class="bar bar-1" style="height: 155px;"></div>
+              <div class="bar bar-2" style="height: 28px;"></div>
+            </div>
+            <span class="bar-label">May</span>
+          </div>
+          <div class="bar-group">
+            <div class="bar-stack">
+              <div class="bar bar-1" style="height: 180px;"></div>
+              <div class="bar bar-2" style="height: 35px;"></div>
+            </div>
+            <span class="bar-label">Jun</span>
+          </div>
+          <div class="bar-group">
+            <div class="bar-stack">
+              <div class="bar bar-1" style="height: 165px;"></div>
+              <div class="bar bar-2" style="height: 32px;"></div>
+            </div>
+            <span class="bar-label">Jul</span>
+          </div>
+        </div>
+        <div class="legend">
+          <span><span class="legend-dot" style="background:#dfb338;"></span>Leads</span>
+          <span><span class="legend-dot" style="background:#3b82f6;"></span>Bookings</span>
+        </div>
+      </div>
+
+      <!-- Trend line chart -->
+      <div class="chart-card">
+        <div class="chart-title">Lead Conversion Trend</div>
+        <svg class="line-chart" viewBox="0 0 400 200" preserveAspectRatio="none">
+          <!-- Grid lines -->
+          <line x1="0" y1="50" x2="400" y2="50" stroke="#f3f4f6" stroke-width="1"/>
+          <line x1="0" y1="100" x2="400" y2="100" stroke="#f3f4f6" stroke-width="1"/>
+          <line x1="0" y1="150" x2="400" y2="150" stroke="#f3f4f6" stroke-width="1"/>
+          <!-- Area fill -->
+          <path d="M 0,160 L 50,140 L 100,120 L 150,100 L 200,85 L 250,70 L 300,60 L 350,45 L 400,30 L 400,200 L 0,200 Z" fill="#dfb338" fill-opacity="0.1"/>
+          <!-- Line -->
+          <polyline points="0,160 50,140 100,120 150,100 200,85 250,70 300,60 350,45 400,30" fill="none" stroke="#dfb338" stroke-width="2.5"/>
+          <!-- Dots -->
+          <circle cx="0" cy="160" r="3" fill="#dfb338"/>
+          <circle cx="50" cy="140" r="3" fill="#dfb338"/>
+          <circle cx="100" cy="120" r="3" fill="#dfb338"/>
+          <circle cx="150" cy="100" r="3" fill="#dfb338"/>
+          <circle cx="200" cy="85" r="3" fill="#dfb338"/>
+          <circle cx="250" cy="70" r="3" fill="#dfb338"/>
+          <circle cx="300" cy="60" r="3" fill="#dfb338"/>
+          <circle cx="350" cy="45" r="3" fill="#dfb338"/>
+          <circle cx="400" cy="30" r="3" fill="#dfb338"/>
+        </svg>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:#6b7280;">
+          <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span>
+        </div>
+      </div>
+
+      <!-- Source-wise pie chart -->
+      <div class="chart-card">
+        <div class="chart-title">Leads by Source</div>
+        <div class="pie-row">
+          <svg class="pie-svg" viewBox="0 0 100 100">
+            <!-- Pie slices using stroke-dasharray on circles -->
+            <circle cx="50" cy="50" r="35" fill="none" stroke="#dfb338" stroke-width="70" stroke-dasharray="110 220" stroke-dashoffset="0" transform="rotate(-90 50 50)"/>
+            <circle cx="50" cy="50" r="35" fill="none" stroke="#3b82f6" stroke-width="70" stroke-dasharray="66 220" stroke-dashoffset="-110" transform="rotate(-90 50 50)"/>
+            <circle cx="50" cy="50" r="35" fill="none" stroke="#10b981" stroke-width="70" stroke-dasharray="33 220" stroke-dashoffset="-176" transform="rotate(-90 50 50)"/>
+            <circle cx="50" cy="50" r="35" fill="none" stroke="#a855f7" stroke-width="70" stroke-dasharray="25 220" stroke-dashoffset="-209" transform="rotate(-90 50 50)"/>
+            <circle cx="50" cy="50" r="35" fill="none" stroke="#ef4444" stroke-width="70" stroke-dasharray="12 220" stroke-dashoffset="-234" transform="rotate(-90 50 50)"/>
+            <circle cx="50" cy="50" r="18" fill="#fff"/>
+            <text x="50" y="48" text-anchor="middle" font-size="10" font-weight="bold" fill="#111827">3,368</text>
+            <text x="50" y="58" text-anchor="middle" font-size="6" fill="#6b7280">Total</text>
+          </svg>
+          <div class="pie-legend">
+            <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#dfb338;"></span>MagicBricks<span class="pie-legend-val">42%</span></div>
+            <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#3b82f6;"></span>Housing.com<span class="pie-legend-val">25%</span></div>
+            <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#10b981;"></span>Facebook<span class="pie-legend-val">13%</span></div>
+            <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#a855f7;"></span>99acres<span class="pie-legend-val">9%</span></div>
+            <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#ef4444;"></span>Others<span class="pie-legend-val">11%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project-wise table -->
+      <div class="chart-card">
+        <div class="chart-title">Project-wise Performance</div>
+        <table style="width:100%;">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:8px 0;font-size:11px;">Project</th>
+              <th style="text-align:right;padding:8px 0;font-size:11px;">Leads</th>
+              <th style="text-align:right;padding:8px 0;font-size:11px;">Visits</th>
+              <th style="text-align:right;padding:8px 0;font-size:11px;">Booked</th>
+              <th style="text-align:right;padding:8px 0;font-size:11px;">Conv.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="padding:8px 0;font-size:13px;font-weight:500;">Sunshine Vista</td><td class="num" style="text-align:right;padding:8px 0;font-size:13px;">1,142</td><td style="text-align:right;padding:8px 0;font-size:13px;">156</td><td style="text-align:right;padding:8px 0;font-size:13px;">34</td><td class="pct" style="text-align:right;padding:8px 0;font-size:13px;">2.98%</td></tr>
+            <tr><td style="padding:8px 0;font-size:13px;font-weight:500;">Green Residency</td><td class="num" style="text-align:right;padding:8px 0;font-size:13px;">876</td><td style="text-align:right;padding:8px 0;font-size:13px;">112</td><td style="text-align:right;padding:8px 0;font-size:13px;">28</td><td class="pct" style="text-align:right;padding:8px 0;font-size:13px;">3.20%</td></tr>
+            <tr><td style="padding:8px 0;font-size:13px;font-weight:500;">Skyline Towers</td><td class="num" style="text-align:right;padding:8px 0;font-size:13px;">654</td><td style="text-align:right;padding:8px 0;font-size:13px;">78</td><td style="text-align:right;padding:8px 0;font-size:13px;">15</td><td class="pct" style="text-align:right;padding:8px 0;font-size:13px;">2.29%</td></tr>
+            <tr><td style="padding:8px 0;font-size:13px;font-weight:500;">Palm Grove</td><td class="num" style="text-align:right;padding:8px 0;font-size:13px;">432</td><td style="text-align:right;padding:8px 0;font-size:13px;">45</td><td style="text-align:right;padding:8px 0;font-size:13px;">10</td><td class="pct" style="text-align:right;padding:8px 0;font-size:13px;">2.31%</td></tr>
+            <tr><td style="padding:8px 0;font-size:13px;font-weight:500;">Lake View Heights</td><td class="num" style="text-align:right;padding:8px 0;font-size:13px;">264</td><td style="text-align:right;padding:8px 0;font-size:13px;">30</td><td style="text-align:right;padding:8px 0;font-size:13px;">0</td><td style="text-align:right;padding:8px 0;font-size:13px;color:#6b7280;">0%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

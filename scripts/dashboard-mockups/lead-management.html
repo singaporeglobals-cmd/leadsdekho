@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Leads Dekho - Lead Management</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  body { background: #f4f5f7; display: flex; height: 100vh; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar { width: 256px; background: #111827; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-logo { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid #374151; }
+  .sidebar-logo img { width: 32px; height: 32px; border-radius: 6px; }
+  .sidebar-logo span { font-size: 18px; font-weight: 700; }
+  .sidebar-nav { flex: 1; padding: 12px; overflow-y: auto; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #d1d5db; font-size: 14px; font-weight: 500; margin-bottom: 4px; cursor: pointer; }
+  .nav-item:hover { background: #1f2937; color: #fff; }
+  .nav-item.active { background: #dfb338; color: #fff; }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sidebar-user { padding: 16px; border-top: 1px solid #374151; }
+  .user-row { display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: #dfb338; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { color: #fff; font-size: 14px; font-weight: 500; }
+  .user-role { display: inline-block; background: #636d82; color: #c8cdd6; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; margin-top: 2px; }
+
+  /* Main */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .header { height: 64px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 24px; }
+  .header h1 { font-size: 18px; font-weight: 600; color: #111827; flex: 1; }
+  .header-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6b7280; }
+  .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+  /* Filters */
+  .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .search-box { flex: 1; min-width: 200px; position: relative; }
+  .search-box input { width: 100%; padding: 8px 12px 8px 36px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; color: #374151; background: #fff; }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; }
+  .filter-btn { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 12px; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 4px; cursor: pointer; min-width: 120px; justify-content: space-between; }
+  .filter-btn:hover { background: #f9fafb; }
+
+  /* Action bar */
+  .action-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .date-chip { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 12px; font-size: 13px; color: #6b7280; cursor: pointer; }
+  .date-chip.active { background: #dfb338; color: #fff; border-color: #dfb338; }
+  .spacer { flex: 1; }
+  .btn { padding: 8px 14px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; border: 1px solid #e5e7eb; background: #fff; color: #374151; }
+  .btn:hover { background: #f9fafb; }
+  .btn-primary { background: #dfb338; color: #fff; border-color: #dfb338; }
+  .btn-primary:hover { background: #c49a20; }
+
+  /* Stats line */
+  .stats-line { display: flex; gap: 16px; margin-bottom: 16px; font-size: 14px; color: #6b7280; align-items: center; flex-wrap: wrap; }
+  .stats-line strong { color: #111827; }
+  .stat-chip { background: #fef9ec; color: #dfb338; padding: 4px 10px; border-radius: 12px; font-weight: 600; }
+
+  /* Table */
+  .table-wrap { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: #f9fafb; }
+  th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 12px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover { background: #f9fafb; }
+  .lead-name { font-weight: 600; color: #111827; font-size: 14px; }
+  .lead-phone { font-size: 12px; color: #6b7280; margin-top: 2px; }
+  .lead-source { font-size: 12px; color: #6b7280; }
+  .lead-owner { font-size: 13px; color: #374151; }
+  .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; color: #fff; display: inline-block; }
+  .b-blue { background: #3b82f6; }
+  .b-cyan { background: #06b6d4; }
+  .b-amber { background: #f59e0b; }
+  .b-purple { background: #a855f7; }
+  .b-orange { background: #f97316; }
+  .b-emerald { background: #10b981; }
+  .b-red { background: #ef4444; }
+  .b-slate { background: #64748b; }
+  .action-btns { display: flex; gap: 4px; }
+  .action-btn { padding: 4px 10px; border-radius: 5px; font-size: 12px; border: 1px solid #e5e7eb; background: #fff; color: #374151; cursor: pointer; }
+  .action-btn:hover { background: #f3f4f6; }
+  .action-btn.feedback { color: #3b82f6; border-color: #bfdbfe; }
+  .action-btn.followup { color: #f59e0b; border-color: #fde68a; }
+  .action-btn.assign { color: #8b5cf6; border-color: #ddd6fe; }
+  .action-btn.update { color: #10b981; border-color: #a7f3d0; }
+  .checkbox { width: 16px; height: 16px; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23dfb338'/%3E%3Ctext x='50' y='68' font-size='52' font-weight='bold' text-anchor='middle' fill='white' font-family='Arial'%3ELD%3C/text%3E%3C/svg%3E" alt="Leads Dekho">
+    <span>Leads Dekho</span>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item active">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Leads
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Import Leads
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Site Visits
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+      Bookings
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Projects
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Reports
+    </div>
+  </div>
+  <div class="sidebar-user">
+    <div class="user-row">
+      <div class="avatar">PU</div>
+      <div class="user-info">
+        <div class="user-name">PUJA</div>
+        <div class="user-role">Admin</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="header">
+    <h1>Lead Management</h1>
+    <div class="header-icon">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </div>
+  </div>
+  <div class="content">
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <div class="search-box">
+        <span class="search-icon">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <input type="text" placeholder="Search leads..." value="">
+      </div>
+      <div class="filter-btn">Users ▾</div>
+      <div class="filter-btn">Pipeline ▾</div>
+      <div class="filter-btn">Sources ▾</div>
+      <div class="filter-btn">Projects ▾</div>
+      <div class="filter-btn">Lead Status ▾</div>
+    </div>
+
+    <!-- Action bar -->
+    <div class="action-bar">
+      <div class="date-chip">Today</div>
+      <div class="date-chip">Last 7 Days</div>
+      <div class="date-chip active">Last 30 Days</div>
+      <div class="date-chip">This Month</div>
+      <div class="date-chip">Last Month</div>
+      <div class="spacer"></div>
+      <div class="btn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Refresh
+      </div>
+      <div class="btn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Import
+      </div>
+      <div class="btn btn-primary">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Lead
+      </div>
+    </div>
+
+    <!-- Stats line -->
+    <div class="stats-line">
+      <span class="stat-chip">My Leads: 311</span>
+      <span>Fresh leads: <strong>42</strong></span>
+      <span>Follow Up Due: <strong>38</strong></span>
+      <span style="margin-left:auto;"><strong>3,368</strong> leads found</span>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:32px;"><input type="checkbox" class="checkbox"></th>
+            <th>Lead Info</th>
+            <th>Details</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="checkbox" class="checkbox"></td>
+            <td>
+              <div class="lead-name">Barnali Laha</div>
+              <div class="lead-phone">+91 98300 12345</div>
+            </td>
+            <td>
+              <div style="margin-bottom:4px;"><span class="badge b-blue">Contacted</span></div>
+              <div class="lead-source">Source: FB.D · Owner: NISHA · Sunshine Vista</div>
+            </td>
+            <td>
+              <div class="action-btns">
+                <button class="action-btn feedback">Feedback</button>
+                <button class="action-btn followup">Follow Up</button>
+                <button class="action-btn assign">Assign</button>
+                <button class="action-btn update">Update</button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="checkbox"></td>
+            <td>
+              <div class="lead-name">Anindita Roy</div>
+              <div class="lead-phone">+91 90000 56789</div>
+            </td>
+            <td>
+              <div style="margin-bottom:4px;"><span class="badge b-red">Lost</span></div>
+              <div class="lead-source">Source: MagicBricks · Owner: RIYA · Green Residency</div>
+            </td>
+            <td>
+              <div class="action-btns">
+                <button class="action-btn feedback">Feedback</button>
+                <button class="action-btn followup">Follow Up</button>
+                <button class="action-btn assign">Assign</button>
+                <button class="action-btn update">Update</button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="checkbox"></td>
+            <td>
+              <div class="lead-name">Suman Jha</div>
+              <div class="lead-phone">+91 89012 34567</div>
+            </td>
+            <td>
+              <div style="margin-bottom:4px;"><span class="badge b-purple">Site Visit Done</span></div>
+              <div class="lead-source">Source: Housing.com · Owner: SHISANGI · Sunshine Vista</div>
+            </td>
+            <td>
+              <div class="action-btns">
+                <button class="action-btn feedback">Feedback</button>
+                <button class="action-btn followup">Follow Up</button>
+                <button class="action-btn assign">Assign</button>
+                <button class="action-btn update">Update</button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="checkbox"></td>
+            <td>
+              <div class="lead-name">Rohit Sharma</div>
+              <div class="lead-phone">+91 70123 45678</div>
+            </td>
+            <td>
+              <div style="margin-bottom:4px;"><span class="badge b-amber">Site Visit Promised</span></div>
+              <div class="lead-source">Source: 99acres · Owner: ARJUN · Skyline Towers</div>
+            </td>
+            <td>
+              <div class="action-btns">
+                <button class="action-btn feedback">Feedback</button>
+                <button class="action-btn followup">Follow Up</button>
+                <button class="action-btn assign">Assign</button>
+                <button class="action-btn update">Update</button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="checkbox"></td>
+            <td>
+              <div class="lead-name">Priyanka Das</div>
+              <div class="lead-phone">+91 98765 43210</div>
+            </td>
+            <td>
+              <div style="margin-bottom:4px;"><span class="badge b-cyan">Prospect</span></div>
+              <div class="lead-source">Source: Facebook · Owner: PRIYA · Palm Grove</div>
+            </td>
+            <td>
+              <div class="action-btns">
+                <button class="action-btn feedback">Feedback</button>
+                <button class="action-btn followup">Follow Up</button>
+                <button class="action-btn assign">Assign</button>
+                <button class="action-btn update">Update</button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="checkbox"></td>
+            <td>
+              <div class="lead-name">Amit Ghosh</div>
+              <div class="lead-phone">+91 80980 11223</div>
+            </td>
+            <td>
+              <div style="margin-bottom:4px;"><span class="badge b-amber">Not Connected</span></div>
+              <div class="lead-source">Source: MagicBricks · Owner: NISHA · Sunshine Vista</div>
+            </td>
+            <td>
+              <div class="action-btns">
+                <button class="action-btn feedback">Feedback</button>
+                <button class="action-btn followup">Follow Up</button>
+                <button class="action-btn assign">Assign</button>
+                <button class="action-btn update">Update</button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="checkbox"></td>
+            <td>
+              <div class="lead-name">Sneha Mukherjee</div>
+              <div class="lead-phone">+91 91234 56780</div>
+            </td>
+            <td>
+              <div style="margin-bottom:4px;"><span class="badge b-emerald">Booked</span></div>
+              <div class="lead-source">Source: Walk-in · Owner: SHISANGI · Green Residency</div>
+            </td>
+            <td>
+              <div class="action-btns">
+                <button class="action-btn feedback">Feedback</button>
+                <button class="action-btn followup">Follow Up</button>
+                <button class="action-btn assign">Assign</button>
+                <button class="action-btn update">Update</button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="checkbox"></td>
+            <td>
+              <div class="lead-name">Vikram Singh</div>
+              <div class="lead-phone">+91 99887 76655</div>
+            </td>
+            <td>
+              <div style="margin-bottom:4px;"><span class="badge b-slate">New</span></div>
+              <div class="lead-source">Source: Google Ads · Owner: RIYA · Skyline Towers</div>
+            </td>
+            <td>
+              <div class="action-btns">
+                <button class="action-btn feedback">Feedback</button>
+                <button class="action-btn followup">Follow Up</button>
+                <button class="action-btn assign">Assign</button>
+                <button class="action-btn update">Update</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Leads Dekho - Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  body { background: #f4f5f7; display: flex; height: 100vh; overflow: hidden; }
+
+  /* Sidebar - matches bg-gray-900 */
+  .sidebar { width: 256px; background: #111827; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-logo { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid #374151; }
+  .sidebar-logo img { width: 32px; height: 32px; border-radius: 6px; }
+  .sidebar-logo span { font-size: 18px; font-weight: 700; }
+  .sidebar-nav { flex: 1; padding: 12px; overflow-y: auto; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #d1d5db; font-size: 14px; font-weight: 500; margin-bottom: 4px; cursor: pointer; }
+  .nav-item:hover { background: #1f2937; color: #fff; }
+  .nav-item.active { background: #dfb338; color: #fff; }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sidebar-user { padding: 16px; border-top: 1px solid #374151; }
+  .user-row { display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: #dfb338; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { color: #fff; font-size: 14px; font-weight: 500; }
+  .user-role { display: inline-block; background: #636d82; color: #c8cdd6; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; margin-top: 2px; }
+
+  /* Main */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .header { height: 64px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 24px; }
+  .header h1 { font-size: 18px; font-weight: 600; color: #111827; flex: 1; }
+  .header-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6b7280; }
+  .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+  /* Filters row */
+  .filters { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  .filter-btn { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 12px; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .filter-btn:hover { background: #f9fafb; }
+
+  /* Summary cards */
+  .cards-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; border-left-width: 4px; }
+  .card-brand { border-left-color: #dfb338; }
+  .card-amber { border-left-color: #f59e0b; }
+  .card-red { border-left-color: #ef4444; }
+  .card-cyan { border-left-color: #06b6d4; }
+  .card-emerald { border-left-color: #10b981; }
+  .card-label { font-size: 13px; color: #6b7280; margin-bottom: 4px; }
+  .card-value { font-size: 24px; font-weight: 700; color: #111827; }
+  .card-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; float: right; }
+  .icon-brand { background: #fef9ec; color: #dfb338; }
+  .icon-amber { background: #fffbeb; color: #f59e0b; }
+  .icon-red { background: #fef2f2; color: #ef4444; }
+  .icon-cyan { background: #ecfeff; color: #06b6d4; }
+  .icon-emerald { background: #ecfdf5; color: #10b981; }
+
+  /* 3-column grid */
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 24px; }
+  .card-full { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; }
+  .card-head { padding: 16px 20px 0; font-size: 16px; font-weight: 600; color: #111827; }
+  .card-body { padding: 12px 20px 20px; }
+
+  .status-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+  .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #fff; }
+  .b-slate { background: #64748b; }
+  .b-blue { background: #3b82f6; }
+  .b-cyan { background: #06b6d4; }
+  .b-amber { background: #f59e0b; }
+  .b-purple { background: #a855f7; }
+  .b-orange { background: #f97316; }
+  .b-emerald { background: #10b981; }
+  .b-red { background: #ef4444; }
+  .count-text { font-size: 14px; font-weight: 500; color: #111827; }
+  .source-text { font-size: 14px; color: #6b7280; }
+
+  .team-row { padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+  .team-row:last-child { border-bottom: none; }
+  .team-name { font-size: 14px; font-weight: 500; color: #111827; }
+  .team-role { display: inline-block; border: 1px solid #e5e7eb; border-radius: 10px; padding: 2px 6px; font-size: 10px; color: #6b7280; }
+  .team-stats { font-size: 12px; color: #6b7280; margin-top: 4px; }
+
+  /* Recent leads */
+  .recent-list { display: flex; flex-direction: column; gap: 12px; }
+  .recent-item { display: flex; align-items: center; justify-content: space-between; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+  .recent-item:hover { background: #f9fafb; }
+  .recent-name { font-weight: 500; color: #111827; font-size: 14px; }
+  .recent-meta { font-size: 13px; color: #6b7280; margin-top: 2px; }
+  .eye-btn { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #6b7280; cursor: pointer; }
+  .eye-btn:hover { background: #f3f4f6; }
+
+  .view-all { color: #dfb338; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23dfb338'/%3E%3Ctext x='50' y='68' font-size='52' font-weight='bold' text-anchor='middle' fill='white' font-family='Arial'%3ELD%3C/text%3E%3C/svg%3E" alt="Leads Dekho">
+    <span>Leads Dekho</span>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-item active">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Leads
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Import Leads
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Site Visits
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+      Bookings
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Projects
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      Lead Sources
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Reports
+    </div>
+    <div class="nav-item">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      User Management
+    </div>
+  </div>
+  <div class="sidebar-user">
+    <div class="user-row">
+      <div class="avatar">PU</div>
+      <div class="user-info">
+        <div class="user-name">PUJA</div>
+        <div class="user-role">Admin</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="header">
+    <h1>Dashboard</h1>
+    <div class="header-icon">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </div>
+  </div>
+  <div class="content">
+    <!-- Filters -->
+    <div class="filters">
+      <div class="filter-btn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        All Users
+      </div>
+      <div class="filter-btn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        All Time
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="cards-row">
+      <div class="card card-brand">
+        <div class="card-icon icon-brand">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        </div>
+        <div class="card-label">Total Leads</div>
+        <div class="card-value">3,368</div>
+      </div>
+      <div class="card card-amber">
+        <div class="card-icon icon-amber">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="card-label">Today Follow-ups</div>
+        <div class="card-value">142</div>
+      </div>
+      <div class="card card-red">
+        <div class="card-icon icon-red">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="card-label">Pending Follow-ups</div>
+        <div class="card-value">38</div>
+      </div>
+      <div class="card card-cyan">
+        <div class="card-icon icon-cyan">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </div>
+        <div class="card-label">Total Projects</div>
+        <div class="card-value">12</div>
+      </div>
+      <div class="card card-emerald">
+        <div class="card-icon icon-emerald">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
+        <div class="card-label">Bookings</div>
+        <div class="card-value">87</div>
+      </div>
+    </div>
+
+    <!-- 3-column grid -->
+    <div class="grid-3">
+      <!-- Leads by Status -->
+      <div class="card-full">
+        <div class="card-head">Leads by Status</div>
+        <div class="card-body">
+          <div class="status-row"><span class="badge b-blue">Contacted</span><span class="count-text">1,247</span></div>
+          <div class="status-row"><span class="badge b-amber">Not Connected</span><span class="count-text">892</span></div>
+          <div class="status-row"><span class="badge b-purple">Site Visit Done</span><span class="count-text">456</span></div>
+          <div class="status-row"><span class="badge b-cyan">Prospect</span><span class="count-text">321</span></div>
+          <div class="status-row"><span class="badge b-red">Not Interested</span><span class="count-text">287</span></div>
+          <div class="status-row"><span class="badge b-amber">Site Visit Promised</span><span class="count-text">103</span></div>
+          <div class="status-row"><span class="badge b-emerald">Booked</span><span class="count-text">87</span></div>
+          <div class="status-row"><span class="badge b-slate">New</span><span class="count-text">42</span></div>
+        </div>
+      </div>
+
+      <!-- Leads by Source -->
+      <div class="card-full">
+        <div class="card-head">Leads by Source</div>
+        <div class="card-body">
+          <div class="status-row"><span class="source-text">MagicBricks</span><span class="count-text">1,428</span></div>
+          <div class="status-row"><span class="source-text">Housing.com</span><span class="count-text">856</span></div>
+          <div class="status-row"><span class="source-text">Facebook</span><span class="count-text">432</span></div>
+          <div class="status-row"><span class="source-text">99acres</span><span class="count-text">317</span></div>
+          <div class="status-row"><span class="source-text">Walk-in</span><span class="count-text">156</span></div>
+          <div class="status-row"><span class="source-text">Referral</span><span class="count-text">98</span></div>
+          <div class="status-row"><span class="source-text">Google Ads</span><span class="count-text">52</span></div>
+          <div class="status-row"><span class="source-text">Portal</span><span class="count-text">29</span></div>
+        </div>
+      </div>
+
+      <!-- Team Performance -->
+      <div class="card-full">
+        <div class="card-head">Team Performance</div>
+        <div class="card-body">
+          <div class="team-row">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="team-name">NISHA</span>
+              <span class="team-role">telecalling</span>
+            </div>
+            <div class="team-stats">612 owned · 1,847 calls</div>
+          </div>
+          <div class="team-row">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="team-name">RIYA</span>
+              <span class="team-role">telecalling</span>
+            </div>
+            <div class="team-stats">534 owned · 1,623 calls</div>
+          </div>
+          <div class="team-row">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="team-name">SHISANGI</span>
+              <span class="team-role">sales</span>
+            </div>
+            <div class="team-stats">421 owned · 892 calls</div>
+          </div>
+          <div class="team-row">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="team-name">ARJUN</span>
+              <span class="team-role">sales</span>
+            </div>
+            <div class="team-stats">387 owned · 654 calls</div>
+          </div>
+          <div class="team-row">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="team-name">PRIYA</span>
+              <span class="team-role">telecalling</span>
+            </div>
+            <div class="team-stats">298 owned · 921 calls</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Leads -->
+    <div class="card-full">
+      <div class="card-head" style="display:flex;justify-content:space-between;align-items:center;">
+        Recent Leads
+        <span class="view-all">View All →</span>
+      </div>
+      <div class="card-body">
+        <div class="recent-list">
+          <div class="recent-item">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="recent-name">Barnali Laha</span>
+                <span class="badge b-blue">Contacted</span>
+              </div>
+              <div class="recent-meta">+91 98300 12345 · Owner: NISHA</div>
+            </div>
+            <div class="eye-btn">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+          </div>
+          <div class="recent-item">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="recent-name">Anindita Roy</span>
+                <span class="badge b-red">Lost</span>
+              </div>
+              <div class="recent-meta">+91 90000 56789 · Owner: RIYA</div>
+            </div>
+            <div class="eye-btn">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+          </div>
+          <div class="recent-item">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="recent-name">Suman Jha</span>
+                <span class="badge b-purple">Site Visit Done</span>
+              </div>
+              <div class="recent-meta">+91 89012 34567 · Owner: SHISANGI</div>
+            </div>
+            <div class="eye-btn">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+          </div>
+          <div class="recent-item">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="recent-name">Rohit Sharma</span>
+                <span class="badge b-amber">Site Visit Promised</span>
+              </div>
+              <div class="recent-meta">+91 70123 45678 · Owner: ARJUN</div>
+            </div>
+            <div class="eye-btn">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
