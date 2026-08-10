@@ -1,0 +1,658 @@
+     1→"use client";
+     2→
+     3→import { useState } from "react";
+     4→import { Button } from "@/components/ui/button";
+     5→import { Card, CardContent } from "@/components/ui/card";
+     6→import { useAppStore } from "@/lib/store";
+     7→import { ContactFormDialog } from "@/components/contact-form-dialog";
+     8→import { blogPosts } from "@/lib/blog-posts";
+     9→import {
+    10→  Users,
+    11→  TrendingUp,
+    12→  Phone,
+    13→  BarChart3,
+    14→  Shield,
+    15→  ArrowRight,
+    16→  MapPin,
+    17→  Target,
+    18→  Sun,
+    19→  Moon,
+    20→  Building2,
+    21→  Mail,
+    22→  Calendar,
+    23→  Clock,
+    24→  CheckCircle2,
+    25→  Zap,
+    26→  Database,
+    27→  Workflow,
+    28→} from "lucide-react";
+    29→
+    30→export function LandingPage() {
+    31→  const { setPage, setSelectedBlogSlug } = useAppStore();
+    32→  const [contactOpen, setContactOpen] = useState(false);
+    33→  const [darkMode, setDarkMode] = useState(false);
+    34→
+    35→  const toggleDarkMode = () => {
+    36→    setDarkMode(!darkMode);
+    37→    document.documentElement.classList.toggle("dark");
+    38→  };
+    39→
+    40→  const openBlog = () => {
+    41→    setPage("blog");
+    42→    if (typeof window !== "undefined") window.scrollTo(0, 0);
+    43→  };
+    44→
+    45→  const openPost = (slug: string) => {
+    46→    setSelectedBlogSlug(slug);
+    47→    setPage("blog-detail");
+    48→    if (typeof window !== "undefined") window.scrollTo(0, 0);
+    49→  };
+    50→
+    51→  // Show only the 6 most recent posts on the landing page
+    52→  const recentPosts = [...blogPosts]
+    53→    .sort((a, b) => (a.date < b.date ? 1 : -1))
+    54→    .slice(0, 6);
+    55→
+    56→  return (
+    57→    <div className={darkMode ? "dark" : ""}>
+    58→    <div className="min-h-screen bg-gradient-to-br from-brand-light via-background to-steel-light dark:from-gray-900 dark:via-gray-950 dark:to-gray-900">
+    59→      {/* Navigation */}
+    60→      <nav className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 lg:px-12 border-b border-border bg-background/80 backdrop-blur">
+    61→        <div className="flex items-center gap-2">
+    62→          <img src="/logo.png" alt="Leads Dekho" className="h-9 w-9 rounded-lg object-cover" />
+    63→          <span className="text-xl font-bold text-foreground">Leads Dekho</span>
+    64→        </div>
+    65→        <div className="hidden md:flex items-center gap-6">
+    66→          <button
+    67→            onClick={() => {
+    68→              const el = document.getElementById("features");
+    69→              if (el) el.scrollIntoView({ behavior: "smooth" });
+    70→            }}
+    71→            className="text-sm text-muted-foreground hover:text-foreground"
+    72→          >
+    73→            Features
+    74→          </button>
+    75→          <button
+    76→            onClick={() => {
+    77→              const el = document.getElementById("dashboard");
+    78→              if (el) el.scrollIntoView({ behavior: "smooth" });
+    79→            }}
+    80→            className="text-sm text-muted-foreground hover:text-foreground"
+    81→          >
+    82→            Dashboard
+    83→          </button>
+    84→          <button
+    85→            onClick={openBlog}
+    86→            className="text-sm text-muted-foreground hover:text-foreground"
+    87→          >
+    88→            Blog
+    89→          </button>
+    90→          <button
+    91→            onClick={() => {
+    92→              const el = document.getElementById("contact");
+    93→              if (el) el.scrollIntoView({ behavior: "smooth" });
+    94→            }}
+    95→            className="text-sm text-muted-foreground hover:text-foreground"
+    96→          >
+    97→            Contact
+    98→          </button>
+    99→        </div>
+   100→        <div className="flex items-center gap-3">
+   101→          <Button
+   102→            variant="ghost"
+   103→            size="icon"
+   104→            onClick={toggleDarkMode}
+   105→            className="h-9 w-9"
+   106→          >
+   107→            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+   108→          </Button>
+   109→          <Button
+   110→            variant="ghost"
+   111→            onClick={() => setPage("login")}
+   112→            className="text-muted-foreground hover:text-foreground"
+   113→          >
+   114→            Sign In
+   115→          </Button>
+   116→          <Button
+   117→            onClick={() => setContactOpen(true)}
+   118→            className="bg-brand hover:bg-brand-dark text-white"
+   119→          >
+   120→            Get Started
+   121→          </Button>
+   122→        </div>
+   123→      </nav>
+   124→
+   125→      {/* Hero Section */}
+   126→      <section className="px-6 py-16 lg:px-12 lg:py-24 relative overflow-hidden">
+   127→        {/* Decorative gradient blobs */}
+   128→        <div className="absolute top-0 left-1/4 w-72 h-72 bg-brand/10 rounded-full blur-3xl pointer-events-none" />
+   129→        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-amber-300/10 rounded-full blur-3xl pointer-events-none" />
+   130→
+   131→        <div className="relative mx-auto max-w-6xl text-center">
+   132→          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-muted px-4 py-1.5 text-sm font-medium text-brand-dark dark:text-brand">
+   133→            <Target className="h-4 w-4" />
+   134→            CRM Built for Growth
+   135→          </div>
+   136→          <h1 className="mb-6 text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+   137→            Close More Deals with
+   138→            <span className="text-brand"> Smart Lead Management</span>
+   139→          </h1>
+   140→          <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground">
+   141→            From first call to closed deal — manage your entire real estate sales
+   142→            pipeline with intelligent tracking, team collaboration, and powerful
+   143→            analytics. Built in India, for Indian property businesses.
+   144→          </p>
+   145→          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+   146→            <Button
+   147→              size="lg"
+   148→              onClick={() => setContactOpen(true)}
+   149→              className="bg-brand px-8 text-base hover:bg-brand-dark"
+   150→            >
+   151→              Start Free Trial
+   152→              <ArrowRight className="ml-2 h-4 w-4" />
+   153→            </Button>
+   154→            <Button
+   155→              size="lg"
+   156→              variant="outline"
+   157→              className="px-8 text-base"
+   158→              onClick={() => {
+   159→                const el = document.getElementById("features");
+   160→                if (el) el.scrollIntoView({ behavior: "smooth" });
+   161→              }}
+   162→            >
+   163→              See Features
+   164→            </Button>
+   165→          </div>
+   166→
+   167→          {/* Quick badges */}
+   168→          <div className="mt-10 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
+   169→            <span className="flex items-center gap-1.5">
+   170→              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+   171→              No credit card required
+   172→            </span>
+   173→            <span className="flex items-center gap-1.5">
+   174→              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+   175→              MagicBricks & Housing.com ready
+   176→            </span>
+   177→            <span className="flex items-center gap-1.5">
+   178→              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+   179→              Setup in 7 days
+   180→            </span>
+   181→          </div>
+   182→        </div>
+   183→      </section>
+   184→
+   185→      {/* Dashboard Preview Section */}
+   186→      <section id="dashboard" className="px-6 py-16 lg:px-12 lg:py-24 bg-card/60 border-y border-border">
+   187→        <div className="mx-auto max-w-6xl">
+   188→          <div className="mb-12 text-center">
+   189→            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-brand-muted px-4 py-1.5 text-sm font-medium text-brand-dark">
+   190→              <Zap className="h-4 w-4" />
+   191→              Built for Operators
+   192→            </div>
+   193→            <h2 className="mb-3 text-3xl font-bold text-foreground sm:text-4xl">
+   194→              A Dashboard Your Team Will Actually Use
+   195→            </h2>
+   196→            <p className="text-muted-foreground max-w-2xl mx-auto">
+   197→              Three screenshots from the Leads Dekho Real Estate CRM —
+   198→              the dashboard, lead management, and reports. No clutter, no
+   199→              confusing menus, just the tools your team needs to close deals.
+   200→            </p>
+   201→          </div>
+   202→
+   203→          {/* Dashboard screenshots grid */}
+   204→          <div className="grid gap-8 lg:grid-cols-3">
+   205→            {[
+   206→              {
+   207→                src: "/dashboard-1.png",
+   208→                title: "Smart Dashboard",
+   209→                desc: "Fresh leads, follow-ups, and site visits — all on one screen. Red alerts for leads that have not been called within 30 minutes.",
+   210→                label: "Admin Dashboard",
+   211→              },
+   212→              {
+   213→                src: "/dashboard-2.png",
+   214→                title: "Lead Management",
+   215→                desc: "Filter by user, project, source, or status. Inline feedback buttons, quick assignment, and full timeline history per lead.",
+   216→                label: "Leads Page",
+   217→              },
+   218→              {
+   219→                src: "/dashboard-3.png",
+   220→                title: "Reports & Analytics",
+   221→                desc: "Daily, monthly, source-wise, project-wise, and user-wise reports. Export to CSV in one click for stakeholder reviews.",
+   222→                label: "Reports Page",
+   223→              },
+   224→            ].map((item, idx) => (
+   225→              <Card
+   226→                key={idx}
+   227→                className="border-border bg-background overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1"
+   228→              >
+   229→                <div className="relative h-48 sm:h-56 overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
+   230→                  <img
+   231→                    src={item.src}
+   232→                    alt={item.title}
+   233→                    className="w-full h-full object-cover object-top"
+   234→                  />
+   235→                  <span className="absolute top-3 left-3 rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white shadow-lg">
+   236→                    {item.label}
+   237→                  </span>
+   238→                </div>
+   239→                <CardContent className="p-5">
+   240→                  <h3 className="mb-2 text-lg font-bold text-foreground">
+   241→                    {item.title}
+   242→                  </h3>
+   243→                  <p className="text-sm text-muted-foreground">{item.desc}</p>
+   244→                </CardContent>
+   245→              </Card>
+   246→            ))}
+   247→          </div>
+   248→
+   249→          {/* CTA below dashboards */}
+   250→          <div className="mt-12 text-center">
+   251→            <Button
+   252→              size="lg"
+   253→              onClick={() => setPage("login")}
+   254→              className="bg-brand hover:bg-brand-dark text-white"
+   255→            >
+   256→              Try the Dashboard Yourself
+   257→              <ArrowRight className="ml-2 h-4 w-4" />
+   258→            </Button>
+   259→          </div>
+   260→        </div>
+   261→      </section>
+   262→
+   263→      {/* Stats Bar */}
+   264→      <section className="px-6 py-12 lg:px-12">
+   265→        <div className="mx-auto grid max-w-5xl grid-cols-2 gap-8 lg:grid-cols-4">
+   266→          {[
+   267→            { value: "500+", label: "Active Teams" },
+   268→            { value: "50K+", label: "Leads Managed" },
+   269→            { value: "35%", label: "Higher Conversion" },
+   270→            { value: "99.9%", label: "Uptime" },
+   271→          ].map((stat) => (
+   272→            <div key={stat.label} className="text-center">
+   273→              <div className="text-3xl font-extrabold text-brand lg:text-4xl">
+   274→                {stat.value}
+   275→              </div>
+   276→              <div className="mt-1 text-sm text-muted-foreground">{stat.label}</div>
+   277→            </div>
+   278→          ))}
+   279→        </div>
+   280→      </section>
+   281→
+   282→      {/* Features Section */}
+   283→      <section id="features" className="px-6 py-16 lg:px-12 lg:py-24">
+   284→        <div className="mx-auto max-w-6xl">
+   285→          <div className="mb-12 text-center">
+   286→            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-brand-muted px-4 py-1.5 text-sm font-medium text-brand-dark">
+   287→              <Workflow className="h-4 w-4" />
+   288→              Everything in One Place
+   289→            </div>
+   290→            <h2 className="mb-3 text-3xl font-bold text-foreground sm:text-4xl">
+   291→              Everything You Need to Close Deals
+   292→            </h2>
+   293→            <p className="text-muted-foreground">
+   294→              Purpose-built features for real estate sales teams
+   295→            </p>
+   296→          </div>
+   297→          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+   298→            {[
+   299→              {
+   300→                icon: Users,
+   301→                title: "Lead Management",
+   302→                desc: "Track every lead from first contact to close with intelligent pipeline stages and role-based access.",
+   303→                color: "emerald",
+   304→              },
+   305→              {
+   306→                icon: Phone,
+   307→                title: "Quick Feedback",
+   308→                desc: "Log calls and feedback instantly. Quick assign leads while logging — no context switching.",
+   309→                color: "teal",
+   310→              },
+   311→              {
+   312→                icon: MapPin,
+   313→                title: "Site Visit Tracking",
+   314→                desc: "Schedule and track site visits with status updates and feedback collection.",
+   315→                color: "amber",
+   316→              },
+   317→              {
+   318→                icon: Building2,
+   319→                title: "Project Management",
+   320→                desc: "Manage your projects with add/delete functionality. Admin-only project management.",
+   321→                color: "violet",
+   322→              },
+   323→              {
+   324→                icon: BarChart3,
+   325→                title: "Reports & Analytics",
+   326→                desc: "Daily and monthly reports with export capabilities. Track team performance and conversion rates.",
+   327→                color: "rose",
+   328→              },
+   329→              {
+   330→                icon: Shield,
+   331→                title: "Role-Based Access",
+   332→                desc: "Admin, Telecalling, and Sales roles with granular permissions to protect your data.",
+   333→                color: "sky",
+   334→              },
+   335→              {
+   336→                icon: Database,
+   337→                title: "MagicBricks & Housing Integration",
+   338→                desc: "Webhooks for automatic lead capture from MagicBricks, Housing.com, Facebook Ads, and more.",
+   339→                color: "indigo",
+   340→              },
+   341→              {
+   342→                icon: Phone,
+   343→                title: "WhatsApp Ready",
+   344→                desc: "Quick-action WhatsApp templates, call-logging, and complete activity timeline per lead.",
+   345→                color: "green",
+   346→              },
+   347→              {
+   348→                icon: TrendingUp,
+   349→                title: "Source-wise ROI Reports",
+   350→                desc: "See exactly which lead sources convert best, so you can spend your marketing budget wisely.",
+   351→                color: "orange",
+   352→              },
+   353→            ].map((feature) => (
+   354→              <Card
+   355→                key={feature.title}
+   356→                className="border-border bg-card/80 transition-all hover:shadow-lg hover:-translate-y-1"
+   357→              >
+   358→                <CardContent className="p-6">
+   359→                  <div
+   360→                    className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-${feature.color}-100 dark:bg-${feature.color}-950`}
+   361→                  >
+   362→                    <feature.icon
+   363→                      className={`h-6 w-6 text-${feature.color}-600 dark:text-${feature.color}-400`}
+   364→                    />
+   365→                  </div>
+   366→                  <h3 className="mb-2 text-lg font-semibold text-foreground">
+   367→                    {feature.title}
+   368→                  </h3>
+   369→                  <p className="text-sm text-muted-foreground">{feature.desc}</p>
+   370→                </CardContent>
+   371→              </Card>
+   372→            ))}
+   373→          </div>
+   374→        </div>
+   375→      </section>
+   376→
+   377→      {/* How It Works */}
+   378→      <section className="bg-card px-6 py-16 lg:px-12 lg:py-24 border-y border-border">
+   379→        <div className="mx-auto max-w-4xl">
+   380→          <div className="mb-12 text-center">
+   381→            <h2 className="mb-3 text-3xl font-bold text-foreground sm:text-4xl">
+   382→              How It Works
+   383→            </h2>
+   384→            <p className="text-muted-foreground">Get started in minutes</p>
+   385→          </div>
+   386→          <div className="space-y-8">
+   387→            {[
+   388→              {
+   389→                step: "1",
+   390→                title: "Capture Leads",
+   391→                desc: "Add leads manually, import via CSV, or capture from multiple sources like MagicBricks, Housing.com, and Facebook Ads. Auto-assign to team members.",
+   392→              },
+   393→              {
+   394→                step: "2",
+   395→                title: "Nurture & Track",
+   396→                desc: "Log calls, schedule follow-ups, and track site visits. Every interaction is recorded in the timeline so nothing falls through the cracks.",
+   397→              },
+   398→              {
+   399→                step: "3",
+   400→                title: "Close Deals",
+   401→                desc: "Move leads through your pipeline. Get insights on conversion rates and team performance. Export reports for stakeholders in one click.",
+   402→              },
+   403→            ].map((item) => (
+   404→              <div key={item.step} className="flex gap-4">
+   405→                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
+   406→                  {item.step}
+   407→                </div>
+   408→                <div>
+   409→                  <h3 className="mb-1 text-lg font-semibold text-foreground">
+   410→                    {item.title}
+   411→                  </h3>
+   412→                  <p className="text-muted-foreground">{item.desc}</p>
+   413→                </div>
+   414→              </div>
+   415→            ))}
+   416→          </div>
+   417→        </div>
+   418→      </section>
+   419→
+   420→      {/* Blog Section */}
+   421→      <section id="blog" className="px-6 py-16 lg:px-12 lg:py-24">
+   422→        <div className="mx-auto max-w-6xl">
+   423→          <div className="mb-12 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+   424→            <div>
+   425→              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-brand-muted px-4 py-1.5 text-sm font-medium text-brand-dark">
+   426→                <Database className="h-4 w-4" />
+   427→                Insights & Strategy
+   428→              </div>
+   429→              <h2 className="mb-3 text-3xl font-bold text-foreground sm:text-4xl">
+   430→                From the Leads Dekho Blog
+   431→              </h2>
+   432→              <p className="text-muted-foreground max-w-2xl">
+   433→                Real-world strategies, integration guides, and operator stories
+   434→                about running a Real Estate CRM that actually converts.
+   435→              </p>
+   436→            </div>
+   437→            <Button
+   438→              variant="outline"
+   439→              onClick={openBlog}
+   440→              className="shrink-0"
+   441→            >
+   442→              View All Articles
+   443→              <ArrowRight className="ml-2 h-4 w-4" />
+   444→            </Button>
+   445→          </div>
+   446→
+   447→          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+   448→            {recentPosts.map((post) => (
+   449→              <Card
+   450→                key={post.slug}
+   451→                className="border-border bg-card/80 transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer overflow-hidden"
+   452→                onClick={() => openPost(post.slug)}
+   453→              >
+   454→                <div
+   455→                  className={`h-36 bg-gradient-to-br ${post.image} flex items-end p-4`}
+   456→                >
+   457→                  <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-gray-800">
+   458→                    {post.category}
+   459→                  </span>
+   460→                </div>
+   461→                <CardContent className="p-5">
+   462→                  <h3 className="mb-2 text-base font-bold text-foreground line-clamp-2">
+   463→                    {post.title}
+   464→                  </h3>
+   465→                  <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
+   466→                    {post.excerpt}
+   467→                  </p>
+   468→                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+   469→                    <span className="flex items-center gap-1">
+   470→                      <Calendar className="h-3 w-3" />
+   471→                      {new Date(post.date).toLocaleDateString("en-IN", {
+   472→                        day: "numeric",
+   473→                        month: "short",
+   474→                        year: "numeric",
+   475→                      })}
+   476→                    </span>
+   477→                    <span className="flex items-center gap-1">
+   478→                      <Clock className="h-3 w-3" />
+   479→                      {post.readTime}
+   480→                    </span>
+   481→                  </div>
+   482→                </CardContent>
+   483→              </Card>
+   484→            ))}
+   485→          </div>
+   486→
+   487→          <div className="mt-10 text-center">
+   488→            <Button
+   489→              variant="ghost"
+   490→              onClick={openBlog}
+   491→              className="text-brand hover:text-brand-dark"
+   492→            >
+   493→              Read all 15 articles
+   494→              <ArrowRight className="ml-2 h-4 w-4" />
+   495→            </Button>
+   496→          </div>
+   497→        </div>
+   498→      </section>
+   499→
+   500→      {/* Contact / CTA Section */}
+   501→      <section id="contact" className="bg-brand px-6 py-16 lg:px-12 lg:py-24">
+   502→        <div className="mx-auto max-w-4xl text-center">
+   503→          <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl">
+   504→            Ready to Transform Your Sales Process?
+   505→          </h2>
+   506→          <p className="mb-8 text-white/80">
+   507→            Join hundreds of real estate teams already using Leads Dekho to close
+   508→            more deals. Talk to us today.
+   509→          </p>
+   510→
+   511→          <div className="mb-8 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-8">
+   512→            <a
+   513→              href="mailto:contact@leadsdekho.in"
+   514→              className="flex items-center gap-2 text-white hover:text-white/80 transition"
+   515→            >
+   516→              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
+   517→                <Mail className="h-5 w-5" />
+   518→              </span>
+   519→              <span className="text-sm font-medium">contact@leadsdekho.in</span>
+   520→            </a>
+   521→            <a
+   522→              href="tel:7605804832"
+   523→              className="flex items-center gap-2 text-white hover:text-white/80 transition"
+   524→            >
+   525→              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
+   526→                <Phone className="h-5 w-5" />
+   527→              </span>
+   528→              <span className="text-sm font-medium">7605804832</span>
+   529→            </a>
+   530→          </div>
+   531→
+   532→          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+   533→            <Button
+   534→              size="lg"
+   535→              variant="secondary"
+   536→              onClick={() => setContactOpen(true)}
+   537→              className="bg-white text-brand-dark hover:bg-gray-100 px-8"
+   538→            >
+   539→              Get Started Now
+   540→              <ArrowRight className="ml-2 h-4 w-4" />
+   541→            </Button>
+   542→            <Button
+   543→              size="lg"
+   544→              variant="outline"
+   545→              onClick={() => setPage("login")}
+   546→              className="border-white text-white hover:bg-white/10 px-8"
+   547→            >
+   548→              Sign In
+   549→            </Button>
+   550→          </div>
+   551→        </div>
+   552→      </section>
+   553→
+   554→      {/* Footer */}
+   555→      <footer className="border-t border-border bg-muted px-6 py-10 lg:px-12">
+   556→        <div className="mx-auto max-w-6xl">
+   557→          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+   558→            <div>
+   559→              <div className="flex items-center gap-2 mb-3">
+   560→                <img src="/logo.png" alt="Leads Dekho" className="h-7 w-7 rounded-md object-cover" />
+   561→                <span className="font-semibold text-foreground">Leads Dekho</span>
+   562→              </div>
+   563→              <p className="text-sm text-muted-foreground">
+   564→                A Real Estate CRM built in India, for Indian property businesses.
+   565→                Capture leads from MagicBricks, Housing.com, and Facebook Ads —
+   566→                all in one pipeline.
+   567→              </p>
+   568→            </div>
+   569→            <div>
+   570→              <h4 className="mb-3 font-semibold text-foreground">Product</h4>
+   571→              <ul className="space-y-2 text-sm text-muted-foreground">
+   572→                <li>
+   573→                  <button
+   574→                    onClick={() => {
+   575→                      const el = document.getElementById("features");
+   576→                      if (el) el.scrollIntoView({ behavior: "smooth" });
+   577→                    }}
+   578→                    className="hover:text-brand"
+   579→                  >
+   580→                    Features
+   581→                  </button>
+   582→                </li>
+   583→                <li>
+   584→                  <button
+   585→                    onClick={() => {
+   586→                      const el = document.getElementById("dashboard");
+   587→                      if (el) el.scrollIntoView({ behavior: "smooth" });
+   588→                    }}
+   589→                    className="hover:text-brand"
+   590→                  >
+   591→                    Dashboard
+   592→                  </button>
+   593→                </li>
+   594→                <li>
+   595→                  <button onClick={() => setPage("login")} className="hover:text-brand">
+   596→                    Sign In
+   597→                  </button>
+   598→                </li>
+   599→                <li>
+   600→                  <button onClick={() => setContactOpen(true)} className="hover:text-brand">
+   601→                    Get Started
+   602→                  </button>
+   603→                </li>
+   604→              </ul>
+   605→            </div>
+   606→            <div>
+   607→              <h4 className="mb-3 font-semibold text-foreground">Resources</h4>
+   608→              <ul className="space-y-2 text-sm text-muted-foreground">
+   609→                <li>
+   610→                  <button onClick={openBlog} className="hover:text-brand">
+   611→                    Blog
+   612→                  </button>
+   613→                </li>
+   614→                <li>
+   615→                  <a href="mailto:contact@leadsdekho.in" className="hover:text-brand flex items-center gap-1">
+   616→                    <Mail className="h-3 w-3" /> contact@leadsdekho.in
+   617→                  </a>
+   618→                </li>
+   619→                <li>
+   620→                  <a href="tel:7605804832" className="hover:text-brand flex items-center gap-1">
+   621→                    <Phone className="h-3 w-3" /> 7605804832
+   622→                  </a>
+   623→                </li>
+   624→              </ul>
+   625→            </div>
+   626→            <div>
+   627→              <h4 className="mb-3 font-semibold text-foreground">Developed by</h4>
+   628→              <p className="text-base font-bold text-foreground tracking-wide">
+   629→                PSC TECH SOLUTIONS
+   630→              </p>
+   631→              <p className="mt-2 text-sm text-muted-foreground">
+   632→                Building tools that help Indian real estate teams grow.
+   633→              </p>
+   634→            </div>
+   635→          </div>
+   636→          <div className="mt-8 pt-6 border-t border-border flex flex-col items-center justify-between gap-3 sm:flex-row">
+   637→            <div className="text-xs text-muted-foreground">
+   638→              © {new Date().getFullYear()} Leads Dekho · PSC Tech Solutions. All rights reserved.
+   639→            </div>
+   640→            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+   641→              <a href="mailto:contact@leadsdekho.in" className="hover:text-brand">
+   642→                contact@leadsdekho.in
+   643→              </a>
+   644→              <a href="tel:7605804832" className="hover:text-brand">
+   645→                7605804832
+   646→              </a>
+   647→            </div>
+   648→          </div>
+   649→        </div>
+   650→      </footer>
+   651→
+   652→      {/* Contact Form Dialog */}
+   653→      <ContactFormDialog open={contactOpen} onOpenChange={setContactOpen} />
+   654→    </div>
+   655→    </div>
+   656→  );
+   657→}
+   658→

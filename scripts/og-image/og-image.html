@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Leads Dekho OG</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 1200px;
+    height: 630px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+  }
+  body {
+    background:
+      radial-gradient(circle at 85% 15%, rgba(245, 158, 11, 0.18), transparent 40%),
+      radial-gradient(circle at 15% 85%, rgba(14, 165, 233, 0.20), transparent 45%),
+      linear-gradient(135deg, #0a2540 0%, #0F4C81 50%, #0a2540 100%);
+    color: white;
+    position: relative;
+    padding: 60px 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .grid-overlay {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+  }
+  .brand-row {
+    display: flex; align-items: center; gap: 18px;
+    position: relative; z-index: 2;
+  }
+  .logo {
+    width: 64px; height: 64px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 30px; color: white;
+    box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
+  }
+  .brand-name {
+    font-size: 30px; font-weight: 700; letter-spacing: -0.02em;
+  }
+  .brand-tag {
+    font-size: 14px; font-weight: 500; opacity: 0.7;
+    margin-left: 12px; padding: 4px 10px;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 999px;
+  }
+  .headline {
+    font-size: 76px; font-weight: 800; line-height: 1.05;
+    letter-spacing: -0.035em;
+    position: relative; z-index: 2;
+    max-width: 980px;
+  }
+  .headline .accent {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .sub {
+    font-size: 22px; font-weight: 400; opacity: 0.85;
+    max-width: 820px; line-height: 1.45;
+    position: relative; z-index: 2;
+  }
+  .features {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    position: relative; z-index: 2;
+  }
+  .pill {
+    padding: 10px 18px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 999px;
+    font-size: 15px; font-weight: 500;
+    backdrop-filter: blur(8px);
+  }
+  .pill .dot {
+    display: inline-block; width: 6px; height: 6px;
+    border-radius: 50%; background: #34d399;
+    margin-right: 8px; vertical-align: middle;
+  }
+  .footer {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    position: relative; z-index: 2;
+  }
+  .footer-left {
+    font-size: 18px; font-weight: 600; opacity: 0.9;
+  }
+  .footer-left .url {
+    color: #fbbf24; font-weight: 700;
+  }
+  .footer-right {
+    text-align: right; font-size: 14px; opacity: 0.65;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+  <div class="grid-overlay"></div>
+
+  <div class="brand-row">
+    <div class="logo">LD</div>
+    <div class="brand-name">Leads Dekho</div>
+    <div class="brand-tag">Real Estate CRM</div>
+  </div>
+
+  <div>
+    <h1 class="headline">
+      Close More Deals with<br>
+      <span class="accent">Smart Lead Management</span>
+    </h1>
+  </div>
+
+  <div class="sub">
+    From first call to closed deal — manage your entire real estate sales
+    pipeline with intelligent tracking, team collaboration, and powerful
+    analytics. Built in India, for Indian property businesses.
+  </div>
+
+  <div class="features">
+    <div class="pill"><span class="dot"></span>MagicBricks &amp; Housing.com</div>
+    <div class="pill"><span class="dot"></span>Auto Lead Distribution</div>
+    <div class="pill"><span class="dot"></span>Site Visit Tracking</div>
+    <div class="pill"><span class="dot"></span>30-min SLA Alerts</div>
+    <div class="pill"><span class="dot"></span>Real-time Reports</div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-left">
+      <span class="url">leadsdekho.in</span>
+    </div>
+    <div class="footer-right">
+      Developed by PSC TECH SOLUTIONS<br>
+      contact@leadsdekho.in &nbsp;|&nbsp; +91 76058 04832
+    </div>
+  </div>
+</body>
+</html>
