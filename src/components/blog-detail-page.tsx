@@ -214,7 +214,7 @@ export function BlogDetailPage() {
       {/* Footer */}
       <footer className="border-t border-border bg-muted px-6 py-8 lg:px-12">
         <div className="mx-auto max-w-6xl">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2">
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <img src="/logo.png" alt="Leads Dekho" className="h-7 w-7 rounded-md object-cover" />
@@ -233,21 +233,10 @@ export function BlogDetailPage() {
                 <Mail className="h-4 w-4" />
                 contact@leadsdekho.in
               </a>
-              <a
-                href="tel:7605804832"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-brand"
-              >
-                <Phone className="h-4 w-4" />
-                7605804832
-              </a>
-            </div>
-            <div>
-              <h4 className="mb-2 font-semibold text-foreground">Developed by</h4>
-              <p className="text-sm font-medium text-foreground">PSC TECH SOLUTIONS</p>
             </div>
           </div>
           <div className="mt-6 pt-4 border-t border-border text-center text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Leads Dekho · PSC Tech Solutions. All rights reserved.
+            © {new Date().getFullYear()} Leads Dekho. All rights reserved.
           </div>
         </div>
       </footer>

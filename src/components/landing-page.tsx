@@ -518,15 +518,6 @@ export function LandingPage() {
               </span>
               <span className="text-sm font-medium">contact@leadsdekho.in</span>
             </a>
-            <a
-              href="tel:7605804832"
-              className="flex items-center gap-2 text-white hover:text-white/80 transition"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
-                <Phone className="h-5 w-5" />
-              </span>
-              <span className="text-sm font-medium">7605804832</span>
-            </a>
           </div>
 
           <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -616,33 +607,16 @@ export function LandingPage() {
                     <Mail className="h-3 w-3" /> contact@leadsdekho.in
                   </a>
                 </li>
-                <li>
-                  <a href="tel:7605804832" className="hover:text-brand flex items-center gap-1">
-                    <Phone className="h-3 w-3" /> 7605804832
-                  </a>
-                </li>
               </ul>
-            </div>
-            <div>
-              <h4 className="mb-3 font-semibold text-foreground">Developed by</h4>
-              <p className="text-base font-bold text-foreground tracking-wide">
-                PSC TECH SOLUTIONS
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Building tools that help Indian real estate teams grow.
-              </p>
             </div>
           </div>
           <div className="mt-8 pt-6 border-t border-border flex flex-col items-center justify-between gap-3 sm:flex-row">
             <div className="text-xs text-muted-foreground">
-              © {new Date().getFullYear()} Leads Dekho · PSC Tech Solutions. All rights reserved.
+              © {new Date().getFullYear()} Leads Dekho. All rights reserved.
             </div>
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
               <a href="mailto:contact@leadsdekho.in" className="hover:text-brand">
                 contact@leadsdekho.in
-              </a>
-              <a href="tel:7605804832" className="hover:text-brand">
-                7605804832
               </a>
             </div>
           </div>

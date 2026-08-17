@@ -46,9 +46,9 @@ export const metadata: Metadata = {
     "Lead Distribution Software",
     "Real Estate Analytics",
   ],
-  authors: [{ name: "PSC TECH SOLUTIONS", url: SITE_URL }],
-  creator: "PSC TECH SOLUTIONS",
-  publisher: "PSC TECH SOLUTIONS",
+  authors: [{ name: "Leads Dekho", url: SITE_URL }],
+  creator: "Leads Dekho",
+  publisher: "Leads Dekho",
   category: "Real Estate Software",
   alternates: {
     canonical: SITE_URL,
@@ -111,14 +111,12 @@ const jsonLdOrganization = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "Leads Dekho",
-  legalName: "PSC TECH SOLUTIONS",
   url: SITE_URL,
   logo: `${SITE_URL}/logo.png`,
   description: SITE_DESCRIPTION,
   email: "contact@leadsdekho.in",
-  telephone: "+91-7605804832",
   foundingDate: "2024",
-  founders: [{ "@type": "Organization", name: "PSC TECH SOLUTIONS" }],
+  founders: [{ "@type": "Organization", name: "Leads Dekho" }],
   address: {
     "@type": "PostalAddress",
     addressCountry: "IN",
@@ -128,7 +126,6 @@ const jsonLdOrganization = {
       "@type": "ContactPoint",
       contactType: "sales",
       email: "contact@leadsdekho.in",
-      telephone: "+91-7605804832",
       availableLanguage: ["English", "Hindi", "Bengali"],
     },
   ],
@@ -152,9 +149,8 @@ const jsonLdSoftware = {
   },
   publisher: {
     "@type": "Organization",
-    name: "PSC TECH SOLUTIONS",
+    name: "Leads Dekho",
     email: "contact@leadsdekho.in",
-    telephone: "+91-7605804832",
   },
   featureList: [
     "Lead capture from MagicBricks & Housing.com",
@@ -183,7 +179,7 @@ const jsonLdWebsite = {
   description: SITE_DESCRIPTION,
   publisher: {
     "@type": "Organization",
-    name: "PSC TECH SOLUTIONS",
+    name: "Leads Dekho",
   },
   potentialAction: {
     "@type": "SearchAction",
@@ -255,12 +251,7 @@ export default function RootLayout({
             <p>
               Email: <a href="mailto:contact@leadsdekho.in">contact@leadsdekho.in</a>
               <br />
-              Phone: <a href="tel:+917605804832">+91 76058 04832</a>
-              <br />
               Website: <a href="https://leadsdekho.in">leadsdekho.in</a>
-            </p>
-            <p>
-              Developed by <strong>PSC TECH SOLUTIONS</strong>.
             </p>
             <h2>Real Estate CRM Blog</h2>
             <p>

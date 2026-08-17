@@ -27,7 +27,7 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "Spreadsheets and WhatsApp groups no longer cut it. Here is why every serious real estate team in India is moving to a dedicated Real Estate CRM like Leads Dekho.",
     category: "Industry",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-07-28",
     readTime: "6 min read",
     image: "from-amber-500 to-orange-600",
@@ -45,14 +45,14 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "Round-robin, skill-based, or project-based? Here is how to assign leads in a Real Estate CRM without burning your best agents or starving your new ones.",
     category: "Strategy",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-07-25",
     readTime: "7 min read",
     image: "from-emerald-500 to-teal-600",
     content: [
       "Lead distribution is the silent killer of real estate conversion rates. Get it wrong and your best agents burn out while new hires sit idle. Get it right and every lead lands with the right person at the right time, every single time. The good news is that a modern Real Estate CRM makes this almost automatic — but only if you set up the rules correctly.",
       "The three most common distribution models are round-robin (each agent gets the next lead in turn), skill-based (the most experienced agent gets the highest-value lead), and project-based (agents specialized in a particular project get all leads for that project). None of them is universally 'best'. The right choice depends on your team size, your project portfolio, and how senior your agents are.",
-      "In Leads Dekho, the Real Estate CRM we built at PSC Tech Solutions, lead distribution is role-aware. Telecallers get the first touch — they call the lead, log the feedback, and qualify the prospect. If the lead is hot, it gets assigned to a sales executive who handles the site visit and closing. Admins and super-admins can see the entire flow and reassign leads at any time if an agent is overloaded or unavailable.",
+      "In Leads Dekho, the Real Estate CRM we built at Leads Dekho, lead distribution is role-aware. Telecallers get the first touch — they call the lead, log the feedback, and qualify the prospect. If the lead is hot, it gets assigned to a sales executive who handles the site visit and closing. Admins and super-admins can see the entire flow and reassign leads at any time if an agent is overloaded or unavailable.",
       "A practical tip: never let one agent own more than 40 active leads at a time. Beyond that number, follow-up quality collapses. A Real Estate CRM like Leads Dekho shows you the 'leads per agent' count on the dashboard, so you can rebalance before things go wrong. Some of our most successful clients do a weekly rebalancing meeting — every Monday, they look at the CRM reports and reassign leads that have been sitting untouched for more than 48 hours.",
       "Finally, remember that distribution is not the same as accountability. Distributing a lead to an agent does not mean the agent will follow up. You need both: the right assignment rule, and the right tracking system. That is why the Leads Dekho Real Estate CRM pairs every assignment with a follow-up reminder, a call-log requirement, and a timeline that admins can audit. Distribution gets the lead to the agent. Tracking makes sure the agent actually does the work.",
     ],
@@ -63,7 +63,7 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "Stop copy-pasting lead emails. Here is how to wire MagicBricks, Housing.com, and Facebook Ads straight into your Real Estate CRM so every enquiry lands in one pipeline.",
     category: "Integrations",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-07-22",
     readTime: "8 min read",
     image: "from-sky-500 to-blue-600",
@@ -81,7 +81,7 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "Site visits are the strongest buying signal in real estate. Yet most teams treat them as an afterthought. Here is how to track them properly in your Real Estate CRM.",
     category: "Sales",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-07-19",
     readTime: "5 min read",
     image: "from-violet-500 to-purple-600",
@@ -99,7 +99,7 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "Telecallers are the engine of any real estate CRM operation. Here is how to set daily targets, audit call quality, and keep your team productive without micromanaging.",
     category: "Telecalling",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-07-16",
     readTime: "6 min read",
     image: "from-rose-500 to-pink-600",
@@ -117,7 +117,7 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "Most leads are not ready to buy on day one. Here is a 7-touch nurture sequence — calls, WhatsApps, and site-visit invitations — built right into a Real Estate CRM.",
     category: "Sales",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-07-13",
     readTime: "7 min read",
     image: "from-amber-500 to-yellow-600",
@@ -139,7 +139,7 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "Spreadsheets are free, flexible, and familiar. So why are real estate teams leaving them in droves? Here is an honest, no-sales-pitch comparison.",
     category: "Comparison",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-07-10",
     readTime: "6 min read",
     image: "from-slate-500 to-gray-700",
@@ -158,7 +158,7 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "If you cannot measure which lead source converts best, you are flying blind with your marketing budget. Here is how a Real Estate CRM fixes this.",
     category: "Marketing",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-07-07",
     readTime: "5 min read",
     image: "from-cyan-500 to-teal-600",
@@ -176,7 +176,7 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "Admin, telecalling, sales, super-admin — getting role permissions right is the difference between a secure CRM and a leaky one. Here is the breakdown.",
     category: "Security",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-07-04",
     readTime: "6 min read",
     image: "from-indigo-500 to-blue-700",
@@ -194,7 +194,7 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "Adopting a CRM does not have to be a 3-month IT project. Here is a day-by-day plan to get your team live on Leads Dekho in one week.",
     category: "Implementation",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-07-01",
     readTime: "8 min read",
     image: "from-orange-500 to-red-600",
@@ -216,7 +216,7 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "Most dashboards show 20 numbers and none of them are useful. Here are the 5 metrics that actually drive real estate revenue.",
     category: "Analytics",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-06-28",
     readTime: "5 min read",
     image: "from-emerald-500 to-green-600",
@@ -236,7 +236,7 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "WhatsApp is where Indian buyers actually live. Here is how to use it with your Real Estate CRM without ending up with 50 untracked chats per lead.",
     category: "Integrations",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-06-25",
     readTime: "6 min read",
     image: "from-green-500 to-emerald-600",
@@ -255,7 +255,7 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "Big developers have brand and budget. Small brokers have neither — which is exactly why a Real Estate CRM is more valuable for them, not less.",
     category: "Industry",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-06-22",
     readTime: "5 min read",
     image: "from-blue-500 to-indigo-600",
@@ -274,12 +274,12 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "Moving 5,000 leads from spreadsheets to a Real Estate CRM is scary. Here is the field-mapping checklist and dry-run process we use with every client.",
     category: "Implementation",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-06-19",
     readTime: "7 min read",
     image: "from-purple-500 to-violet-700",
     content: [
-      "Data migration is the most feared part of adopting a new Real Estate CRM. 'Will I lose my leads?' 'Will phone numbers get mangled?' 'Will my historical follow-up notes survive the move?' These fears are reasonable — bad migrations do happen — but they are entirely preventable with the right process. Here is the exact playbook we use at PSC Tech Solutions to migrate clients onto Leads Dekho without losing a single lead.",
+      "Data migration is the most feared part of adopting a new Real Estate CRM. 'Will I lose my leads?' 'Will phone numbers get mangled?' 'Will my historical follow-up notes survive the move?' These fears are reasonable — bad migrations do happen — but they are entirely preventable with the right process. Here is the exact playbook we use at Leads Dekho to migrate clients onto Leads Dekho without losing a single lead.",
       "Step 1 — Export from your current system. Whether it is Excel, Google Sheets, Tally, or another CRM, export to CSV. Open the file and inspect it. Look for: rows with missing phone numbers, duplicate phone numbers, rows where the status column has free-text values instead of standardized ones, and rows with dates in mixed formats (some dd-mm-yyyy, some mm/dd/yyyy). All of these will cause issues if not cleaned up first.",
       "Step 2 — Clean the data. Standardize phone numbers to 10-digit Indian format (remove +91, remove leading 0, remove spaces and hyphens). Standardize status values to the Real Estate CRM's expected set (Fresh, Contacted, Not Connected, Site Visit Promised, Site Visit Done, Prospect, Booked, Not Interested, Lost). Standardize dates to yyyy-mm-dd. Remove obvious duplicates. This step takes 2–4 hours for a 5,000-lead list, and it is worth every minute.",
       "Step 3 — Map fields. Open Leads Dekho's CSV import tool and map your spreadsheet columns to the Real Estate CRM's fields. Common mappings: 'Customer Name' → name, 'Mobile' → phone, 'Email ID' → email, 'Project Name' → project, 'Source' → source, 'Status' → status, 'Last Follow-up Date' → lastContactDate, 'Next Follow-up Date' → nextFollowUpDate, 'Notes' → feedback. Save this mapping so you can reuse it for future imports.",
@@ -295,7 +295,7 @@ export const blogPosts: BlogPost[] = [
     excerpt:
       "AI is not going to replace real estate agents. But agents who use AI-enabled CRMs will replace agents who do not. Here is what is coming in 2026 and beyond.",
     category: "Future",
-    author: "PSC Tech Solutions",
+    author: "Leads Dekho Team",
     date: "2026-06-16",
     readTime: "8 min read",
     image: "from-pink-500 to-rose-600",
