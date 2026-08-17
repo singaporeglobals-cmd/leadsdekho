@@ -66,11 +66,9 @@ export const metadata: Metadata = {
     },
   },
   // Favicons are auto-detected by Next.js from src/app/icon.png and
-  // src/app/apple-icon.png (app router convention). No manual icons
-  // config needed — Next.js injects the correct <link rel="icon"> tags.
-  icons: {
-    shortcut: ["/favicon.ico"],
-  },
+  // src/app/apple-icon.png (app router convention). Next.js automatically
+  // injects the correct <link rel="icon"> and <link rel="apple-touch-icon">
+  // tags. public/favicon.ico serves legacy browsers at /favicon.ico.
   openGraph: {
     type: "website",
     locale: "en_IN",
