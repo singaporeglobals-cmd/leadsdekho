@@ -65,13 +65,11 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
+  // Favicons are auto-detected by Next.js from src/app/icon.png and
+  // src/app/apple-icon.png (app router convention). No manual icons
+  // config needed — Next.js injects the correct <link rel="icon"> tags.
   icons: {
-    icon: [
-      { url: "/logo.png", type: "image/png" },
-      { url: "/logo.svg", type: "image/svg+xml" },
-    ],
-    apple: [{ url: "/logo.png" }],
-    shortcut: ["/logo.png"],
+    shortcut: ["/favicon.ico"],
   },
   openGraph: {
     type: "website",
