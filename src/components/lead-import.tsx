@@ -77,6 +77,7 @@ export function LeadImport() {
   const [importing, setImporting] = useState(false);
   const [imported, setImported] = useState(0);
   const [skippedCount, setSkippedCount] = useState(0);
+  const [importWarning, setImportWarning] = useState("");
   const [users, setUsers] = useState<Array<{ id: string; name: string; role: string; isActive: boolean }>>([]);
   const [error, setError] = useState("");
   const [duplicateCount, setDuplicateCount] = useState(0);
@@ -139,6 +140,16 @@ export function LeadImport() {
     setError("");
     setParsing(true);
 
+    // Vercel serverless functions reject request bodies over ~4.5MB.
+    // Catch it client-side with a clear message instead of a vague server error.
+    if (selectedFile.size > 4.5 * 1024 * 1024) {
+      setError(
+        "File is too large (over 4.5 MB). Please split it into smaller files or remove unnecessary columns/rows before uploading."
+      );
+      setParsing(false);
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", selectedFile);
 
@@ -148,9 +159,16 @@ export function LeadImport() {
         body: formData,
       });
 
-      const data = await res.json();
-      if (res.ok) {
-        const rows = data.rows as ParsedRow[];
+      let data: { error?: string; rows?: ParsedRow[]; projectNames?: string[]; duplicateCount?: number } | null = null;
+      try {
+        data = await res.json();
+      } catch {
+        // Server returned non-JSON (e.g. HTML 500 page) — show the status instead
+        setError(`Server error (${res.status}). Please try again in a moment.`);
+        return;
+      }
+      if (res.ok && data) {
+        const rows = (data.rows || []) as ParsedRow[];
         // Auto-match project names to DB projects
         const autoMapping: Record<string, string> = {};
         for (const projectName of data.projectNames || []) {
@@ -179,10 +197,15 @@ export function LeadImport() {
         setSelectedRows(defaultSelected);
         setStep(2);
       } else {
-        setError(data.error || "Failed to parse file");
+        setError(data?.error || "Failed to parse file");
       }
-    } catch {
-      setError("Failed to parse file");
+    } catch (err) {
+      console.error("File upload error:", err);
+      setError(
+        err instanceof Error && err.message
+          ? `Failed to parse file: ${err.message}`
+          : "Failed to parse file. Check your internet connection and try again."
+      );
     } finally {
       setParsing(false);
     }
@@ -295,16 +318,43 @@ export function LeadImport() {
         }),
       });
 
-      const data = await res.json();
-      if (res.ok) {
-        setImported(data.imported);
+      let data: {
+        imported?: number;
+        skipped?: number;
+        invalid?: number;
+        invalidDetails?: { row: number; name: string; phone: string; reason: string }[];
+        error?: string;
+      } | null = null;
+      try {
+        data = await res.json();
+      } catch {
+        setError(`Server error (${res.status}). Please try again in a moment.`);
+        return;
+      }
+      if (res.ok && data) {
+        setImported(data.imported || 0);
         setSkippedCount(data.skipped || 0);
+        if ((data.invalid || 0) > 0) {
+          const details = (data.invalidDetails || [])
+            .map((d) => `Row ${d.row}: ${d.reason}`)
+            .join(" • ");
+          setImportWarning(
+            `${data.invalid} row(s) need attention. ${details}`
+          );
+        } else {
+          setImportWarning("");
+        }
         setStep(5);
       } else {
-        setError(data.error || "Import failed");
+        setError(data?.error || `Import failed (server error ${res.status})`);
       }
-    } catch {
-      setError("Import failed");
+    } catch (err) {
+      console.error("Import error:", err);
+      setError(
+        err instanceof Error && err.message
+          ? `Import failed: ${err.message}`
+          : "Import failed. Check your internet connection and try again."
+      );
     } finally {
       setImporting(false);
     }
@@ -934,6 +984,11 @@ export function LeadImport() {
               <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
                 {skippedCount} duplicate leads were skipped.
               </p>
+            )}
+            {importWarning && (
+              <div className="mt-3 rounded-md bg-amber-50 dark:bg-amber-950 p-3 text-sm text-amber-700 dark:text-amber-400 max-w-xl mx-auto text-left">
+                {importWarning}
+              </div>
             )}
             <p className="text-sm text-muted-foreground mt-1">
               Projects and assignees have been linked to leads based on your settings.
