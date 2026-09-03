@@ -1153,3 +1153,27 @@ Stage Summary:
   4. Submit sitemap → enter "sitemap.xml" → click Submit
   5. (Optional) Use "URL Inspection" tool → request indexing for https://leadsdekho.in/
 - Optional: also do the same at https://www.bing.com/webmasters for Bing indexing.
+
+---
+Task ID: fix-lead-import-error
+Agent: main
+Task: User reported error when uploading lead data ("etar oi lead er data upload a error dicche ektu fix koro").
+
+Work Log:
+- Investigated the import pipeline: /api/leads/import (parse) + /api/leads/import/confirm (insert) + lead-import.tsx (frontend).
+- Wrote local test script (scripts/test-import-parse.js) and ran it against the real test files (test_leads.csv/xls/xlsx).
+- BUG 1 (critical): UI documents the format as "DATE, LEAD SOURCE, NAME, NUMBER, MAIL ID, PROJECT NAME" but the parser only mapped "lead_source" (underscore) and "source" — the "LEAD SOURCE" header (with SPACE) was silently dropped. Source column lost on every import using the documented format. Fixed: now maps both space and underscore variants + extra aliases (client name, customer name, phone number, contact, whatsapp, email id, e-mail).
+- BUG 2 (critical): confirm route used `Promise.all` batches of 10 with per-row db.lead.create — a single bad row (e.g. FK violation on assignToId) rejected the whole batch → unhandled → HTML 500 → frontend showed generic "Import failed". Fixed: all rows validated upfront (name/phone/assignee/project), invalid rows collected and reported per-row with reasons (row number + reason), rows with phone but no name auto-named "Unknown" instead of being dropped.
+- BUG 3: timeline + assignment writes were fire-and-forget promises (not awaited) — on Vercel they can be silently dropped when the function freezes after response. Fixed: batched createMany AFTER lead insert, properly awaited.
+- BUG 4 (performance): thousands of rows = 3 DB round trips per row → 30s serverless timeout. Fixed: chunked createManyAndReturn (100/chunk) — ~3 queries total regardless of size.
+- BUG 5: CSV files with semicolon or tab delimiters parsed into a single column. Fixed: auto-detect delimiter (, vs ; vs tab) from header line.
+- BUG 6: duplicate detection missed variants ("98765 43210" vs "9876543210" vs "+91..."). Fixed: phone normalization (keep digits/+, strip spaces-dashes-parens) + check +91/91/0/last-10-digit variants against DB, chunked IN queries (500/chunk) to avoid oversized queries.
+- BUG 7: files > 4.5MB hit Vercel's body limit with an HTML error → generic client message. Fixed: client-side size guard with clear message (frontend + server both check).
+- BUG 8: frontend catch blocks swallowed real errors ("Import failed"). Fixed: JSON parse fallback showing HTTP status; server errors now always return JSON with a real message; success screen shows invalid-row warnings (importWarning state + amber alert).
+- Verified: parse test script shows source now maps correctly (Housing.com/99acres), dates parse, dev server returns proper 401 without session (route compiles + runs).
+- Committed locally: 2d825db "Fix lead import errors..." (4 files, +514/-159).
+- PUSH FAILED: GitHub token in remote URL became invalid mid-session (earlier pushes succeeded; API check confirms 401). No gh CLI / env credentials available. Commit is SAFE locally — needs re-push once token is renewed.
+
+Stage Summary:
+- All import fixes committed locally (2d825db) but NOT yet pushed to GitHub / NOT yet deployed to production.
+- PENDING ACTION: push to origin/main once GitHub access is restored, then Vercel auto-deploys.
