@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Section 03 — Admin Control Center</title>
+<link rel="stylesheet" href="global.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:var(--primary); }
+  .glass-chip {
+    display:inline-flex; align-items:center; gap:8px; border-radius:999px;
+    padding:10px 16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16);
+    color:#E2E8F0; font:600 var(--fs-small)/1.2 var(--font-body);
+  }
+  .glass-chip .material-icons { font-size:16px; color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="slide" style="background:var(--primary);">
+
+  <!-- Decorative ghost numeral -->
+  <div data-decor aria-hidden="true" style="position:absolute; right:-36px; bottom:-158px; font:800 470px/1 var(--font-heading); color:rgba(255,255,255,0.04); letter-spacing:-0.03em; user-select:none;">03</div>
+  <!-- Decorative emerald glow + shapes -->
+  <div data-decor aria-hidden="true" style="position:absolute; left:-190px; top:-190px; width:580px; height:580px; border-radius:50%; background:radial-gradient(circle, rgba(16,185,129,0.17) 0%, rgba(16,185,129,0) 68%);"></div>
+  <div data-decor aria-hidden="true" style="position:absolute; right:230px; top:-110px; width:320px; height:320px; border-radius:50%; border:1px solid rgba(16,185,129,0.22);"></div>
+  <div data-decor aria-hidden="true" style="position:absolute; right:176px; top:196px; width:10px; height:10px; border-radius:50%; background:var(--accent); opacity:0.75;"></div>
+  <div data-decor aria-hidden="true" style="position:absolute; right:128px; top:172px; width:6px; height:6px; border-radius:50%; background:rgba(16,185,129,0.5);"></div>
+
+  <div class="relative h-full flex flex-col justify-center" style="padding:0 90px; z-index:10;">
+    <div class="flex items-center" style="gap:20px;">
+      <span class="num" style="font:700 var(--fs-h3)/1 var(--font-num); color:var(--accent); letter-spacing:0.28em;">03 / 03</span>
+      <div style="width:110px; height:1px; background:rgba(255,255,255,0.22);"></div>
+      <span style="font:600 var(--fs-micro)/1 var(--font-body); color:rgba(232,238,245,0.6); letter-spacing:0.34em; text-transform:uppercase;">Section</span>
+    </div>
+
+    <div class="accent-bar" style="margin-top:36px;"></div>
+    <h1 style="margin-top:20px; font:800 var(--fs-display)/1.1 var(--font-heading); color:#FFFFFF; letter-spacing:-0.01em;">Admin Control Center</h1>
+    <p style="margin-top:20px; max-width:680px; font:400 var(--fs-h3)/1.6 var(--font-body); color:#AFC2D4;">Master data, analytics and team governance — kept safely in admin hands.</p>
+
+    <div style="margin-top:48px;">
+      <div style="font:700 var(--fs-micro)/1 var(--font-body); color:rgba(232,238,245,0.55); letter-spacing:0.3em; text-transform:uppercase;">In this section</div>
+      <div class="flex items-center flex-wrap" style="gap:10px; margin-top:16px;">
+        <span class="glass-chip"><i class="material-icons">home_work</i>Projects</span>
+        <span class="glass-chip"><i class="material-icons">radio</i>Lead Sources</span>
+        <span class="glass-chip"><i class="material-icons">bar_chart</i>Reports</span>
+        <span class="glass-chip"><i class="material-icons">manage_accounts</i>User Management</span>
+        <span class="glass-chip"><i class="material-icons">mail</i>Enquiries</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

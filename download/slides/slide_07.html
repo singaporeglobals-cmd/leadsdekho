@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lead Details &amp; Lifecycle</title>
+<link rel="stylesheet" href="global.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg)}
+  .kicker{font-family:var(--font-heading);font-size:12px}
+  .headline{font-family:var(--font-heading);font-size:var(--fs-h1);font-weight:700;color:var(--primary);letter-spacing:-0.01em;line-height:1.15;margin:0}
+  .pchip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;background:var(--navy-soft);color:var(--primary);font:600 12.5px/1 var(--font-body);padding:9px 13px;white-space:nowrap}
+  .parrow{font-size:15px;color:var(--muted);flex:none}
+  .ctitle{font-family:var(--font-heading);font-weight:600;font-size:16px;color:var(--primary)}
+  .ftitle{font-family:var(--font-heading);font-weight:600;font-size:15.5px;color:var(--primary);margin-bottom:4px}
+  .fdesc{font-size:13px;line-height:1.5;color:var(--muted)}
+  .itile{width:46px;height:46px;border-radius:12px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;flex:none}
+  .itile .material-icons{font-size:23px;color:var(--accent-deep)}
+</style>
+</head>
+<body>
+<div class="slide">
+  <div data-decor aria-hidden="true" style="position:absolute;top:-190px;right:-170px;width:580px;height:580px;border-radius:50%;background:radial-gradient(circle,rgba(16,185,129,0.10) 0%,rgba(16,185,129,0) 68%)"></div>
+
+  <div style="position:relative;height:100%;padding:56px 64px;display:flex;flex-direction:column">
+    <header>
+      <div class="kicker">MENU 02 — LEAD DETAILS</div>
+      <div class="accent-bar" style="margin:12px 0 14px"></div>
+      <h1 class="headline">A complete lifecycle on one screen</h1>
+    </header>
+
+    <div style="display:flex;gap:28px;flex:1;min-height:0;margin-top:26px">
+      <!-- LEFT: pipeline visual + ownership -->
+      <div style="width:498px;display:flex;flex-direction:column;gap:16px">
+        <div class="card" style="padding:20px 22px">
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:15px">
+            <i class="material-icons" style="font-size:20px;color:var(--accent-deep)">route</i>
+            <span class="ctitle">Pipeline</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+            <span class="pchip">New</span><i class="material-icons parrow">east</i>
+            <span class="pchip">Contacted</span><i class="material-icons parrow">east</i>
+            <span class="pchip">Qualified</span><i class="material-icons parrow">east</i>
+            <span class="pchip">Visit Scheduled</span><i class="material-icons parrow">east</i>
+            <span class="pchip">Visited</span><i class="material-icons parrow">east</i>
+            <span class="pchip">Negotiation</span><i class="material-icons parrow">east</i>
+            <span class="pchip" style="background:var(--accent-soft);color:var(--accent-deep)">Won</span>
+            <span class="pchip" style="background:var(--surface);border:1px solid var(--border);color:var(--muted)"><i class="material-icons" style="font-size:14px;color:var(--danger)">cancel</i>Lost</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;margin-top:16px;padding-top:13px;border-top:1px dashed var(--border)">
+            <i class="material-icons" style="font-size:15px;color:var(--accent-deep)">autorenew</i>
+            <span style="font-size:12.5px;color:var(--muted)">Pipeline auto-advances on the first feedback</span>
+          </div>
+        </div>
+
+        <div class="card" style="padding:20px 22px;flex:1;display:flex;flex-direction:column;justify-content:center">
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:15px">
+            <i class="material-icons" style="font-size:20px;color:var(--accent-deep)">swap_horiz</i>
+            <span class="ctitle">Ownership</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="pchip" style="padding:10px 15px">Primary Owner</span>
+            <span style="font:600 12px var(--font-body);color:var(--muted)">vs</span>
+            <span class="pchip" style="padding:10px 15px;background:var(--accent-soft);color:var(--accent-deep)">Current Owner</span>
+          </div>
+          <div style="margin-top:13px;font-size:13px;color:var(--muted)">+ full <span style="font-weight:600;color:var(--primary)">Assignment History</span> with reasons</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: 4 feature cards -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:14px;min-width:0">
+        <div class="card" style="flex:1;display:flex;align-items:center;gap:16px;padding:16px 20px">
+          <div class="itile"><i class="material-icons">forum</i></div>
+          <div>
+            <div class="ftitle">Log Call &amp; Feedback</div>
+            <div class="fdesc">Lead Status + mandatory sub-stages (8 for Not Interested, 6 for Not Connected) + notes + next follow-up date</div>
+          </div>
+        </div>
+        <div class="card" style="flex:1;display:flex;align-items:center;gap:16px;padding:16px 20px">
+          <div class="itile"><i class="material-icons">assignment</i></div>
+          <div>
+            <div class="ftitle">Project attribution</div>
+            <div class="fdesc">Site Visit Done requires a project, keeping reports accurate</div>
+          </div>
+        </div>
+        <div class="card" style="flex:1;display:flex;align-items:center;gap:16px;padding:16px 20px">
+          <div class="itile"><i class="material-icons">history</i></div>
+          <div>
+            <div class="ftitle">Tabs</div>
+            <div class="fdesc">Timeline · Calls · Follow-ups · Visits, all history in one place</div>
+          </div>
+        </div>
+        <div class="card" style="flex:1;display:flex;align-items:center;gap:16px;padding:16px 20px">
+          <div class="itile"><i class="material-icons">flash_on</i></div>
+          <div>
+            <div class="ftitle">Quick actions</div>
+            <div class="fdesc">Log Call, Schedule Follow-up, Schedule Visit, Mark Lost (reason required)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

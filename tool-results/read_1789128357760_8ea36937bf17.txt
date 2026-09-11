@@ -1,0 +1,983 @@
+     1→"use client";
+     2→
+     3→import { useEffect, useState } from "react";
+     4→import { useAppStore } from "@/lib/store";
+     5→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+     6→import {
+     7→  Users,
+     8→  Phone,
+     9→  TrendingUp,
+    10→  CalendarCheck,
+    11→  Building2,
+    12→  Home,
+    13→  ArrowUpRight,
+    14→  Eye,
+    15→  MapPin,
+    16→  Clock,
+    17→  AlertCircle,
+    18→  Copy,
+    19→  Zap,
+    20→} from "lucide-react";
+    21→import { Button } from "@/components/ui/button";
+    22→import { Badge } from "@/components/ui/badge";
+    23→import { MultiSelect } from "@/components/ui/multi-select";
+    24→import {
+    25→  Select,
+    26→  SelectContent,
+    27→  SelectItem,
+    28→  SelectTrigger,
+    29→  SelectValue,
+    30→} from "@/components/ui/select";
+    31→
+    32→interface DashboardData {
+    33→  role: string;
+    34→  [key: string]: unknown;
+    35→}
+    36→
+    37→const statusColors: Record<string, string> = {
+    38→  New: "bg-slate-500 text-white",
+    39→  Contacted: "bg-blue-500 text-white",
+    40→  Qualified: "bg-cyan-500 text-white",
+    41→  "Visit Scheduled": "bg-amber-500 text-white",
+    42→  Visited: "bg-purple-500 text-white",
+    43→  Negotiation: "bg-orange-500 text-white",
+    44→  Won: "bg-emerald-500 text-white",
+    45→  Lost: "bg-red-500 text-white",
+    46→};
+    47→
+    48→function generateMonthOptions() {
+    49→  const options = [{ value: "all", label: "All Time" }];
+    50→  const now = new Date();
+    51→  for (let i = 0; i < 12; i++) {
+    52→    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    53→    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    54→    const label = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    55→    options.push({ value, label });
+    56→  }
+    57→  return options;
+    58→}
+    59→
+    60→export function AdminDashboard() {
+    61→  const { setPage, setTodayFollowUpsFilter, setFollowUpDate, user } = useAppStore();
+    62→  const [data, setData] = useState<DashboardData | null>(null);
+    63→  const [loading, setLoading] = useState(true);
+    64→  const [month, setMonth] = useState("all");
+    65→  const [assignFilter, setAssignFilter] = useState<string[]>([]);
+    66→  const [optimizing, setOptimizing] = useState(false);
+    67→  const [optimizeResult, setOptimizeResult] = useState<string | null>(null);
+    68→
+    69→  const applyOptimization = async () => {
+    70→    if (!confirm("This will apply database updates: create the Booking table (if missing) and add performance indexes. Continue?")) return;
+    71→    setOptimizing(true);
+    72→    setOptimizeResult(null);
+    73→    try {
+    74→      const res = await fetch("/api/admin/apply-indexes", { method: "POST" });
+    75→      const d = await res.json();
+    76→      if (res.ok) {
+    77→        setOptimizeResult(`Done! Applied ${d.applied} updates (${d.failed} failed). Booking feature is now ready.`);
+    78→      } else {
+    79→        setOptimizeResult(`Error: ${d.error || "Unknown"}`);
+    80→      }
+    81→    } catch (err: any) {
+    82→      setOptimizeResult(`Error: ${err.message}`);
+    83→    } finally {
+    84→      setOptimizing(false);
+    85→    }
+    86→  };
+    87→
+    88→  useEffect(() => {
+    89→    let cancelled = false;
+    90→    (async () => {
+    91→      const params = new URLSearchParams();
+    92→      params.set("month", month);
+    93→      if (assignFilter.length > 0) params.set("assignee", assignFilter.join(","));
+    94→      const res = await fetch(`/api/dashboard?${params}`);
+    95→      if (!cancelled && res.ok) {
+    96→        const d = await res.json();
+    97→        setData(d);
+    98→      }
+    99→      if (!cancelled) setLoading(false);
+   100→    })();
+   101→    return () => { cancelled = true; };
+   102→  }, [month, assignFilter]);
+   103→
+   104→  if (loading) {
+   105→    return (
+   106→      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+   107→        {[...Array(4)].map((_, i) => (
+   108→          <Card key={i} className="animate-pulse">
+   109→            <CardContent className="p-6">
+   110→              <div className="h-16 rounded bg-muted" />
+   111→            </CardContent>
+   112→          </Card>
+   113→        ))}
+   114→      </div>
+   115→    );
+   116→  }
+   117→
+   118→  if (!data) return <div>Failed to load dashboard</div>;
+   119→
+   120→  const statusCounts = (data.statusCounts || {}) as Record<string, number>;
+   121→  const sourceCounts = (data.sourceCounts || {}) as Record<string, number>;
+   122→  const recentLeads = (data.recentLeads || []) as Array<{
+   123→    id: string;
+   124→    name: string;
+   125→    phone: string;
+   126→    pipelineStatus: string;
+   127→    currentOwner: { name: string };
+   128→    primaryOwner: { name: string };
+   129→    createdAt: string;
+   130→  }>;
+   131→  const teamMembers = (data.teamMembers || []) as Array<{
+   132→    id: string;
+   133→    name: string;
+   134→    email: string;
+   135→    role: string;
+   136→    _count: { currentLeads: number; primaryLeads: number; callLogs: number };
+   137→  }>;
+   138→  const ownerUsers = (data.ownerUsers || []) as Array<{
+   139→    id: string;
+   140→    name: string;
+   141→    role: string;
+   142→  }>;
+   143→  const leadsByOwner = (data.leadsByOwner || []) as Array<{
+   144→    currentOwnerId: string;
+   145→    _count: number;
+   146→  }>;
+   147→
+   148→  // Build owner lead count map
+   149→  const ownerLeadCountMap: Record<string, number> = {};
+   150→  leadsByOwner.forEach((item) => {
+   151→    ownerLeadCountMap[item.currentOwnerId] = item._count;
+   152→  });
+   153→
+   154→  const monthOptions = generateMonthOptions();
+   155→
+   156→  return (
+   157→    <div className="space-y-6">
+   158→      {/* Filters - Top Right */}
+   159→      <div className="flex items-center justify-end gap-2 flex-wrap">
+   160→        <MultiSelect
+   161→          options={ownerUsers.map((u) => ({
+   162→            value: u.id,
+   163→            label: `${u.name} (${ownerLeadCountMap[u.id] || 0})`,
+   164→          }))}
+   165→          value={assignFilter}
+   166→          onChange={setAssignFilter}
+   167→          placeholder="Users"
+   168→          allLabel="All Users"
+   169→          className="w-[180px]"
+   170→        />
+   171→        <Select value={month} onValueChange={setMonth}>
+   172→          <SelectTrigger className="w-[160px] h-9">
+   173→            <CalendarCheck className="mr-1 h-3 w-3" />
+   174→            <SelectValue placeholder="Select month" />
+   175→          </SelectTrigger>
+   176→          <SelectContent>
+   177→            {monthOptions.map((opt) => (
+   178→              <SelectItem key={opt.value} value={opt.value}>
+   179→                {opt.label}
+   180→              </SelectItem>
+   181→            ))}
+   182→          </SelectContent>
+   183→        </Select>
+   184→        {user?.role === "super_admin" && (
+   185→          <Button
+   186→            variant="outline"
+   187→            size="sm"
+   188→            className="h-9 text-brand border-brand hover:bg-brand hover:text-white"
+   189→            onClick={applyOptimization}
+   190→            disabled={optimizing}
+   191→          >
+   192→            <Zap className="mr-1 h-3 w-3" />
+   193→            {optimizing ? "Applying..." : "Apply DB Updates"}
+   194→          </Button>
+   195→        )}
+   196→        {optimizeResult && (
+   197→          <div className="text-xs px-3 py-2 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 rounded border border-emerald-200 dark:border-emerald-800 max-w-md">
+   198→            {optimizeResult}
+   199→          </div>
+   200→        )}
+   201→      </div>
+   202→
+   203→      {/* Summary Cards */}
+   204→      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+   205→        <Card className="border-l-4 border-l-brand">
+   206→          <CardContent className="p-4">
+   207→            <div className="flex items-center justify-between">
+   208→              <div>
+   209→                <p className="text-sm text-muted-foreground">Total Leads</p>
+   210→                <p className="text-2xl font-bold text-foreground">
+   211→                  {data.totalLeads as number}
+   212→                </p>
+   213→              </div>
+   214→              <div className="rounded-lg bg-brand-light p-3">
+   215→                <Users className="h-5 w-5 text-brand" />
+   216→              </div>
+   217→            </div>
+   218→          </CardContent>
+   219→        </Card>
+   220→
+   221→        <Card className="border-l-4 border-l-amber-500">
+   222→          <CardContent className="p-4">
+   223→            <div className="flex items-center justify-between">
+   224→              <div>
+   225→                <p className="text-sm text-muted-foreground">Today Follow-ups</p>
+   226→                <p className="text-2xl font-bold text-foreground">
+   227→                  {data.todayFollowUps as number}
+   228→                </p>
+   229→              </div>
+   230→              <div className="rounded-lg bg-amber-50 dark:bg-amber-950 p-3">
+   231→                <CalendarCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+   232→              </div>
+   233→            </div>
+   234→          </CardContent>
+   235→        </Card>
+   236→
+   237→        <Card
+   238→          className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow"
+   239→          onClick={() => {
+   240→            setTodayFollowUpsFilter(true);
+   241→            setFollowUpDate(new Date().toISOString().split("T")[0]);
+   242→            setPage("leads");
+   243→          }}
+   244→        >
+   245→          <CardContent className="p-4">
+   246→            <div className="flex items-center justify-between">
+   247→              <div>
+   248→                <p className="text-sm text-muted-foreground">Today&apos;s Pending Follow-ups</p>
+   249→                <p className="text-2xl font-bold text-foreground">
+   250→                  {data.todayFollowUps as number}
+   251→                </p>
+   252→              </div>
+   253→              <div className="rounded-lg bg-red-50 dark:bg-red-950 p-3">
+   254→                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+   255→              </div>
+   256→            </div>
+   257→          </CardContent>
+   258→        </Card>
+   259→
+   260→        <Card className="border-l-4 border-l-cyan-500">
+   261→          <CardContent className="p-4">
+   262→            <div className="flex items-center justify-between">
+   263→              <div>
+   264→                <p className="text-sm text-muted-foreground">Total Projects</p>
+   265→                <p className="text-2xl font-bold text-foreground">
+   266→                  {data.totalProjects as number}
+   267→                </p>
+   268→              </div>
+   269→              <div className="rounded-lg bg-cyan-50 dark:bg-cyan-950 p-3">
+   270→                <Home className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+   271→              </div>
+   272→            </div>
+   273→          </CardContent>
+   274→        </Card>
+   275→
+   276→        <Card
+   277→          className="border-l-4 border-l-emerald-500 cursor-pointer hover:shadow-md transition-shadow"
+   278→          onClick={() => setPage("bookings")}
+   279→        >
+   280→          <CardContent className="p-4">
+   281→            <div className="flex items-center justify-between">
+   282→              <div>
+   283→                <p className="text-sm text-muted-foreground">Booking</p>
+   284→                <p className="text-2xl font-bold text-foreground">
+   285→                  {data.bookedCount as number}
+   286→                </p>
+   287→              </div>
+   288→              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950 p-3">
+   289→                <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+   290→              </div>
+   291→            </div>
+   292→          </CardContent>
+   293→        </Card>
+   294→      </div>
+   295→
+   296→      <div className="grid gap-6 lg:grid-cols-3">
+   297→        {/* Leads by Status */}
+   298→        <Card>
+   299→          <CardHeader className="pb-3">
+   300→            <CardTitle className="text-base">Leads by Status</CardTitle>
+   301→          </CardHeader>
+   302→          <CardContent className="space-y-2">
+   303→            {Object.entries(statusCounts).length === 0 ? (
+   304→              <p className="text-sm text-muted-foreground">No leads yet</p>
+   305→            ) : (
+   306→              Object.entries(statusCounts)
+   307→                .sort((a, b) => b[1] - a[1])
+   308→                .map(([status, count]) => (
+   309→                  <div
+   310→                    key={status}
+   311→                    className="flex items-center justify-between"
+   312→                  >
+   313→                    <Badge
+   314→                      variant="secondary"
+   315→                      className={statusColors[status] || ""}
+   316→                    >
+   317→                      {status}
+   318→                    </Badge>
+   319→                    <span className="text-sm font-medium text-foreground">
+   320→                      {count as number}
+   321→                    </span>
+   322→                  </div>
+   323→                ))
+   324→            )}
+   325→          </CardContent>
+   326→        </Card>
+   327→
+   328→        {/* Leads by Source */}
+   329→        <Card>
+   330→          <CardHeader className="pb-3">
+   331→            <CardTitle className="text-base">Leads by Source</CardTitle>
+   332→          </CardHeader>
+   333→          <CardContent className="space-y-2">
+   334→            {Object.entries(sourceCounts).length === 0 ? (
+   335→              <p className="text-sm text-muted-foreground">No data</p>
+   336→            ) : (
+   337→              Object.entries(sourceCounts)
+   338→                .sort((a, b) => b[1] - a[1])
+   339→                .map(([source, count]) => (
+   340→                  <div
+   341→                    key={source}
+   342→                    className="flex items-center justify-between"
+   343→                  >
+   344→                    <span className="text-sm text-muted-foreground">{source}</span>
+   345→                    <span className="text-sm font-medium text-foreground">
+   346→                      {count as number}
+   347→                    </span>
+   348→                  </div>
+   349→                ))
+   350→            )}
+   351→          </CardContent>
+   352→        </Card>
+   353→
+   354→        {/* Team Performance */}
+   355→        <Card>
+   356→          <CardHeader className="pb-3">
+   357→            <CardTitle className="text-base">Team Performance</CardTitle>
+   358→          </CardHeader>
+   359→          <CardContent className="space-y-3">
+   360→            {teamMembers.length === 0 ? (
+   361→              <p className="text-sm text-muted-foreground">No team members</p>
+   362→            ) : (
+   363→              teamMembers.map((member) => (
+   364→                <div key={member.id} className="space-y-1">
+   365→                  <div className="flex items-center justify-between">
+   366→                    <span className="text-sm font-medium text-foreground">
+   367→                      {member.name}
+   368→                    </span>
+   369→                    <Badge variant="outline" className="text-xs">
+   370→                      {member.role}
+   371→                    </Badge>
+   372→                  </div>
+   373→                  <div className="flex gap-3 text-xs text-muted-foreground">
+   374→                    <span>{member._count.currentLeads} owned</span>
+   375→                    <span>{member._count.callLogs} calls</span>
+   376→                  </div>
+   377→                </div>
+   378→              ))
+   379→            )}
+   380→          </CardContent>
+   381→        </Card>
+   382→      </div>
+   383→
+   384→      {/* Recent Leads */}
+   385→      <Card>
+   386→        <CardHeader className="flex flex-row items-center justify-between pb-3">
+   387→          <CardTitle className="text-base">Recent Leads</CardTitle>
+   388→          <Button
+   389→            variant="ghost"
+   390→            size="sm"
+   391→            className="text-brand"
+   392→            onClick={() => setPage("leads")}
+   393→          >
+   394→            View All <ArrowUpRight className="ml-1 h-3 w-3" />
+   395→          </Button>
+   396→        </CardHeader>
+   397→        <CardContent>
+   398→          {recentLeads.length === 0 ? (
+   399→            <p className="text-sm text-muted-foreground">
+   400→              No leads yet. Create your first lead!
+   401→            </p>
+   402→          ) : (
+   403→            <div className="space-y-3">
+   404→              {recentLeads.map((lead) => (
+   405→                <div
+   406→                  key={lead.id}
+   407→                  className="flex items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-muted"
+   408→                >
+   409→                  <div className="min-w-0 flex-1">
+   410→                    <div className="flex items-center gap-2">
+   411→                      <span className="font-medium text-foreground">
+   412→                        {lead.name}
+   413→                      </span>
+   414→                      <Badge
+   415→                        variant="secondary"
+   416→                        className={`text-xs ${statusColors[lead.pipelineStatus] || ""}`}
+   417→                      >
+   418→                        {lead.pipelineStatus}
+   419→                      </Badge>
+   420→                    </div>
+   421→                    <div className="mt-0.5 text-sm text-muted-foreground">
+   422→                      <span className="flex items-center gap-1">{lead.phone}<button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(lead.phone); }} className="inline-flex text-muted-foreground hover:text-brand transition-colors"><Copy className="h-3 w-3" /></button></span> · Owner: {lead.currentOwner.name}
+   423→                    </div>
+   424→                  </div>
+   425→                  <Button
+   426→                    variant="ghost"
+   427→                    size="sm"
+   428→                    onClick={() => {
+   429→                      useAppStore.getState().setSelectedLeadId(lead.id);
+   430→                      setPage("lead-detail");
+   431→                    }}
+   432→                  >
+   433→                    <Eye className="h-4 w-4" />
+   434→                  </Button>
+   435→                </div>
+   436→              ))}
+   437→            </div>
+   438→          )}
+   439→        </CardContent>
+   440→      </Card>
+   441→
+   442→    </div>
+   443→  );
+   444→}
+   445→
+   446→export function TelecallingDashboard() {
+   447→  const { setPage, setTodayFollowUpsFilter, setFollowUpDate } = useAppStore();
+   448→  const [data, setData] = useState<DashboardData | null>(null);
+   449→  const [loading, setLoading] = useState(true);
+   450→
+   451→  useEffect(() => {
+   452→    fetch("/api/dashboard")
+   453→      .then((r) => r.json())
+   454→      .then((d) => setData(d))
+   455→      .finally(() => setLoading(false));
+   456→  }, []);
+   457→
+   458→  if (loading) {
+   459→    return (
+   460→      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+   461→        {[...Array(4)].map((_, i) => (
+   462→          <Card key={i} className="animate-pulse">
+   463→            <CardContent className="p-6">
+   464→              <div className="h-16 rounded bg-muted" />
+   465→            </CardContent>
+   466→          </Card>
+   467→        ))}
+   468→      </div>
+   469→    );
+   470→  }
+   471→
+   472→  if (!data) return <div>Failed to load dashboard</div>;
+   473→
+   474→  const statusCounts = (data.statusCounts || {}) as Record<string, number>;
+   475→  const todayFollowUps = (data.todayFollowUps || 0) as number;
+   476→  const pendingFollowUps = (data.pendingFollowUps || 0) as number;
+   477→  const pendingFollowUpsList = (data.pendingFollowUpsList || []) as Array<{
+   478→    id: string;
+   479→    scheduledAt: string;
+   480→    notes: string;
+   481→    lead: { id: string; name: string; phone: string };
+   482→  }>;
+   483→  const recentCallLogs = (data.recentCallLogs || []) as Array<{
+   484→    id: string;
+   485→    notes: string;
+   486→    callType: string;
+   487→    createdAt: string;
+   488→    lead: { id: string; name: string };
+   489→  }>;
+   490→
+   491→  return (
+   492→    <div className="space-y-6">
+   493→      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+   494→        <Card className="border-l-4 border-l-brand">
+   495→          <CardContent className="p-4">
+   496→            <div className="flex items-center justify-between">
+   497→              <div>
+   498→                <p className="text-sm text-muted-foreground">My Leads</p>
+   499→                <p className="text-2xl font-bold text-foreground">
+   500→                  {data.myLeadsCount as number}
+   501→                </p>
+   502→              </div>
+   503→              <div className="rounded-lg bg-brand-light p-3">
+   504→                <Users className="h-5 w-5 text-brand" />
+   505→              </div>
+   506→            </div>
+   507→          </CardContent>
+   508→        </Card>
+   509→
+   510→        <Card className="border-l-4 border-l-blue-500">
+   511→          <CardContent className="p-4">
+   512→            <div className="flex items-center justify-between">
+   513→              <div>
+   514→                <p className="text-sm text-muted-foreground">All Leads</p>
+   515→                <p className="text-2xl font-bold text-foreground">
+   516→                  {data.allLeadsCount as number}
+   517→                </p>
+   518→              </div>
+   519→              <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-3">
+   520→                <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+   521→              </div>
+   522→            </div>
+   523→          </CardContent>
+   524→        </Card>
+   525→
+   526→        <Card className="border-l-4 border-l-amber-500">
+   527→          <CardContent className="p-4">
+   528→            <div className="flex items-center justify-between">
+   529→              <div>
+   530→                <p className="text-sm text-muted-foreground">Today Follow-ups</p>
+   531→                <p className="text-2xl font-bold text-foreground">
+   532→                  {todayFollowUps}
+   533→                </p>
+   534→              </div>
+   535→              <div className="rounded-lg bg-amber-50 dark:bg-amber-950 p-3">
+   536→                <CalendarCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+   537→              </div>
+   538→            </div>
+   539→          </CardContent>
+   540→        </Card>
+   541→
+   542→        <Card
+   543→          className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow"
+   544→          onClick={() => {
+   545→            setTodayFollowUpsFilter(true);
+   546→            setFollowUpDate(new Date().toISOString().split("T")[0]);
+   547→            setPage("leads");
+   548→          }}
+   549→        >
+   550→          <CardContent className="p-4">
+   551→            <div className="flex items-center justify-between">
+   552→              <div>
+   553→                <p className="text-sm text-muted-foreground">Today&apos;s Pending Follow-ups</p>
+   554→                <p className="text-2xl font-bold text-foreground">
+   555→                  {todayFollowUps}
+   556→                </p>
+   557→              </div>
+   558→              <div className="rounded-lg bg-red-50 dark:bg-red-950 p-3">
+   559→                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+   560→              </div>
+   561→            </div>
+   562→          </CardContent>
+   563→        </Card>
+   564→
+   565→        <Card className="border-l-4 border-l-purple-500">
+   566→          <CardContent className="p-4">
+   567→            <div className="flex items-center justify-between">
+   568→              <div>
+   569→                <p className="text-sm text-muted-foreground">Calls Made</p>
+   570→                <p className="text-2xl font-bold text-foreground">
+   571→                  {data.myCallLogsCount as number}
+   572→                </p>
+   573→              </div>
+   574→              <div className="rounded-lg bg-purple-50 dark:bg-purple-950 p-3">
+   575→                <Phone className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+   576→              </div>
+   577→            </div>
+   578→          </CardContent>
+   579→        </Card>
+   580→      </div>
+   581→
+   582→      <div className="grid gap-6 lg:grid-cols-2">
+   583→        {/* Status Breakdown */}
+   584→        <Card>
+   585→          <CardHeader className="pb-3">
+   586→            <CardTitle className="text-base">My Leads by Status</CardTitle>
+   587→          </CardHeader>
+   588→          <CardContent className="space-y-2">
+   589→            {Object.entries(statusCounts).length === 0 ? (
+   590→              <p className="text-sm text-muted-foreground">No leads yet</p>
+   591→            ) : (
+   592→              Object.entries(statusCounts)
+   593→                .sort((a, b) => b[1] - a[1])
+   594→                .map(([status, count]) => (
+   595→                  <div
+   596→                    key={status}
+   597→                    className="flex items-center justify-between"
+   598→                  >
+   599→                    <Badge
+   600→                      variant="secondary"
+   601→                      className={statusColors[status] || ""}
+   602→                    >
+   603→                      {status}
+   604→                    </Badge>
+   605→                    <span className="text-sm font-medium text-foreground">
+   606→                      {count as number}
+   607→                    </span>
+   608→                  </div>
+   609→                ))
+   610→            )}
+   611→          </CardContent>
+   612→        </Card>
+   613→
+   614→        {/* Today's Pending Follow-ups */}
+   615→        <Card>
+   616→          <CardHeader className="flex flex-row items-center justify-between pb-3">
+   617→            <CardTitle className="text-base flex items-center gap-2">
+   618→              <AlertCircle className="h-4 w-4 text-red-500" />
+   619→              Today&apos;s Pending Follow-ups ({todayFollowUps})
+   620→            </CardTitle>
+   621→            <Button
+   622→              variant="ghost"
+   623→              size="sm"
+   624→              className="text-brand"
+   625→              onClick={() => {
+   626→                setTodayFollowUpsFilter(true);
+   627→                setFollowUpDate(new Date().toISOString().split("T")[0]);
+   628→                setPage("leads");
+   629→              }}
+   630→            >
+   631→              View Leads
+   632→            </Button>
+   633→          </CardHeader>
+   634→          <CardContent>
+   635→            {pendingFollowUpsList.length === 0 ? (
+   636→              <p className="text-sm text-muted-foreground">
+   637→                No pending follow-ups
+   638→              </p>
+   639→            ) : (
+   640→              <div className="space-y-2 max-h-64 overflow-y-auto">
+   641→                {pendingFollowUpsList.map((fu) => (
+   642→                  <div
+   643→                    key={fu.id}
+   644→                    className="rounded-lg border border-border p-3"
+   645→                  >
+   646→                    <div className="flex items-center justify-between">
+   647→                      <div className="font-medium text-foreground">
+   648→                        {fu.lead.name}
+   649→                      </div>
+   650→                      <Badge variant="outline" className="text-[10px] text-red-600 dark:text-red-400">
+   651→                        <Clock className="mr-1 h-3 w-3" />
+   652→                        {new Date(fu.scheduledAt).toLocaleDateString()}
+   653→                      </Badge>
+   654→                    </div>
+   655→                    <div className="text-sm text-muted-foreground flex items-center gap-1">{fu.lead.phone}<button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(fu.lead.phone); }} className="inline-flex text-muted-foreground hover:text-brand transition-colors"><Copy className="h-3 w-3" /></button></div>
+   656→                    <div className="mt-1 text-xs text-muted-foreground">
+   657→                      {fu.notes}
+   658→                    </div>
+   659→                  </div>
+   660→                ))}
+   661→              </div>
+   662→            )}
+   663→          </CardContent>
+   664→        </Card>
+   665→      </div>
+   666→
+   667→      {/* Recent Calls */}
+   668→      <Card>
+   669→        <CardHeader className="pb-3">
+   670→          <CardTitle className="text-base">Recent Calls</CardTitle>
+   671→        </CardHeader>
+   672→        <CardContent>
+   673→          {recentCallLogs.length === 0 ? (
+   674→            <p className="text-sm text-muted-foreground">No calls logged yet</p>
+   675→          ) : (
+   676→            <div className="space-y-2">
+   677→              {recentCallLogs.map((log) => (
+   678→                <div
+   679→                  key={log.id}
+   680→                  className="flex items-center justify-between rounded-lg border border-border p-3"
+   681→                >
+   682→                  <div>
+   683→                    <div className="font-medium text-foreground">
+   684→                      {log.lead.name}
+   685→                    </div>
+   686→                    <div className="text-sm text-muted-foreground">
+   687→                      {log.notes.substring(0, 80)}
+   688→                      {log.notes.length > 80 ? "..." : ""}
+   689→                    </div>
+   690→                  </div>
+   691→                  <Badge variant="outline" className="text-xs">
+   692→                    {log.callType}
+   693→                  </Badge>
+   694→                </div>
+   695→              ))}
+   696→            </div>
+   697→          )}
+   698→        </CardContent>
+   699→      </Card>
+   700→
+   701→    </div>
+   702→  );
+   703→}
+   704→
+   705→export function SalesDashboard() {
+   706→  const { setPage, setTodayFollowUpsFilter, setFollowUpDate } = useAppStore();
+   707→  const [data, setData] = useState<DashboardData | null>(null);
+   708→  const [loading, setLoading] = useState(true);
+   709→
+   710→  useEffect(() => {
+   711→    fetch("/api/dashboard")
+   712→      .then((r) => r.json())
+   713→      .then((d) => setData(d))
+   714→      .finally(() => setLoading(false));
+   715→  }, []);
+   716→
+   717→  if (loading) {
+   718→    return (
+   719→      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+   720→        {[...Array(4)].map((_, i) => (
+   721→          <Card key={i} className="animate-pulse">
+   722→            <CardContent className="p-6">
+   723→              <div className="h-16 rounded bg-muted" />
+   724→            </CardContent>
+   725→          </Card>
+   726→        ))}
+   727→      </div>
+   728→    );
+   729→  }
+   730→
+   731→  if (!data) return <div>Failed to load dashboard</div>;
+   732→
+   733→  const statusCounts = (data.statusCounts || {}) as Record<string, number>;
+   734→  const recentLeads = (data.recentLeads || []) as Array<{
+   735→    id: string;
+   736→    name: string;
+   737→    phone: string;
+   738→    pipelineStatus: string;
+   739→    currentOwner: { name: string };
+   740→    primaryOwner: { name: string };
+   741→  }>;
+   742→  const todayFollowUps = (data.todayFollowUps || 0) as number;
+   743→  const pendingFollowUps = (data.pendingFollowUps || 0) as number;
+   744→  const pendingFollowUpsList = (data.pendingFollowUpsList || []) as Array<{
+   745→    id: string;
+   746→    scheduledAt: string;
+   747→    notes: string;
+   748→    lead: { id: string; name: string; phone: string };
+   749→  }>;
+   750→
+   751→  return (
+   752→    <div className="space-y-6">
+   753→      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+   754→        <Card className="border-l-4 border-l-brand">
+   755→          <CardContent className="p-4">
+   756→            <div className="flex items-center justify-between">
+   757→              <div>
+   758→                <p className="text-sm text-muted-foreground">My Leads</p>
+   759→                <p className="text-2xl font-bold text-foreground">
+   760→                  {data.myLeadsCount as number}
+   761→                </p>
+   762→              </div>
+   763→              <div className="rounded-lg bg-brand-light p-3">
+   764→                <Users className="h-5 w-5 text-brand" />
+   765→              </div>
+   766→            </div>
+   767→          </CardContent>
+   768→        </Card>
+   769→
+   770→        <Card className="border-l-4 border-l-amber-500">
+   771→          <CardContent className="p-4">
+   772→            <div className="flex items-center justify-between">
+   773→              <div>
+   774→                <p className="text-sm text-muted-foreground">Visits Scheduled</p>
+   775→                <p className="text-2xl font-bold text-foreground">
+   776→                  {data.visitsScheduled as number}
+   777→                </p>
+   778→              </div>
+   779→              <div className="rounded-lg bg-amber-50 dark:bg-amber-950 p-3">
+   780→                <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+   781→              </div>
+   782→            </div>
+   783→          </CardContent>
+   784→        </Card>
+   785→
+   786→        <Card
+   787→          className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow"
+   788→          onClick={() => {
+   789→            setTodayFollowUpsFilter(true);
+   790→            setFollowUpDate(new Date().toISOString().split("T")[0]);
+   791→            setPage("leads");
+   792→          }}
+   793→        >
+   794→          <CardContent className="p-4">
+   795→            <div className="flex items-center justify-between">
+   796→              <div>
+   797→                <p className="text-sm text-muted-foreground">Today&apos;s Pending Follow-ups</p>
+   798→                <p className="text-2xl font-bold text-foreground">
+   799→                  {todayFollowUps}
+   800→                </p>
+   801→              </div>
+   802→              <div className="rounded-lg bg-red-50 dark:bg-red-950 p-3">
+   803→                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+   804→              </div>
+   805→            </div>
+   806→          </CardContent>
+   807→        </Card>
+   808→
+   809→        <Card className="border-l-4 border-l-orange-500">
+   810→          <CardContent className="p-4">
+   811→            <div className="flex items-center justify-between">
+   812→              <div>
+   813→                <p className="text-sm text-muted-foreground">In Negotiation</p>
+   814→                <p className="text-2xl font-bold text-foreground">
+   815→                  {data.dealsInNegotiation as number}
+   816→                </p>
+   817→              </div>
+   818→              <div className="rounded-lg bg-orange-50 dark:bg-orange-950 p-3">
+   819→                <Phone className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+   820→              </div>
+   821→            </div>
+   822→          </CardContent>
+   823→        </Card>
+   824→
+   825→        <Card
+   826→          className="border-l-4 border-l-emerald-500 cursor-pointer hover:shadow-md transition-shadow"
+   827→          onClick={() => setPage("bookings")}
+   828→        >
+   829→          <CardContent className="p-4">
+   830→            <div className="flex items-center justify-between">
+   831→              <div>
+   832→                <p className="text-sm text-muted-foreground">Booking</p>
+   833→                <p className="text-2xl font-bold text-foreground">
+   834→                  {data.bookedCount as number}
+   835→                </p>
+   836→              </div>
+   837→              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950 p-3">
+   838→                <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+   839→              </div>
+   840→            </div>
+   841→          </CardContent>
+   842→        </Card>
+   843→      </div>
+   844→
+   845→      <div className="grid gap-6 lg:grid-cols-2">
+   846→        <Card>
+   847→          <CardHeader className="pb-3">
+   848→            <CardTitle className="text-base">My Leads by Status</CardTitle>
+   849→          </CardHeader>
+   850→          <CardContent className="space-y-2">
+   851→            {Object.entries(statusCounts).length === 0 ? (
+   852→              <p className="text-sm text-muted-foreground">No leads yet</p>
+   853→            ) : (
+   854→              Object.entries(statusCounts)
+   855→                .sort((a, b) => b[1] - a[1])
+   856→                .map(([status, count]) => (
+   857→                  <div
+   858→                    key={status}
+   859→                    className="flex items-center justify-between"
+   860→                  >
+   861→                    <Badge
+   862→                      variant="secondary"
+   863→                      className={statusColors[status] || ""}
+   864→                    >
+   865→                      {status}
+   866→                    </Badge>
+   867→                    <span className="text-sm font-medium text-foreground">
+   868→                      {count as number}
+   869→                    </span>
+   870→                  </div>
+   871→                ))
+   872→            )}
+   873→          </CardContent>
+   874→        </Card>
+   875→
+   876→        <Card>
+   877→          <CardHeader className="flex flex-row items-center justify-between pb-3">
+   878→            <CardTitle className="text-base flex items-center gap-2">
+   879→              <AlertCircle className="h-4 w-4 text-red-500" />
+   880→              Today&apos;s Pending Follow-ups ({todayFollowUps})
+   881→            </CardTitle>
+   882→            <Button
+   883→              variant="ghost"
+   884→              size="sm"
+   885→              className="text-brand"
+   886→              onClick={() => {
+   887→                setTodayFollowUpsFilter(true);
+   888→                setFollowUpDate(new Date().toISOString().split("T")[0]);
+   889→                setPage("leads");
+   890→              }}
+   891→            >
+   892→              View Leads
+   893→            </Button>
+   894→          </CardHeader>
+   895→          <CardContent>
+   896→            {pendingFollowUpsList.length === 0 ? (
+   897→              <p className="text-sm text-muted-foreground">
+   898→                No pending follow-ups
+   899→              </p>
+   900→            ) : (
+   901→              <div className="space-y-2 max-h-64 overflow-y-auto">
+   902→                {pendingFollowUpsList.map((fu) => (
+   903→                  <div
+   904→                    key={fu.id}
+   905→                    className="rounded-lg border border-border p-3"
+   906→                  >
+   907→                    <div className="flex items-center justify-between">
+   908→                      <div className="font-medium text-foreground">
+   909→                        {fu.lead.name}
+   910→                      </div>
+   911→                      <Badge variant="outline" className="text-[10px] text-red-600 dark:text-red-400">
+   912→                        <Clock className="mr-1 h-3 w-3" />
+   913→                        {new Date(fu.scheduledAt).toLocaleDateString()}
+   914→                      </Badge>
+   915→                    </div>
+   916→                    <div className="text-sm text-muted-foreground flex items-center gap-1">{fu.lead.phone}<button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(fu.lead.phone); }} className="inline-flex text-muted-foreground hover:text-brand transition-colors"><Copy className="h-3 w-3" /></button></div>
+   917→                    <div className="mt-1 text-xs text-muted-foreground">{fu.notes}</div>
+   918→                  </div>
+   919→                ))}
+   920→              </div>
+   921→            )}
+   922→          </CardContent>
+   923→        </Card>
+   924→      </div>
+   925→
+   926→      {/* Recent Leads */}
+   927→      <Card>
+   928→        <CardHeader className="flex flex-row items-center justify-between pb-3">
+   929→          <CardTitle className="text-base">My Recent Leads</CardTitle>
+   930→          <Button
+   931→            variant="ghost"
+   932→            size="sm"
+   933→            className="text-brand"
+   934→            onClick={() => setPage("leads")}
+   935→          >
+   936→            View All <ArrowUpRight className="ml-1 h-3 w-3" />
+   937→          </Button>
+   938→        </CardHeader>
+   939→        <CardContent>
+   940→          {recentLeads.length === 0 ? (
+   941→            <p className="text-sm text-muted-foreground">No leads yet</p>
+   942→          ) : (
+   943→            <div className="space-y-2">
+   944→              {recentLeads.map((lead) => (
+   945→                <div
+   946→                  key={lead.id}
+   947→                  className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted"
+   948→                >
+   949→                  <div>
+   950→                    <div className="flex items-center gap-2">
+   951→                      <span className="font-medium text-foreground">
+   952→                        {lead.name}
+   953→                      </span>
+   954→                      <Badge
+   955→                        variant="secondary"
+   956→                        className={`text-xs ${statusColors[lead.pipelineStatus] || ""}`}
+   957→                      >
+   958→                        {lead.pipelineStatus}
+   959→                      </Badge>
+   960→                    </div>
+   961→                    <div className="text-sm text-muted-foreground flex items-center gap-1">{lead.phone}<button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(lead.phone); }} className="inline-flex text-muted-foreground hover:text-brand transition-colors"><Copy className="h-3 w-3" /></button></div>
+   962→                  </div>
+   963→                  <Button
+   964→                    variant="ghost"
+   965→                    size="sm"
+   966→                    onClick={() => {
+   967→                      useAppStore.getState().setSelectedLeadId(lead.id);
+   968→                      setPage("lead-detail");
+   969→                    }}
+   970→                  >
+   971→                    <Eye className="h-4 w-4" />
+   972→                  </Button>
+   973→                </div>
+   974→              ))}
+   975→            </div>
+   976→          )}
+   977→        </CardContent>
+   978→      </Card>
+   979→
+   980→    </div>
+   981→  );
+   982→}
+   983→

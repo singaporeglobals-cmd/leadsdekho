@@ -1177,3 +1177,63 @@ Work Log:
 Stage Summary:
 - All import fixes committed locally (2d825db) but NOT yet pushed to GitHub / NOT yet deployed to production.
 - PENDING ACTION: push to origin/main once GitHub access is restored, then Vercel auto-deploys.
+
+---
+Task ID: ppt-gC
+Agent: ppt-expert
+Task: Render slides 13-18 of Leads Dekho feature deck
+
+Work Log:
+- slide_13.html — Section 03 divider on deep navy: "03 / 03" accent marker, "Admin Control Center" display title, tagline, 5 glass preview chips (Projects / Lead Sources / Reports / User Management / Enquiries) with ghost "03" numeral + emerald glow decor.
+- slide_14.html — Two-column admin master-data slide: Projects card (4 bullets) + Lead Sources card (3 bullets with 9 seeded-source chips: Manual → MagicBricks), navy-soft bottom strip "change once, applies everywhere".
+- slide_15.html — Reports & Analytics: three accent-top tab cards (Date-wise / Source-wise / Project-wise) with KPI bullets, download filter-bar strip (Export Leads & Export Calls as CSV), plus Leads Report and User Report mini cards.
+- slide_16.html — Two-column governance slide with header-band cards: User Management (5 bullets + Super Admin/Admin/Telecalling/Sales role chips) and Enquiries · Super Admin (4 bullets, ghost mail decor).
+- slide_17.html — Full-width 10-row permission matrix table (Menu | Admin | Presales | Sales) with role-colored header cells, check_circle/cancel icons in AA-safe role-ink colors, compact --fs-small rows fitting 720px, plus edit/delete footnote strip.
+- slide_18.html — Closing split slide: right 42% team photo (brief-provided URL) blended via navy gradient, left "All your leads. One system." hero with 5 recap chips, accent-bordered leadsdekho.in CTA card, and 3 role reminder chips.
+
+Stage Summary:
+- All 6 assigned slides (slide_13–slide_18) rendered as standalone 1280×720 HTML pages in /home/z/my-project/download/slides/, linking global.css relatively, using only the Navy & Emerald SaaS tokens, with no speaker notes, no fabricated assets, and no repeated back-to-back layouts.
+---
+Task ID: ppt-gB
+Agent: ppt-expert
+Task: Render slides 7-12 of Leads Dekho feature deck
+
+Work Log:
+- slide_07.html — Lead Details & Lifecycle split slide: left pipeline card with 8 auto-advance chips (Won accent / Lost outlined-cancel) + "auto-advances on first feedback" caption and Ownership card (Primary vs Current Owner + Assignment History), right 4 icon feature cards (Log Call & Feedback, Project attribution, Tabs, Quick actions).
+- slide_08.html — Import Leads 5-step horizontal timeline (numbered navy circles, emerald final "Done", connector line): Upload File → Review & Edit → Map Projects → Confirm → Done, plus 3 feature cards (Duplicate detection, Bulk tools, Smart parsing) and admin-default footnote strip.
+- slide_09.html — Portal Auto-Capture: 3 integration cards (MagicBricks webhook, Housing.com multi-account + Test connection, Any portal via 99acres generic endpoint), navy review-queue flow strip (Portal lead arrives → Review queue → bulk-set → Confirm/Discard) and 3 dedupe/audit/diagnostics chips.
+- slide_10.html — Section 02 divider on deep navy: "02 / 03" accent marker, "Field Sales & Bookings" 64px display title, tagline, 2 glass preview chips (Site Visits, Bookings), ghost "02" numeral + emerald glow/ring decor tagged data-decor.
+- slide_11.html — Site Visits split: left 2×2 summary stat cards (Upcoming, Completed, Cancelled, Via Lead Status) with palette-consistent icon tiles, right divided feature list of 5 items (date ranges, filters, update dialog, virtual visit via Lead Status, one-tap lead file).
+- slide_12.html — Bookings: 4 stat chips (Total Bookings, Today, This Month, Total Value ₹) over a 3×2 feature grid (Add Booking, 7 payment modes, Status flow, Photos 1400px, Linked Lead, Admin filters).
+
+Stage Summary:
+- All 6 assigned slides (slide_07–slide_12) rendered as standalone 1280×720 HTML pages in /home/z/my-project/download/slides/, linking global.css relatively, using only the Navy & Emerald SaaS tokens (accent-deep for AA-safe accent text), no speaker notes, no fabricated assets, distinct layouts with no back-to-back repetition, and all task_brief facts rendered verbatim.
+---
+Task ID: ppt-gA
+Agent: ppt-expert
+Task: Render slides 1-6 of Leads Dekho feature deck
+Work Log:
+- slide_01.html: Cover — split layout with two-tone display title (Dekho in emerald), role chips, meta row, and hero towers image blended via navy gradient overlay.
+- slide_02.html: Product at a Glance — 2x2 stat tiles (500+/50K+/35%/99.9%), three module group cards (Lead Engine / Field & Sales / Control Center), navy auto-capture bottom strip.
+- slide_03.html: Three role cards with color-coded top borders, verbatim permission bullets, lead-journey flow strip with arrows, and ownership footnote.
+- slide_04.html: Section 01 Lead Engine — deep navy background, ghost "01" numeral, emerald ring/glow decor, accent chapter number and module preview chips.
+- slide_05.html: Dashboard comparison — three role columns (Admin/Presales/Sales) with KPI card tiles, panel lists, admin filter controls row, and clickable-KPI footer note.
+- slide_06.html: Leads workhorse screen — 2x4 icon feature grid covering search, power/quick filters, add lead, row/bulk actions, follow-up mode and safety.
+Stage Summary: Slides 1-6 rendered as standalone 1280x720 HTML in Navy & Emerald SaaS style per brief; all facts/stats rendered verbatim from slides_brief.json, no speaker notes, no headers/footers, layouts diversified.
+---
+Task ID: 2
+Agent: Main Agent
+Task: Build product features PPT for leadsdekho.in (menus + features + roles: Admin, Presales, Sales)
+
+Work Log:
+- Loaded pptx skill; ran Explore agent over /src — full inventory of 10 sidebar menus, 4 DB roles (super_admin/admin/telecalling/sales → presented as Admin / Presales / Sales per user framing), APIs, portal integrations, CSV import wizard
+- AskUserQuestion answered "kore dao" → defaults: client-demo English deck, 13-18 slides, Navy+Emerald palette (#F8FAFC/#0F2A43/#10B981), Poppins+Inter, role badges + permission matrix, no speaker notes
+- Image search (2 queries): cover hero (residential towers rendering) + closing team photo; URLs baked into briefs
+- Committed download/slides/global.css (palette vars, role color tokens, typography tokens, card/chip utilities) + slides_brief.json (18 slides: cover, glance, roles, 3 section headers, dashboard-per-role, leads, lead detail lifecycle, import wizard, portal capture, site visits, bookings, projects+sources, reports, users+enquiries, permission matrix, closing)
+- Fanned out 3 ppt-expert groups in parallel (slides 0:6 / 6:12 / 12:18) — all 18 HTML files committed
+- Converted via skills/pptx/batch_html2pptx.js (NODE_PATH=$(npm root -g)); re-ran with full log: 0 CRITICAL warnings, only non-fatal ⚠ BOUNDS from decorative full-bleed elements
+
+Stage Summary:
+- Deliverable: /home/z/my-project/download/Leads-Dekho-Features.pptx (7.3 MB, 18 slides verified via python-pptx)
+- Source slides: /home/z/my-project/download/slides/slide_01..18.html + global.css + slides_brief.json
+- Role mapping used: Admin = super_admin/admin, Presales = telecalling, Sales = sales; matrix slide reflects real code-level permissions

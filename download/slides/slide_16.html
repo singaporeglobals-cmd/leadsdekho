@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>User Management &amp; Enquiries — Leads Dekho</title>
+<link rel="stylesheet" href="global.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:var(--bg); }
+  .bullet { display:flex; align-items:flex-start; gap:10px; }
+  .bullet .material-icons { font-size:20px; color:var(--accent-deep); margin-top:1px; flex:none; }
+  .bullet p { font:400 var(--fs-body)/1.55 var(--font-body); color:#3D5165; }
+  .bullet p b { font-weight:600; color:var(--primary); }
+  .role-mini { border-radius:999px; padding:4px 11px; font:600 var(--fs-micro)/1.2 var(--font-body); display:inline-flex; align-items:center; }
+</style>
+</head>
+<body>
+<div class="slide flex flex-col" style="padding:56px 64px 50px;">
+
+  <header>
+    <div class="kicker" style="font-size:var(--fs-small);">MENUS 09 + 10 — ADMIN ONLY</div>
+    <h1 style="margin-top:10px; font:700 var(--fs-h1)/1.15 var(--font-heading); color:var(--primary); letter-spacing:-0.01em;">Team governance and website enquiries</h1>
+  </header>
+
+  <div class="grid grid-cols-2 flex-1 min-h-0" style="gap:26px; margin-top:26px;">
+
+    <!-- LEFT: User Management -->
+    <section class="card flex flex-col overflow-hidden">
+      <div class="flex items-center" style="gap:14px; padding:18px 26px; background:var(--navy-soft); border-bottom:1px solid var(--border);">
+        <div style="width:44px; height:44px; border-radius:12px; background:var(--primary); color:#FFFFFF; display:flex; align-items:center; justify-content:center; flex:none;">
+          <i class="material-icons" style="font-size:23px;">manage_accounts</i>
+        </div>
+        <div>
+          <div style="font:600 var(--fs-h2)/1.2 var(--font-heading); color:var(--primary);">User Management</div>
+          <div style="margin-top:4px; font:600 var(--fs-micro)/1 var(--font-body); letter-spacing:0.12em; color:var(--muted);">MENU 09 · ROLES &amp; ACCESS</div>
+        </div>
+      </div>
+      <div class="flex flex-col justify-center flex-1" style="gap:15px; padding:20px 26px 22px;">
+        <div class="bullet"><i class="material-icons">chevron_right</i><p><b>Add Admin / Add User</b> — name, email, password, role, Active switch</p></div>
+        <div class="bullet"><i class="material-icons">chevron_right</i>
+          <div>
+            <p><b>Roles</b></p>
+            <div class="flex flex-wrap" style="gap:7px; margin-top:9px;">
+              <span class="role-mini" style="background:var(--navy-soft); color:var(--primary);">Super Admin</span>
+              <span class="role-mini role-admin">Admin</span>
+              <span class="role-mini role-presales">Telecalling (Presales)</span>
+              <span class="role-mini role-sales">Sales</span>
+            </div>
+          </div>
+        </div>
+        <div class="bullet"><i class="material-icons">chevron_right</i><p><b>Deactivate users</b> without losing their lead history</p></div>
+        <div class="bullet"><i class="material-icons">chevron_right</i><p><b>Password reset + show-passwords toggle</b> (Super Admin only)</p></div>
+        <div class="bullet"><i class="material-icons">chevron_right</i><p><b>Leads &amp; calls count</b> per member at a glance</p></div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Enquiries -->
+    <section class="card flex flex-col overflow-hidden relative">
+      <i data-decor aria-hidden="true" class="material-icons" style="position:absolute; right:-18px; bottom:-22px; font-size:150px; color:rgba(16,185,129,0.07); user-select:none;">mail</i>
+      <div class="flex items-center" style="gap:14px; padding:18px 26px; background:var(--accent-soft); border-bottom:1px solid var(--border);">
+        <div style="width:44px; height:44px; border-radius:12px; background:var(--accent-deep); color:#FFFFFF; display:flex; align-items:center; justify-content:center; flex:none;">
+          <i class="material-icons" style="font-size:23px;">mail</i>
+        </div>
+        <div>
+          <div style="font:600 var(--fs-h2)/1.2 var(--font-heading); color:var(--primary);">Enquiries · Super Admin</div>
+          <div style="margin-top:4px; font:600 var(--fs-micro)/1 var(--font-body); letter-spacing:0.12em; color:var(--muted);">MENU 10 · WEBSITE CONTACT FORM</div>
+        </div>
+      </div>
+      <div class="flex flex-col justify-center flex-1" style="gap:17px; padding:20px 26px 22px;">
+        <div class="bullet"><i class="material-icons">chevron_right</i><p><b>Every contact-form submission</b> from leadsdekho.in lands here</p></div>
+        <div class="bullet"><i class="material-icons">chevron_right</i><p><b>Search + detail view</b> — name, email, phone, company, message</p></div>
+        <div class="bullet"><i class="material-icons">chevron_right</i><p><b>One-tap Call and Email actions</b> on each enquiry</p></div>
+        <div class="bullet"><i class="material-icons">chevron_right</i><p><b>Delete with confirmation</b></p></div>
+      </div>
+    </section>
+  </div>
+</div>
+</body>
+</html>

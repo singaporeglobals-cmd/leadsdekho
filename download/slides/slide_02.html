@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Product at a Glance</title>
+<link rel="stylesheet" href="global.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  body{margin:0;background:#F8FAFC;}
+  .stat-tile{position:relative;display:flex;flex-direction:column;justify-content:center;padding:20px 24px;}
+  .stat-icon{position:absolute;top:18px;right:18px;font-size:20px;color:var(--muted);opacity:0.4;}
+  .stat-num{font-family:var(--font-num);font-weight:700;font-size:44px;line-height:1;color:var(--primary);letter-spacing:-0.01em;}
+  .stat-label{font-size:var(--fs-small);font-weight:600;color:var(--muted);margin-top:10px;}
+  .mod-card{display:flex;align-items:center;gap:18px;padding:16px 22px;flex:1;min-height:0;}
+  .mod-icon{width:48px;height:48px;border-radius:14px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;flex:none;}
+  .mod-name{font-family:var(--font-heading);font-weight:700;font-size:var(--fs-h3);color:var(--primary);line-height:1.2;}
+  .mod-list{font-size:var(--fs-small);color:var(--muted);font-weight:500;margin-top:5px;line-height:1.45;}
+  .mod-count{border:1px solid var(--border);color:var(--muted);font-size:var(--fs-micro);font-weight:600;padding:4px 10px;flex:none;}
+  .seg{display:flex;align-items:center;gap:9px;}
+  .seg-divider{width:1px;height:22px;background:rgba(255,255,255,0.22);flex:none;}
+</style>
+</head>
+<body>
+<div class="slide flex flex-col" style="padding:54px 60px 50px">
+
+  <div style="flex:none">
+    <div class="kicker" style="font-family:var(--font-heading);font-size:var(--fs-small)">PRODUCT AT A GLANCE</div>
+    <h1 style="font-family:var(--font-heading);font-weight:700;font-size:var(--fs-h1);color:var(--primary);margin-top:8px;line-height:1.15">One CRM for the entire <span style="color:var(--accent-deep)">site-visit-to-booking</span> journey</h1>
+  </div>
+
+  <div class="flex gap-6 flex-1 min-h-0" style="margin-top:22px">
+
+    <!-- 2x2 stat tiles -->
+    <div class="grid grid-cols-2 gap-4" style="width:416px;flex:none">
+      <div class="card stat-tile">
+        <i class="material-icons stat-icon" aria-hidden="true">groups</i>
+        <div class="stat-num num">500<span style="color:var(--accent-deep)">+</span></div>
+        <div class="stat-label">Teams onboarded</div>
+      </div>
+      <div class="card stat-tile">
+        <i class="material-icons stat-icon" aria-hidden="true">storage</i>
+        <div class="stat-num num">50K<span style="color:var(--accent-deep)">+</span></div>
+        <div class="stat-label">Leads managed</div>
+      </div>
+      <div class="card stat-tile">
+        <i class="material-icons stat-icon" aria-hidden="true">trending_up</i>
+        <div class="stat-num num">35<span style="color:var(--accent-deep)">%</span></div>
+        <div class="stat-label">Faster follow-ups</div>
+      </div>
+      <div class="card stat-tile">
+        <i class="material-icons stat-icon" aria-hidden="true">verified</i>
+        <div class="stat-num num">99.9<span style="color:var(--accent-deep)">%</span></div>
+        <div class="stat-label">Uptime</div>
+      </div>
+    </div>
+
+    <!-- Module map: 3 stacked group cards -->
+    <div class="flex-1 flex flex-col gap-4 min-h-0">
+      <div class="card mod-card">
+        <div class="mod-icon"><i class="material-icons" style="color:var(--accent-deep);font-size:24px">bolt</i></div>
+        <div class="flex-1 min-w-0">
+          <div class="mod-name">Lead Engine</div>
+          <div class="mod-list">Dashboard · Leads · Import Leads</div>
+        </div>
+        <span class="chip mod-count">3 modules</span>
+      </div>
+      <div class="card mod-card">
+        <div class="mod-icon"><i class="material-icons" style="color:var(--accent-deep);font-size:24px">map</i></div>
+        <div class="flex-1 min-w-0">
+          <div class="mod-name">Field &amp; Sales</div>
+          <div class="mod-list">Site Visits · Bookings</div>
+        </div>
+        <span class="chip mod-count">2 modules</span>
+      </div>
+      <div class="card mod-card">
+        <div class="mod-icon"><i class="material-icons" style="color:var(--accent-deep);font-size:24px">settings</i></div>
+        <div class="flex-1 min-w-0">
+          <div class="mod-name">Control Center</div>
+          <div class="mod-list">Projects · Lead Sources · Reports · User Management · Enquiries</div>
+        </div>
+        <span class="chip mod-count">5 modules</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom full-width strip -->
+  <div class="flex items-center justify-between rounded-2xl" style="margin-top:20px;background:var(--primary);padding:0 26px;height:58px;flex:none">
+    <div class="seg">
+      <i class="material-icons" style="font-size:18px;color:var(--accent)">rss_feed</i>
+      <span style="font-size:var(--fs-small);color:#FFFFFF;font-weight:600">Auto lead capture: <span style="color:rgba(255,255,255,0.78);font-weight:500">MagicBricks · Housing.com · 99acres</span></span>
+    </div>
+    <div class="seg-divider"></div>
+    <div class="seg">
+      <i class="material-icons" style="font-size:18px;color:var(--accent)">upload_file</i>
+      <span style="font-size:var(--fs-small);color:rgba(255,255,255,0.9);font-weight:500">CSV / XLSX import</span>
+    </div>
+    <div class="seg-divider"></div>
+    <div class="seg">
+      <i class="material-icons" style="font-size:18px;color:var(--accent)">lock</i>
+      <span style="font-size:var(--fs-small);color:rgba(255,255,255,0.9);font-weight:500">Secure login</span>
+    </div>
+    <div class="seg-divider"></div>
+    <div class="seg">
+      <i class="material-icons" style="font-size:18px;color:var(--accent)">dark_mode</i>
+      <span style="font-size:var(--fs-small);color:rgba(255,255,255,0.9);font-weight:500">Dark mode</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

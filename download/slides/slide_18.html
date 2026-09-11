@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Closing — Leads Dekho</title>
+<link rel="stylesheet" href="global.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:var(--primary); }
+  .glass-chip {
+    display:inline-flex; align-items:center; gap:7px; border-radius:999px;
+    padding:8px 15px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16);
+    color:#E2E8F0; font:600 var(--fs-small)/1.2 var(--font-body); white-space:nowrap;
+  }
+  .glass-chip .num { color:var(--accent); font-weight:700; }
+  .role-mini { border-radius:999px; padding:5px 12px; font:600 var(--fs-micro)/1.3 var(--font-body); display:inline-flex; align-items:center; }
+</style>
+</head>
+<body>
+<div class="slide" style="background:var(--primary);">
+
+  <!-- Right image panel (~42%) with navy gradient blending left -->
+  <div class="absolute inset-y-0 right-0" style="width:42%;">
+    <img src="https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/c62d4cd68947.jpeg" alt="Team presenting in a modern office" class="w-full h-full object-cover">
+    <div class="absolute inset-0" style="background:linear-gradient(90deg, var(--primary) 0%, rgba(15,42,67,0.72) 30%, rgba(15,42,67,0.22) 66%, rgba(15,42,67,0.38) 100%), linear-gradient(180deg, rgba(15,42,67,0.12) 0%, rgba(15,42,67,0) 40%, rgba(15,42,67,0.5) 100%);"></div>
+  </div>
+
+  <!-- Decorative emerald glow + accents -->
+  <div data-decor aria-hidden="true" style="position:absolute; left:-170px; bottom:-210px; width:540px; height:540px; border-radius:50%; background:radial-gradient(circle, rgba(16,185,129,0.16) 0%, rgba(16,185,129,0) 68%);"></div>
+  <div data-decor aria-hidden="true" style="position:absolute; left:560px; top:64px; width:180px; height:180px; border-radius:50%; border:1px solid rgba(16,185,129,0.2);"></div>
+  <div data-decor aria-hidden="true" style="position:absolute; left:610px; top:210px; width:8px; height:8px; border-radius:50%; background:var(--accent); opacity:0.7;"></div>
+
+  <!-- Left content -->
+  <div class="relative h-full flex flex-col justify-center" style="width:58%; padding:0 44px 0 72px; z-index:10;">
+    <div class="kicker" style="font-size:var(--fs-small);">GET STARTED</div>
+    <div class="accent-bar" style="margin-top:16px;"></div>
+    <h1 style="margin-top:18px; font:800 var(--fs-display)/1.12 var(--font-heading); color:#FFFFFF; letter-spacing:-0.01em;">All your leads.<br><span style="color:var(--accent);">One system.</span></h1>
+    <p style="margin-top:16px; font:400 var(--fs-h3)/1.55 var(--font-body); color:#AFC2D4;">Leads Dekho — Smart Lead Management for Indian Real Estate Teams</p>
+
+    <div class="flex items-center flex-wrap" style="gap:9px; margin-top:26px;">
+      <span class="glass-chip"><span class="num">10</span> modules</span>
+      <span class="glass-chip"><span class="num">3</span> roles</span>
+      <span class="glass-chip"><span class="num">3</span> portal integrations</span>
+      <span class="glass-chip">CSV import</span>
+      <span class="glass-chip">Full analytics</span>
+    </div>
+
+    <div class="flex items-center" style="margin-top:30px; gap:14px; padding:17px 20px; border:1.5px solid var(--accent); background:rgba(16,185,129,0.10); border-radius:14px; max-width:560px;">
+      <div style="width:40px; height:40px; border-radius:11px; background:var(--accent); display:flex; align-items:center; justify-content:center; flex:none;">
+        <i class="material-icons" style="font-size:21px; color:var(--primary);">open_in_new</i>
+      </div>
+      <p style="font:400 var(--fs-body)/1.55 var(--font-body); color:#DCE6EF;"><span style="font:700 var(--fs-body)/1.4 var(--font-heading); color:#FFFFFF;">leadsdekho.in</span> — Sign in and start closing more deals today.</p>
+    </div>
+
+    <div class="flex items-center flex-wrap" style="gap:8px; margin-top:26px;">
+      <span class="role-mini role-admin">Admin sets up teams &amp; master data</span>
+      <span class="role-mini role-presales">Presales works fresh leads</span>
+      <span class="role-mini role-sales">Sales closes</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

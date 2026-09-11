@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Leads — Lead Management</title>
+<link rel="stylesheet" href="global.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  body{margin:0;background:#F8FAFC;}
+  .f-tile{display:flex;flex-direction:column;padding:18px;min-height:0;}
+  .f-icon{width:40px;height:40px;border-radius:11px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;flex:none;}
+  .f-icon .material-icons{font-size:21px;color:var(--accent-deep);}
+  .f-title{margin-top:12px;font-family:var(--font-heading);font-weight:600;font-size:15px;color:var(--primary);line-height:1.25;}
+  .f-desc{margin-top:6px;font-size:12.5px;color:var(--muted);line-height:1.55;}
+</style>
+</head>
+<body>
+<div class="slide flex flex-col" style="padding:54px 60px 52px">
+
+  <div style="flex:none">
+    <div class="kicker" style="font-family:var(--font-heading);font-size:var(--fs-small)">MENU 02 — LEADS</div>
+    <h1 style="font-family:var(--font-heading);font-weight:700;font-size:var(--fs-h1);color:var(--primary);margin-top:8px;line-height:1.15">Lead Management: <span style="color:var(--accent-deep)">the workhorse screen</span></h1>
+  </div>
+
+  <div class="grid grid-cols-4 grid-rows-2 gap-4 flex-1 min-h-0" style="margin-top:20px">
+
+    <div class="card f-tile">
+      <div class="f-icon"><i class="material-icons">search</i></div>
+      <div class="f-title">Smart search</div>
+      <div class="f-desc">instant name / phone / email search</div>
+    </div>
+
+    <div class="card f-tile">
+      <div class="f-icon"><i class="material-icons">filter_alt</i></div>
+      <div class="f-title">Power filters</div>
+      <div class="f-desc">Users, Pipeline, Sources, Projects, Lead Status, Sub-stage + date presets: Today, Last 7 / 30 Days, This &amp; Last Month</div>
+    </div>
+
+    <div class="card f-tile">
+      <div class="f-icon"><i class="material-icons">bolt</i></div>
+      <div class="f-title">Quick filters</div>
+      <div class="f-desc">My Leads · Fresh · Follow Up with live count badges</div>
+    </div>
+
+    <div class="card f-tile">
+      <div class="f-icon"><i class="material-icons">person_add</i></div>
+      <div class="f-title">Add Lead</div>
+      <div class="f-desc">Name, Phone, Email, Source, Budget, Project, Property, Assign To, Notes</div>
+    </div>
+
+    <div class="card f-tile">
+      <div class="f-icon"><i class="material-icons">touch_app</i></div>
+      <div class="f-title">Row actions</div>
+      <div class="f-desc">Feedback, Follow Up, Assign, Update, View Details, Delete</div>
+    </div>
+
+    <div class="card f-tile">
+      <div class="f-icon"><i class="material-icons">checklist</i></div>
+      <div class="f-title">Bulk actions</div>
+      <div class="f-desc">select many, then Assign (N) / Delete (N), admin only</div>
+    </div>
+
+    <div class="card f-tile">
+      <div class="f-icon"><i class="material-icons">alarm</i></div>
+      <div class="f-title">Follow-up mode</div>
+      <div class="f-desc">shows only pending follow-ups; completed calls drop off the view</div>
+    </div>
+
+    <div class="card f-tile">
+      <div class="f-icon"><i class="material-icons">lock</i></div>
+      <div class="f-title">Safety</div>
+      <div class="f-desc">one-tap copy phone, View Only lock on transferred leads</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

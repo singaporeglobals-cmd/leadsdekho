@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard — every role gets its own</title>
+<link rel="stylesheet" href="global.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  body{margin:0;background:#F8FAFC;}
+  .col-card{flex:1;display:flex;flex-direction:column;padding:16px 16px 14px;min-width:0;}
+  .role-chip{padding:6px 14px;font-size:12px;font-family:var(--font-heading);font-weight:700;letter-spacing:0.05em;}
+  .sec-label{font-size:var(--fs-micro);letter-spacing:0.14em;color:var(--muted);font-weight:700;margin-top:14px;font-family:var(--font-heading);}
+  .kpi{display:flex;align-items:center;gap:7px;background:var(--navy-soft);border-radius:9px;padding:7px 10px;}
+  .kpi span{font-size:12px;font-weight:600;color:var(--primary);line-height:1.2;}
+  .panel{display:flex;align-items:flex-start;gap:8px;}
+  .panel .material-icons{font-size:15px;color:var(--muted);margin-top:1px;flex:none;}
+  .panel .p-name{font-size:12.5px;font-weight:500;color:var(--ink);line-height:1.35;}
+  .panel .p-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+</style>
+</head>
+<body>
+<div class="slide flex flex-col" style="padding:50px 52px 42px">
+
+  <div style="flex:none">
+    <div class="kicker" style="font-family:var(--font-heading);font-size:var(--fs-small)">MENU 01 — DASHBOARD · ALL ROLES</div>
+    <h1 style="font-family:var(--font-heading);font-weight:700;font-size:var(--fs-h1);color:var(--primary);margin-top:8px;line-height:1.15">A home screen tuned to <span style="color:var(--accent-deep)">every role</span></h1>
+  </div>
+
+  <div class="flex gap-5 flex-1 min-h-0" style="margin-top:18px">
+
+    <!-- ADMIN -->
+    <div class="card col-card">
+      <div class="flex items-center justify-between">
+        <span class="chip role-admin role-chip">ADMIN</span>
+        <i class="material-icons" style="font-size:20px;color:var(--admin-ink)">admin_panel_settings</i>
+      </div>
+      <div class="sec-label">KPI CARDS</div>
+      <div class="grid grid-cols-2 gap-2" style="margin-top:8px">
+        <div class="kpi"><span class="dot" style="background:var(--admin);width:6px;height:6px"></span><span>Total Leads</span></div>
+        <div class="kpi"><span class="dot" style="background:var(--admin);width:6px;height:6px"></span><span>Today Follow-ups</span></div>
+        <div class="kpi"><span class="dot" style="background:var(--admin);width:6px;height:6px"></span><span>Pending Follow-ups</span></div>
+        <div class="kpi"><span class="dot" style="background:var(--admin);width:6px;height:6px"></span><span>Total Projects</span></div>
+        <div class="kpi col-span-2"><span class="dot" style="background:var(--admin);width:6px;height:6px"></span><span>Bookings</span></div>
+      </div>
+      <div class="sec-label">PANELS</div>
+      <ul class="space-y-2" style="margin-top:8px">
+        <li class="panel"><i class="material-icons">donut_small</i><span class="p-name">Leads by Status</span></li>
+        <li class="panel"><i class="material-icons">travel_explore</i><span class="p-name">Leads by Source</span></li>
+        <li class="panel"><i class="material-icons">groups</i><div><div class="p-name">Team Performance</div><div class="p-sub">(owned + calls per member)</div></div></li>
+        <li class="panel"><i class="material-icons">schedule</i><span class="p-name">Recent Leads</span></li>
+      </ul>
+      <div class="flex items-center gap-2" style="margin-top:auto;padding-top:10px;border-top:1px solid var(--border)">
+        <i class="material-icons" style="font-size:15px;color:var(--accent-deep)">tune</i>
+        <span style="font-size:12px;color:var(--muted);font-weight:500">user multi-select + month filter</span>
+      </div>
+    </div>
+
+    <!-- PRESALES -->
+    <div class="card col-card">
+      <div class="flex items-center justify-between">
+        <span class="chip role-presales role-chip">PRESALES</span>
+        <i class="material-icons" style="font-size:20px;color:var(--presales-ink)">support_agent</i>
+      </div>
+      <div class="sec-label">KPI CARDS</div>
+      <div class="grid grid-cols-2 gap-2" style="margin-top:8px">
+        <div class="kpi"><span class="dot" style="background:var(--presales);width:6px;height:6px"></span><span>My Leads</span></div>
+        <div class="kpi"><span class="dot" style="background:var(--presales);width:6px;height:6px"></span><span>All Leads</span></div>
+        <div class="kpi"><span class="dot" style="background:var(--presales);width:6px;height:6px"></span><span>Today Follow-ups</span></div>
+        <div class="kpi"><span class="dot" style="background:var(--presales);width:6px;height:6px"></span><span>Calls Made</span></div>
+      </div>
+      <div class="sec-label">PANELS</div>
+      <ul class="space-y-2" style="margin-top:8px">
+        <li class="panel"><i class="material-icons">donut_small</i><span class="p-name">My Leads by Status</span></li>
+        <li class="panel"><i class="material-icons">fact_check</i><span class="p-name">Pending Follow-ups with View Leads</span></li>
+        <li class="panel"><i class="material-icons">call</i><span class="p-name">Recent Calls</span></li>
+      </ul>
+    </div>
+
+    <!-- SALES -->
+    <div class="card col-card">
+      <div class="flex items-center justify-between">
+        <span class="chip role-sales role-chip">SALES</span>
+        <i class="material-icons" style="font-size:20px;color:var(--sales-ink)">handshake</i>
+      </div>
+      <div class="sec-label">KPI CARDS</div>
+      <div class="grid grid-cols-2 gap-2" style="margin-top:8px">
+        <div class="kpi"><span class="dot" style="background:var(--sales);width:6px;height:6px"></span><span>My Leads</span></div>
+        <div class="kpi"><span class="dot" style="background:var(--sales);width:6px;height:6px"></span><span>Visits Scheduled</span></div>
+        <div class="kpi"><span class="dot" style="background:var(--sales);width:6px;height:6px"></span><span>In Negotiation</span></div>
+        <div class="kpi"><span class="dot" style="background:var(--sales);width:6px;height:6px"></span><span>Booking</span></div>
+      </div>
+      <div class="sec-label">PANELS</div>
+      <ul class="space-y-2" style="margin-top:8px">
+        <li class="panel"><i class="material-icons">donut_small</i><span class="p-name">My Leads by Status</span></li>
+        <li class="panel"><i class="material-icons">fact_check</i><span class="p-name">Pending Follow-ups</span></li>
+        <li class="panel"><i class="material-icons">history</i><span class="p-name">My Recent Leads</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Footer note -->
+  <div class="flex items-center justify-center gap-2 rounded-xl" style="margin-top:16px;background:var(--navy-soft);padding:10px 20px;flex:none">
+    <i class="material-icons" style="font-size:17px;color:var(--accent-deep)">touch_app</i>
+    <span style="font-size:var(--fs-small);color:var(--primary);font-weight:500">Every KPI card is clickable — it jumps straight to the matching filtered lead list.</span>
+  </div>
+
+</div>
+</body>
+</html>

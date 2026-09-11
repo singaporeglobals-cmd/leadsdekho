@@ -1,0 +1,123 @@
+{
+  "design": {
+    "title": "Leads Dekho — Complete Product & Feature Guide",
+    "style_name": "Navy & Emerald SaaS",
+    "palette": { "background": "#F8FAFC", "primary": "#0F2A43", "accent": "#10B981" },
+    "typography": { "heading": "Poppins", "body": "Inter", "numeric": "Poppins" },
+    "reference": "Stripe / Linear style product overview — light, airy, card-based, generous whitespace, emerald accent"
+  },
+  "global_css_path": "/home/z/my-project/download/slides/global.css",
+  "slides_dir": "/home/z/my-project/download/slides",
+  "language": "en",
+  "speaker_notes": "none",
+  "slides": [
+    {
+      "title": "Cover",
+      "layout": "cover",
+      "output_path": "/home/z/my-project/download/slides/slide_01.html",
+      "task_brief": "Full-bleed cover, split layout. Right ~45% shows hero image https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/41dc99627142.png (modern residential towers rendering) with a navy gradient overlay blending it into the left panel. Left panel on --bg: kicker 'PRODUCT & FEATURE GUIDE'; display title 'Leads Dekho' (accent the word 'Dekho' in emerald); subtitle 'Smart Lead Management for Indian Real Estate Teams'; supporting line 'Every lead, every visit, every booking — one system, at leadsdekho.in.'; three role chips using role badge classes: 'Admin' (role-admin), 'Presales' (role-presales), 'Sales' (role-sales); bottom meta row in muted small text: '10 Modules · 3 Roles · 3 Portal Integrations · 2026'."
+    },
+    {
+      "title": "Product at a Glance",
+      "layout": "bento grid + stats",
+      "output_path": "/home/z/my-project/download/slides/slide_02.html",
+      "task_brief": "Kicker 'PRODUCT AT A GLANCE'; headline 'One CRM for the entire site-visit-to-booking journey'. Left column: 2x2 stat tiles (big numeric font): '500+ Teams onboarded', '50K+ Leads managed', '35% Faster follow-ups', '99.9% Uptime'. Right: module map as 3 stacked group cards, each with a Material Icon: 'Lead Engine — Dashboard · Leads · Import Leads' (icon: bolt), 'Field & Sales — Site Visits · Bookings' (icon: map), 'Control Center — Projects · Lead Sources · Reports · User Management · Enquiries' (icon: settings). Bottom full-width strip: 'Auto lead capture: MagicBricks · Housing.com · 99acres | CSV / XLSX import | Secure login | Dark mode'."
+    },
+    {
+      "title": "Three Roles, One System",
+      "layout": "three-column role cards + flow strip",
+      "output_path": "/home/z/my-project/download/slides/slide_03.html",
+      "task_brief": "Kicker 'ROLES'; headline 'Three roles. Clear ownership. Zero confusion.' Three equal cards. Card 1 header chip role-admin 'ADMIN' + tagline 'Full control of the system': bullets 'Sees ALL leads, visits & bookings', 'Imports leads — CSV wizard + portal capture', 'Creates projects, lead sources & users', 'Full reports, exports & analytics', 'Bulk assign & delete leads'. Card 2 chip role-presales 'PRESALES (Telecalling)' + tagline 'Works fresh leads first': bullets 'Calls fresh leads, logs quick feedback', 'Schedules & completes follow-ups', 'Sees only own leads — no delete rights', 'Hands leads over via Assign with reason'. Card 3 chip role-sales 'SALES' + tagline 'Closes the deal': bullets 'Works assigned leads through the pipeline', 'Schedules & updates site visits', 'Creates bookings with photos & payment mode', 'Transferred leads become View Only (lock icon)'. Bottom flow strip with arrows: 'Fresh lead → Presales calls & qualifies → Assigned to Sales → Site visit → Booking → Reports'. Footnote: 'Presales & Sales see only the leads they own — Admin sees everything.'"
+    },
+    {
+      "title": "Section 01 — Lead Engine",
+      "layout": "section header",
+      "output_path": "/home/z/my-project/download/slides/slide_04.html",
+      "task_brief": "Section header on deep navy (--primary) background with subtle emerald accent shapes, light text. Chapter number '01 / 03' in accent; chapter title 'Lead Engine'; tagline 'Capture, track and convert every enquiry — from first call to final booking.'; small preview row of chips: 'Dashboard', 'Leads', 'Lead Details', 'Import Leads', 'Portal Capture'."
+    },
+    {
+      "title": "Dashboard — every role gets its own",
+      "layout": "three-column comparison",
+      "output_path": "/home/z/my-project/download/slides/slide_05.html",
+      "task_brief": "Kicker 'MENU 01 — DASHBOARD · ALL ROLES'; headline 'A home screen tuned to every role'. Three columns, each headed by its role chip. ADMIN (role-admin): KPI cards 'Total Leads', 'Today Follow-ups', 'Pending Follow-ups', 'Total Projects', 'Bookings'; panels 'Leads by Status', 'Leads by Source', 'Team Performance' (owned + calls per member), 'Recent Leads'; user multi-select + month filter. PRESALES (role-presales): KPI cards 'My Leads', 'All Leads', 'Today Follow-ups', 'Calls Made'; panels 'My Leads by Status', 'Pending Follow-ups with View Leads', 'Recent Calls'. SALES (role-sales): KPI cards 'My Leads', 'Visits Scheduled', 'In Negotiation', 'Booking'; panels 'My Leads by Status', 'Pending Follow-ups', 'My Recent Leads'. Footer note: 'Every KPI card is clickable — it jumps straight to the matching filtered lead list.'"
+    },
+    {
+      "title": "Leads — Lead Management",
+      "layout": "feature grid 2x4",
+      "output_path": "/home/z/my-project/download/slides/slide_06.html",
+      "task_brief": "Kicker 'MENU 02 — LEADS'; headline 'Lead Management: the workhorse screen'. Grid of 8 feature tiles with Material Icons: 'Smart search — instant name / phone / email search' (search); 'Power filters — Users, Pipeline, Sources, Projects, Lead Status, Sub-stage + date presets: Today, Last 7 / 30 Days, This & Last Month' (filter_alt); 'Quick filters — My Leads · Fresh · Follow Up with live count badges' (bolt); 'Add Lead — Name, Phone, Email, Source, Budget, Project, Property, Assign To, Notes' (person_add); 'Row actions — Feedback, Follow Up, Assign, Update, View Details, Delete' (touch_app); 'Bulk actions — select many, then Assign (N) / Delete (N), admin only' (checklist); 'Follow-up mode — shows only pending follow-ups; completed calls drop off the view' (alarm); 'Safety — one-tap copy phone, View Only lock on transferred leads' (lock)."
+    },
+    {
+      "title": "Lead Details & Lifecycle",
+      "layout": "split text + visual",
+      "output_path": "/home/z/my-project/download/slides/slide_07.html",
+      "task_brief": "Kicker 'MENU 02 — LEAD DETAILS'; headline 'A complete lifecycle on one screen'. Left panel card: clickable pipeline shown as 8 chips in a row/wrap: 'New → Contacted → Qualified → Visit Scheduled → Visited → Negotiation → Won / Lost', caption 'Pipeline auto-advances on the first feedback'. Below it a card 'Ownership' with 'Primary Owner vs Current Owner + full Assignment History with reasons'. Right: 4 compact feature cards: 'Log Call & Feedback — Lead Status + mandatory sub-stages (8 for Not Interested, 6 for Not Connected) + notes + next follow-up date' (forum); 'Project attribution — Site Visit Done requires a project, keeping reports accurate' (assignment); 'Tabs — Timeline · Calls · Follow-ups · Visits, all history in one place' (history); 'Quick actions — Log Call, Schedule Follow-up, Schedule Visit, Mark Lost (reason required)' (flash_on)."
+    },
+    {
+      "title": "Import Leads — 5-step wizard",
+      "layout": "horizontal timeline + cards",
+      "output_path": "/home/z/my-project/download/slides/slide_08.html",
+      "task_brief": "Kicker 'MENU 03 — IMPORT LEADS · ADMIN ONLY'; headline 'From spreadsheet to pipeline in 5 steps'. Horizontal 5-step timeline with numbered circles: '1 Upload File — CSV / XLS / XLSX up to 4.5 MB' → '2 Review & Edit — inline table, per-row source & assignee' → '3 Map Projects — match file names to your projects' → '4 Confirm — summary + assignment recap' → '5 Done — imported / skipped report'. Below: 3 feature cards: 'Duplicate detection — catches +91 / 91 / 0 phone variants and in-file duplicates; one-click Skip duplicates' (content_copy); 'Bulk tools — Select Non-Duplicates, bulk Apply Project / Source / Assignee' (stacked_bar_chart or tune); 'Smart parsing — flexible column names, DD.MM.YY & other date formats, phone normalization' (auto_fix_high). Footer note: 'Unassigned rows go to the importing admin by default.'"
+    },
+    {
+      "title": "Portal Auto-Capture",
+      "layout": "integration cards + queue strip",
+      "output_path": "/home/z/my-project/download/slides/slide_09.html",
+      "task_brief": "Kicker 'AUTO LEAD CAPTURE · INCLUDED'; headline 'Portals push leads straight into Leads Dekho'. Three integration cards: 'MagicBricks — dedicated webhook; leads land instantly, zero manual entry' (location_city); 'Housing.com — multi-account support, webhook push + secure signed pull-sync, Test connection button' (apartment); 'Any portal — 99acres & others via generic endpoint with smart field mapping and source auto-detect' (hub). Bottom review-queue strip with arrows: 'Portal lead arrives → Review queue → bulk-set Project / Source / Assignee → Confirm to Lead Management (or Discard)'. Chip row: 'Phone + portalRef dedupe', 'Raw payload audit trail', 'Live diagnostics — 24h / 7d counts'."
+    },
+    {
+      "title": "Section 02 — Field Sales & Bookings",
+      "layout": "section header",
+      "output_path": "/home/z/my-project/download/slides/slide_10.html",
+      "task_brief": "Section header on deep navy background matching slide_04. '02 / 03'; chapter title 'Field Sales & Bookings'; tagline 'Take the deal from site visit to signed booking — with a full financial and photo trail.'; preview chips: 'Site Visits', 'Bookings'."
+    },
+    {
+      "title": "Site Visits",
+      "layout": "stats + feature list split",
+      "output_path": "/home/z/my-project/download/slides/slide_11.html",
+      "task_brief": "Kicker 'MENU 04 — SITE VISITS · ALL ROLES'; headline 'Every visit scheduled, tracked, attributed'. Left: 4 summary stat cards 'Upcoming', 'Completed', 'Cancelled', 'Via Lead Status'. Right feature list: 'Quick date ranges — Today, Yesterday, Last 7 / 30 Days, This Month' (date_range); 'Filters — Status, User (admin), From / To, Project, Source' (filter_list); 'Update dialog — mark Completed / Cancelled / No Show + feedback' (edit_note); 'Via Lead Status — marking a lead Site Visit Done creates a virtual visit, so reports stay complete' (sync); 'One tap to the lead file — eye icon opens full Lead Details' (visibility)."
+    },
+    {
+      "title": "Bookings",
+      "layout": "feature grid + stat chips",
+      "output_path": "/home/z/my-project/download/slides/slide_12.html",
+      "task_brief": "Kicker 'MENU 05 — BOOKINGS · ALL ROLES'; headline 'Bookings with a full financial & photo trail'. Top stat chip row: 'Total Bookings', 'Today', 'This Month', 'Total Value ₹'. Grid of 6 feature tiles: 'Add Booking — customer, project, unit, booking date, amounts in ₹' (add_card); '7 payment modes — Cash, Cheque, Bank Transfer, UPI, Card, Loan, Other' (payments); 'Status flow — Confirmed, Pending, Cancelled, Refunded' (flag); 'Photos — multi-image upload, auto-resized to 1400px, gallery + Download All' (photo_library); 'Linked Lead — connect a booking to its lead, click-through both ways' (link); 'Admin filters — User, Project, Status, date presets + search' (manage_search)."
+    },
+    {
+      "title": "Section 03 — Admin Control Center",
+      "layout": "section header",
+      "output_path": "/home/z/my-project/download/slides/slide_13.html",
+      "task_brief": "Section header on deep navy background matching slide_04. '03 / 03'; chapter title 'Admin Control Center'; tagline 'Master data, analytics and team governance — kept safely in admin hands.'; preview chips: 'Projects', 'Lead Sources', 'Reports', 'User Management', 'Enquiries'."
+    },
+    {
+      "title": "Projects & Lead Sources",
+      "layout": "two-column",
+      "output_path": "/home/z/my-project/download/slides/slide_14.html",
+      "task_brief": "Kicker 'MENUS 06 + 07 — ADMIN ONLY'; headline 'Master data that powers every dropdown'. Two columns. LEFT card 'Projects' (icon home_work): bullets 'Add / edit / delete projects — name, location, description', 'Live lead counts on every project card', 'Safe delete — linked leads are unlinked, never lost', 'Feeds Add Lead, filters, reports & bookings'. RIGHT card 'Lead Sources' (icon radio): bullets 'Add / edit / delete sources with Active / Inactive toggle', 'Inactive sources are hidden from lead forms automatically', 'Seeded out of the box: Manual, Website, Referral, Social Media, Walk-in, Call, Housing.com, 99acres, MagicBricks'. Bottom note strip: 'Both lists feed every dropdown in the product — change once, applies everywhere.'"
+    },
+    {
+      "title": "Reports & Analytics",
+      "layout": "three tab cards + export strip",
+      "output_path": "/home/z/my-project/download/slides/slide_15.html",
+      "task_brief": "Kicker 'MENU 08 — REPORTS · ADMIN ONLY'; headline 'Three analytics views, one filter bar'. Three cards side by side styled as tabs: 'Date-wise — Daily Lead Trend chart; KPIs: Total Leads, Bookings + booking rate, Total Calls, Follow-ups, Site Visits; expandable day rows' (today); 'Source-wise — Leads by Source, Booking Rate by Source %, Best Source; per-source calls / follow-ups / visits' (donut_small); 'Project-wise — Leads by Project, Booking Rate by Project, stacked Source Distribution' (domain). Middle strip: 'One filter bar — date presets, Project, Source, multi-select Lead Status · Export Leads & Export Calls as CSV' (download). Bottom two mini cards: 'Leads Report — detailed CSV export including full feedback history, paginated preview' (table_view); 'User Report — per-user calls, Connected vs Not Connected, Visit Promised, day-wise fresh leads, Connection / Visit / Booking rates' (group)."
+    },
+    {
+      "title": "User Management & Enquiries",
+      "layout": "two-column",
+      "output_path": "/home/z/my-project/download/slides/slide_16.html",
+      "task_brief": "Kicker 'MENUS 09 + 10 — ADMIN ONLY'; headline 'Team governance and website enquiries'. LEFT card 'User Management' (icon manage_accounts): bullets 'Add Admin / Add User — name, email, password, role, Active switch', 'Roles — Super Admin, Admin, Telecalling (Presales), Sales', 'Deactivate users without losing their lead history', 'Password reset + show-passwords toggle (Super Admin only)', 'Leads & calls count per member at a glance'. RIGHT card 'Enquiries · Super Admin' (icon mail): bullets 'Every contact-form submission from leadsdekho.in lands here', 'Search + detail view — name, email, phone, company, message', 'One-tap Call and Email actions on each enquiry', 'Delete with confirmation'."
+    },
+    {
+      "title": "Role Permission Matrix",
+      "layout": "comparison table",
+      "output_path": "/home/z/my-project/download/slides/slide_17.html",
+      "task_brief": "Kicker 'ROLES & ACCESS'; headline 'Who sees what — full permission matrix'. Clean full-width table, header row: 'Menu' | 'Admin' | 'Presales' | 'Sales' (Admin/Presales/Sales header cells use their role colors). Rows (use Material Icons check_circle in role color for access, cancel in muted grey for no access): Dashboard: Admin 'Full', Presales 'Own stats', Sales 'Own stats'. Leads: Admin 'All + bulk actions', Presales 'Own leads', Sales 'Own leads'. Import Leads: Admin yes, Presales no, Sales no. Site Visits: Admin 'All', Presales 'Own', Sales 'Own'. Bookings: Admin 'All', Presales 'Own', Sales 'Own'. Projects: Admin yes, others no. Lead Sources: Admin yes, others no. Reports (3 views + exports): Admin yes, others no. User Management: Admin yes, others no. Enquiries: Admin 'Super Admin only', others no. Keep rows compact (--fs-small) so all 10 rows fit comfortably. Footnote row below table: 'Edit / delete: Admin always · Presales & Sales only while they are the current owner · Transferred leads become View Only · Delete & bulk actions are admin-only.'"
+    },
+    {
+      "title": "Closing",
+      "layout": "closing + image",
+      "output_path": "/home/z/my-project/download/slides/slide_18.html",
+      "task_brief": "Closing slide, split. Right ~42% image https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/c62d4cd68947.jpeg (team presenting in modern office) with navy overlay gradient blending left. Left: kicker 'GET STARTED'; big headline 'All your leads. One system.'; sub-line 'Leads Dekho — Smart Lead Management for Indian Real Estate Teams'; recap chip row: '10 modules', '3 roles', '3 portal integrations', 'CSV import', 'Full analytics'; CTA card with accent border: 'leadsdekho.in — Sign in and start closing more deals today.'; small role reminder line with mini chips: 'Admin sets up teams & master data · Presales works fresh leads · Sales closes'."
+    }
+  ]
+}

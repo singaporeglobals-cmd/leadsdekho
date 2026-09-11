@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Projects &amp; Lead Sources — Leads Dekho</title>
+<link rel="stylesheet" href="global.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:var(--bg); }
+  .bullet { display:flex; align-items:flex-start; gap:12px; }
+  .bullet .material-icons { font-size:19px; color:var(--accent-deep); margin-top:2px; flex:none; }
+  .bullet p { font:400 var(--fs-body)/1.55 var(--font-body); color:#3D5165; }
+  .bullet p b { font-weight:600; color:var(--primary); }
+  .seed-chip {
+    display:inline-flex; align-items:center; border-radius:999px; padding:4px 11px;
+    background:var(--bg); border:1px solid var(--border);
+    font:600 var(--fs-micro)/1.2 var(--font-body); color:var(--primary);
+  }
+</style>
+</head>
+<body>
+<div class="slide flex flex-col" style="padding:56px 64px 48px;">
+
+  <header>
+    <div class="kicker" style="font-size:var(--fs-small);">MENUS 06 + 07 — ADMIN ONLY</div>
+    <h1 style="margin-top:10px; font:700 var(--fs-h1)/1.15 var(--font-heading); color:var(--primary); letter-spacing:-0.01em;">Master data that powers every dropdown</h1>
+  </header>
+
+  <div class="grid grid-cols-2 flex-1 min-h-0" style="gap:26px; margin-top:26px;">
+
+    <!-- LEFT: Projects -->
+    <section class="card flex flex-col" style="padding:26px 28px 22px;">
+      <div class="flex items-center" style="gap:14px; padding-bottom:18px; border-bottom:1px solid var(--border);">
+        <div style="width:48px; height:48px; border-radius:13px; background:var(--admin-soft); color:var(--admin-ink); display:flex; align-items:center; justify-content:center; flex:none;">
+          <i class="material-icons" style="font-size:25px;">home_work</i>
+        </div>
+        <div>
+          <div style="font:600 var(--fs-h2)/1.2 var(--font-heading); color:var(--primary);">Projects</div>
+          <div style="margin-top:4px; font:600 var(--fs-micro)/1 var(--font-body); letter-spacing:0.12em; color:var(--muted);">MENU 06 · MASTER DATA</div>
+        </div>
+        <span class="chip role-admin" style="margin-left:auto; padding:5px 12px; font:600 var(--fs-micro)/1.2 var(--font-body);">Admin only</span>
+      </div>
+      <div class="flex flex-col justify-center flex-1" style="gap:20px; padding-top:20px;">
+        <div class="bullet"><i class="material-icons">task_alt</i><p><b>Add / edit / delete projects</b> — name, location, description</p></div>
+        <div class="bullet"><i class="material-icons">task_alt</i><p><b>Live lead counts</b> on every project card</p></div>
+        <div class="bullet"><i class="material-icons">task_alt</i><p><b>Safe delete</b> — linked leads are unlinked, never lost</p></div>
+        <div class="bullet"><i class="material-icons">task_alt</i><p><b>Feeds Add Lead,</b> filters, reports &amp; bookings</p></div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Lead Sources -->
+    <section class="card flex flex-col" style="padding:26px 28px 22px;">
+      <div class="flex items-center" style="gap:14px; padding-bottom:18px; border-bottom:1px solid var(--border);">
+        <div style="width:48px; height:48px; border-radius:13px; background:var(--navy-soft); color:var(--primary); display:flex; align-items:center; justify-content:center; flex:none;">
+          <i class="material-icons" style="font-size:25px;">radio</i>
+        </div>
+        <div>
+          <div style="font:600 var(--fs-h2)/1.2 var(--font-heading); color:var(--primary);">Lead Sources</div>
+          <div style="margin-top:4px; font:600 var(--fs-micro)/1 var(--font-body); letter-spacing:0.12em; color:var(--muted);">MENU 07 · MASTER DATA</div>
+        </div>
+        <span class="chip role-admin" style="margin-left:auto; padding:5px 12px; font:600 var(--fs-micro)/1.2 var(--font-body);">Admin only</span>
+      </div>
+      <div class="flex flex-col justify-center flex-1" style="gap:20px; padding-top:20px;">
+        <div class="bullet"><i class="material-icons">task_alt</i><p><b>Add / edit / delete sources</b> with Active / Inactive toggle</p></div>
+        <div class="bullet"><i class="material-icons">task_alt</i><p><b>Inactive sources</b> are hidden from lead forms automatically</p></div>
+        <div class="bullet"><i class="material-icons">task_alt</i>
+          <div>
+            <p><b>Seeded out of the box:</b></p>
+            <div class="flex flex-wrap" style="gap:7px; margin-top:10px;">
+              <span class="seed-chip">Manual</span>
+              <span class="seed-chip">Website</span>
+              <span class="seed-chip">Referral</span>
+              <span class="seed-chip">Social Media</span>
+              <span class="seed-chip">Walk-in</span>
+              <span class="seed-chip">Call</span>
+              <span class="seed-chip">Housing.com</span>
+              <span class="seed-chip">99acres</span>
+              <span class="seed-chip">MagicBricks</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="flex items-center" style="margin-top:20px; gap:12px; padding:14px 22px; background:var(--navy-soft); border:1px solid #D6E1EC; border-radius:12px;">
+    <i class="material-icons" style="font-size:22px; color:var(--accent-deep); flex:none;">sync_alt</i>
+    <p style="font:500 var(--fs-small)/1.45 var(--font-body); color:var(--primary);">Both lists feed every dropdown in the product — <span style="font-weight:700;">change once, applies everywhere.</span></p>
+  </div>
+</div>
+</body>
+</html>

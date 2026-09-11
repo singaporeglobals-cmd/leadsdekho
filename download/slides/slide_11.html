@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Site Visits</title>
+<link rel="stylesheet" href="global.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg)}
+  .kicker{font-family:var(--font-heading);font-size:12px}
+  .headline{font-family:var(--font-heading);font-size:var(--fs-h1);font-weight:700;color:var(--primary);letter-spacing:-0.01em;line-height:1.15;margin:0}
+  .statlabel{font-family:var(--font-heading);font-weight:600;font-size:17px;color:var(--primary)}
+  .stile{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center}
+  .stile .material-icons{font-size:23px}
+  .frow{display:flex;align-items:center;gap:14px;padding:12px 22px;flex:1}
+  .frow + .frow{border-top:1px solid var(--border)}
+  .ficon{width:38px;height:38px;border-radius:10px;background:var(--navy-soft);display:flex;align-items:center;justify-content:center;flex:none}
+  .ficon .material-icons{font-size:19px;color:var(--primary)}
+  .ftext{font-size:14px;line-height:1.55;color:var(--muted)}
+  .ftext b{font-family:var(--font-heading);font-weight:600;color:var(--primary)}
+</style>
+</head>
+<body>
+<div class="slide">
+  <div data-decor aria-hidden="true" style="position:absolute;top:-200px;right:-170px;width:580px;height:580px;border-radius:50%;background:radial-gradient(circle,rgba(16,185,129,0.09) 0%,rgba(16,185,129,0) 68%)"></div>
+
+  <div style="position:relative;height:100%;padding:56px 64px;display:flex;flex-direction:column">
+    <header>
+      <div class="kicker">MENU 04 — SITE VISITS · ALL ROLES</div>
+      <div class="accent-bar" style="margin:12px 0 14px"></div>
+      <h1 class="headline">Every visit scheduled, tracked, attributed</h1>
+    </header>
+
+    <div style="display:flex;gap:26px;flex:1;min-height:0;margin-top:28px">
+      <!-- LEFT: 4 summary stat cards -->
+      <div style="width:396px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:16px">
+        <div class="card" style="padding:22px;display:flex;flex-direction:column;justify-content:space-between">
+          <div class="stile" style="background:var(--navy-soft)"><i class="material-icons" style="color:var(--primary)">schedule</i></div>
+          <div class="statlabel">Upcoming</div>
+        </div>
+        <div class="card" style="padding:22px;display:flex;flex-direction:column;justify-content:space-between">
+          <div class="stile" style="background:var(--accent-soft)"><i class="material-icons" style="color:var(--accent-deep)">check_circle</i></div>
+          <div class="statlabel">Completed</div>
+        </div>
+        <div class="card" style="padding:22px;display:flex;flex-direction:column;justify-content:space-between">
+          <div class="stile" style="background:rgba(239,68,68,0.10)"><i class="material-icons" style="color:var(--danger)">event_busy</i></div>
+          <div class="statlabel">Cancelled</div>
+        </div>
+        <div class="card" style="padding:22px;display:flex;flex-direction:column;justify-content:space-between">
+          <div class="stile" style="background:var(--sales-soft)"><i class="material-icons" style="color:var(--sales-ink)">sync</i></div>
+          <div class="statlabel">Via Lead Status</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: feature list -->
+      <div class="card" style="flex:1;display:flex;flex-direction:column;padding:10px 0;min-width:0">
+        <div class="frow">
+          <div class="ficon"><i class="material-icons">date_range</i></div>
+          <div class="ftext"><b>Quick date ranges</b> — Today, Yesterday, Last 7 / 30 Days, This Month</div>
+        </div>
+        <div class="frow">
+          <div class="ficon"><i class="material-icons">filter_list</i></div>
+          <div class="ftext"><b>Filters</b> — Status, User (admin), From / To, Project, Source</div>
+        </div>
+        <div class="frow">
+          <div class="ficon"><i class="material-icons">edit_note</i></div>
+          <div class="ftext"><b>Update dialog</b> — mark Completed / Cancelled / No Show + feedback</div>
+        </div>
+        <div class="frow">
+          <div class="ficon" style="background:var(--accent-soft)"><i class="material-icons" style="color:var(--accent-deep)">sync</i></div>
+          <div class="ftext"><b>Via Lead Status</b> — marking a lead Site Visit Done creates a virtual visit, so reports stay complete</div>
+        </div>
+        <div class="frow">
+          <div class="ficon"><i class="material-icons">visibility</i></div>
+          <div class="ftext"><b>One tap to the lead file</b> — eye icon opens full Lead Details</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

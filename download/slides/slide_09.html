@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Portal Auto-Capture</title>
+<link rel="stylesheet" href="global.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg)}
+  .kicker{font-family:var(--font-heading);font-size:12px}
+  .headline{font-family:var(--font-heading);font-size:var(--fs-h1);font-weight:700;color:var(--primary);letter-spacing:-0.01em;line-height:1.15;margin:0}
+  .pname{font-family:var(--font-heading);font-weight:600;font-size:18px;color:var(--primary)}
+  .pdesc{font-size:13px;line-height:1.55;color:var(--muted);margin-top:12px}
+  .itile{width:48px;height:48px;border-radius:13px;background:var(--navy-soft);display:flex;align-items:center;justify-content:center;flex:none}
+  .itile .material-icons{font-size:24px;color:var(--primary)}
+  .qchip{display:inline-flex;align-items:center;border-radius:10px;background:rgba(255,255,255,0.10);color:#FFFFFF;font:600 12.5px/1.3 var(--font-body);padding:11px 13px;white-space:nowrap}
+  .qarrow{font-size:18px;color:var(--accent);flex:none}
+  .mchip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:10px 16px;font:600 12.5px/1 var(--font-body);color:var(--primary);white-space:nowrap}
+  .mchip .material-icons{font-size:16px;color:var(--accent-deep)}
+</style>
+</head>
+<body>
+<div class="slide">
+  <div data-decor aria-hidden="true" style="position:absolute;bottom:-220px;right:-180px;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(16,185,129,0.09) 0%,rgba(16,185,129,0) 68%)"></div>
+
+  <div style="position:relative;height:100%;padding:56px 64px;display:flex;flex-direction:column">
+    <header>
+      <div class="kicker">AUTO LEAD CAPTURE · INCLUDED</div>
+      <div class="accent-bar" style="margin:12px 0 14px"></div>
+      <h1 class="headline">Portals push leads straight into Leads Dekho</h1>
+    </header>
+
+    <!-- Integration cards -->
+    <div style="display:flex;gap:20px;flex:1;min-height:0;margin-top:28px">
+      <div class="card" style="flex:1;padding:24px">
+        <div style="display:flex;align-items:center;gap:13px">
+          <div class="itile"><i class="material-icons">location_city</i></div>
+          <span class="pname">MagicBricks</span>
+        </div>
+        <div class="pdesc">dedicated webhook; leads land instantly, zero manual entry</div>
+      </div>
+      <div class="card" style="flex:1;padding:24px">
+        <div style="display:flex;align-items:center;gap:13px">
+          <div class="itile"><i class="material-icons">apartment</i></div>
+          <span class="pname">Housing.com</span>
+        </div>
+        <div class="pdesc">multi-account support, webhook push + secure signed pull-sync, <span style="font-weight:600;color:var(--primary)">Test connection button</span></div>
+      </div>
+      <div class="card" style="flex:1;padding:24px">
+        <div style="display:flex;align-items:center;gap:13px">
+          <div class="itile"><i class="material-icons">hub</i></div>
+          <span class="pname">Any portal</span>
+        </div>
+        <div class="pdesc">99acres &amp; others via generic endpoint with smart field mapping and source auto-detect</div>
+      </div>
+    </div>
+
+    <!-- Review queue strip -->
+    <div style="margin-top:22px;background:var(--primary);border-radius:16px;padding:24px 24px;display:flex;align-items:center;gap:12px">
+      <i class="material-icons" style="font-size:24px;color:var(--accent);flex:none">fact_check</i>
+      <span class="qchip">Portal lead arrives</span>
+      <i class="material-icons qarrow">east</i>
+      <span class="qchip">Review queue</span>
+      <i class="material-icons qarrow">east</i>
+      <span class="qchip">bulk-set Project / Source / Assignee</span>
+      <i class="material-icons qarrow">east</i>
+      <span class="qchip" style="background:var(--accent-deep)">Confirm to Lead Management (or Discard)</span>
+    </div>
+
+    <!-- Chip row -->
+    <div style="margin-top:18px;display:flex;gap:14px;flex-wrap:wrap">
+      <span class="mchip"><i class="material-icons">check_circle</i>Phone + portalRef dedupe</span>
+      <span class="mchip"><i class="material-icons">check_circle</i>Raw payload audit trail</span>
+      <span class="mchip"><i class="material-icons">check_circle</i>Live diagnostics — 24h / 7d counts</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

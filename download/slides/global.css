@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Palette — Navy & Emerald SaaS */
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --primary: #0F2A43;
+  --ink: #0F2A43;
+  --muted: #5B7083;
+  --accent: #10B981;
+  --accent-deep: #0B815A;
+  --accent-soft: #D1FAE5;
+  --border: #E2E8F0;
+  --navy-soft: #E8EEF5;
+
+  /* Role colors */
+  --admin: #10B981;
+  --admin-soft: #D1FAE5;
+  --admin-ink: #065F46;
+  --presales: #F59E0B;
+  --presales-soft: #FEF3C7;
+  --presales-ink: #92400E;
+  --sales: #0EA5E9;
+  --sales-soft: #E0F2FE;
+  --sales-ink: #075985;
+  --danger: #EF4444;
+
+  /* Typography tokens (family + scale only — compose in slides) */
+  --font-heading: 'Poppins', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-num: 'Poppins', sans-serif;
+  --fs-display: 54px;
+  --fs-h1: 38px;
+  --fs-h2: 26px;
+  --fs-h3: 18px;
+  --fs-body: 15px;
+  --fs-small: 13px;
+  --fs-micro: 11px;
+}
+
+/* Slide canvas */
+.slide {
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg);
+  font-family: var(--font-body);
+  color: var(--ink);
+}
+
+/* Surfaces */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15, 42, 67, 0.04);
+}
+
+/* Small components */
+.kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent-deep);
+  font-weight: 700;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.role-admin { background: var(--admin-soft); color: var(--admin-ink); }
+.role-presales { background: var(--presales-soft); color: var(--presales-ink); }
+.role-sales { background: var(--sales-soft); color: var(--sales-ink); }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.accent-bar { width: 44px; height: 5px; border-radius: 3px; background: var(--accent); }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }

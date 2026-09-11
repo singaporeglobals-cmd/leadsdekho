@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Three Roles, One System</title>
+<link rel="stylesheet" href="global.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  body{margin:0;background:#F8FAFC;}
+  .role-card{flex:1;padding:20px 22px;display:flex;flex-direction:column;}
+  .role-tag{margin-top:12px;font-size:var(--fs-small);color:var(--muted);font-weight:600;}
+  .role-chip{padding:6px 14px;font-size:12px;font-family:var(--font-heading);font-weight:700;letter-spacing:0.05em;}
+  .b-item{display:flex;align-items:flex-start;gap:8px;}
+  .b-item .material-icons{font-size:15px;margin-top:2px;flex:none;}
+  .b-item span{font-size:var(--fs-small);color:var(--ink);line-height:1.45;font-weight:500;}
+  .flow-step{background:var(--navy-soft);color:var(--primary);font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;font-family:var(--font-heading);white-space:nowrap;}
+</style>
+</head>
+<body>
+<div class="slide flex flex-col" style="padding:52px 52px 44px">
+
+  <div style="flex:none">
+    <div class="kicker" style="font-family:var(--font-heading);font-size:var(--fs-small)">ROLES</div>
+    <h1 style="font-family:var(--font-heading);font-weight:700;font-size:var(--fs-h1);color:var(--primary);margin-top:8px;line-height:1.15">Three roles. Clear ownership. <span style="color:var(--accent-deep)">Zero confusion.</span></h1>
+  </div>
+
+  <div class="flex gap-5 flex-1 min-h-0" style="margin-top:20px">
+
+    <!-- ADMIN -->
+    <div class="card role-card" style="border-top:4px solid var(--admin)">
+      <div><span class="chip role-admin role-chip">ADMIN</span></div>
+      <div class="role-tag">Full control of the system</div>
+      <ul class="space-y-2.5" style="margin-top:14px">
+        <li class="b-item"><i class="material-icons" style="color:var(--admin-ink)">check_circle</i><span>Sees ALL leads, visits &amp; bookings</span></li>
+        <li class="b-item"><i class="material-icons" style="color:var(--admin-ink)">check_circle</i><span>Imports leads — CSV wizard + portal capture</span></li>
+        <li class="b-item"><i class="material-icons" style="color:var(--admin-ink)">check_circle</i><span>Creates projects, lead sources &amp; users</span></li>
+        <li class="b-item"><i class="material-icons" style="color:var(--admin-ink)">check_circle</i><span>Full reports, exports &amp; analytics</span></li>
+        <li class="b-item"><i class="material-icons" style="color:var(--admin-ink)">check_circle</i><span>Bulk assign &amp; delete leads</span></li>
+      </ul>
+    </div>
+
+    <!-- PRESALES -->
+    <div class="card role-card" style="border-top:4px solid var(--presales)">
+      <div><span class="chip role-presales role-chip">PRESALES (Telecalling)</span></div>
+      <div class="role-tag">Works fresh leads first</div>
+      <ul class="space-y-2.5" style="margin-top:14px">
+        <li class="b-item"><i class="material-icons" style="color:var(--presales-ink)">check_circle</i><span>Calls fresh leads, logs quick feedback</span></li>
+        <li class="b-item"><i class="material-icons" style="color:var(--presales-ink)">check_circle</i><span>Schedules &amp; completes follow-ups</span></li>
+        <li class="b-item"><i class="material-icons" style="color:var(--presales-ink)">check_circle</i><span>Sees only own leads — no delete rights</span></li>
+        <li class="b-item"><i class="material-icons" style="color:var(--presales-ink)">check_circle</i><span>Hands leads over via Assign with reason</span></li>
+      </ul>
+    </div>
+
+    <!-- SALES -->
+    <div class="card role-card" style="border-top:4px solid var(--sales)">
+      <div><span class="chip role-sales role-chip">SALES</span></div>
+      <div class="role-tag">Closes the deal</div>
+      <ul class="space-y-2.5" style="margin-top:14px">
+        <li class="b-item"><i class="material-icons" style="color:var(--sales-ink)">check_circle</i><span>Works assigned leads through the pipeline</span></li>
+        <li class="b-item"><i class="material-icons" style="color:var(--sales-ink)">check_circle</i><span>Schedules &amp; updates site visits</span></li>
+        <li class="b-item"><i class="material-icons" style="color:var(--sales-ink)">check_circle</i><span>Creates bookings with photos &amp; payment mode</span></li>
+        <li class="b-item"><i class="material-icons" style="color:var(--sales-ink)">check_circle</i><span>Transferred leads become View Only (lock icon) <i class="material-icons" style="font-size:14px;color:var(--sales-ink);vertical-align:-2px">lock</i></span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Flow strip -->
+  <div class="card flex items-center justify-between" style="margin-top:18px;padding:9px 18px;flex:none">
+    <span class="flow-step">Fresh lead</span>
+    <i class="material-icons" style="font-size:18px;color:var(--accent-deep)">arrow_forward</i>
+    <span class="flow-step">Presales calls &amp; qualifies</span>
+    <i class="material-icons" style="font-size:18px;color:var(--accent-deep)">arrow_forward</i>
+    <span class="flow-step">Assigned to Sales</span>
+    <i class="material-icons" style="font-size:18px;color:var(--accent-deep)">arrow_forward</i>
+    <span class="flow-step">Site visit</span>
+    <i class="material-icons" style="font-size:18px;color:var(--accent-deep)">arrow_forward</i>
+    <span class="flow-step">Booking</span>
+    <i class="material-icons" style="font-size:18px;color:var(--accent-deep)">arrow_forward</i>
+    <span class="flow-step">Reports</span>
+  </div>
+
+  <!-- Footnote -->
+  <div class="flex items-center justify-center gap-2" style="margin-top:13px;flex:none">
+    <i class="material-icons" style="font-size:16px;color:var(--muted)">visibility</i>
+    <span style="font-size:var(--fs-small);color:var(--muted);font-weight:500">Presales &amp; Sales see only the leads they own — Admin sees everything.</span>
+  </div>
+
+</div>
+</body>
+</html>

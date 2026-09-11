@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Reports &amp; Analytics — Leads Dekho</title>
+<link rel="stylesheet" href="global.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:var(--bg); }
+  .tab-card { border-top:4px solid var(--accent); }
+  .mini-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); margin-top:8px; flex:none; }
+  .tab-li { display:flex; align-items:flex-start; gap:10px; }
+  .tab-li p { font:400 var(--fs-body)/1.5 var(--font-body); color:#3D5165; }
+  .tab-li p b { font-weight:600; color:var(--primary); }
+  .icon-tile {
+    width:38px; height:38px; border-radius:11px; flex:none;
+    display:flex; align-items:center; justify-content:center;
+  }
+</style>
+</head>
+<body>
+<div class="slide flex flex-col" style="padding:52px 64px 46px;">
+
+  <header>
+    <div class="kicker" style="font-size:var(--fs-small);">MENU 08 — REPORTS · ADMIN ONLY</div>
+    <h1 style="margin-top:10px; font:700 var(--fs-h1)/1.15 var(--font-heading); color:var(--primary); letter-spacing:-0.01em;">Three analytics views, one filter bar</h1>
+  </header>
+
+  <!-- Three analytics tab cards -->
+  <div class="grid grid-cols-3 flex-1 min-h-0" style="gap:22px; margin-top:22px;">
+
+    <section class="card tab-card flex flex-col" style="padding:20px 22px;">
+      <div class="flex items-center" style="gap:11px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+        <div class="icon-tile" style="background:var(--accent-soft); color:var(--admin-ink);"><i class="material-icons" style="font-size:21px;">today</i></div>
+        <div style="font:600 var(--fs-h3)/1.2 var(--font-heading); color:var(--primary);">Date-wise</div>
+      </div>
+      <div class="flex flex-col justify-center flex-1" style="gap:12px; padding-top:14px;">
+        <div class="tab-li"><span class="mini-dot"></span><p><b>Daily Lead Trend</b> chart</p></div>
+        <div class="tab-li"><span class="mini-dot"></span><p><b>KPIs:</b> Total Leads, Bookings + booking rate, Total Calls, Follow-ups, Site Visits</p></div>
+        <div class="tab-li"><span class="mini-dot"></span><p><b>Expandable day rows</b></p></div>
+      </div>
+    </section>
+
+    <section class="card tab-card flex flex-col" style="padding:20px 22px;">
+      <div class="flex items-center" style="gap:11px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+        <div class="icon-tile" style="background:var(--accent-soft); color:var(--admin-ink);"><i class="material-icons" style="font-size:21px;">donut_small</i></div>
+        <div style="font:600 var(--fs-h3)/1.2 var(--font-heading); color:var(--primary);">Source-wise</div>
+      </div>
+      <div class="flex flex-col justify-center flex-1" style="gap:12px; padding-top:14px;">
+        <div class="tab-li"><span class="mini-dot"></span><p><b>Leads by Source</b></p></div>
+        <div class="tab-li"><span class="mini-dot"></span><p><b>Booking Rate by Source %</b></p></div>
+        <div class="tab-li"><span class="mini-dot"></span><p><b>Best Source</b></p></div>
+        <div class="tab-li"><span class="mini-dot"></span><p><b>Per-source</b> calls / follow-ups / visits</p></div>
+      </div>
+    </section>
+
+    <section class="card tab-card flex flex-col" style="padding:20px 22px;">
+      <div class="flex items-center" style="gap:11px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+        <div class="icon-tile" style="background:var(--accent-soft); color:var(--admin-ink);"><i class="material-icons" style="font-size:21px;">domain</i></div>
+        <div style="font:600 var(--fs-h3)/1.2 var(--font-heading); color:var(--primary);">Project-wise</div>
+      </div>
+      <div class="flex flex-col justify-center flex-1" style="gap:12px; padding-top:14px;">
+        <div class="tab-li"><span class="mini-dot"></span><p><b>Leads by Project</b></p></div>
+        <div class="tab-li"><span class="mini-dot"></span><p><b>Booking Rate by Project</b></p></div>
+        <div class="tab-li"><span class="mini-dot"></span><p><b>Stacked Source Distribution</b></p></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Filter / export strip -->
+  <div class="flex items-center" style="margin-top:18px; gap:12px; padding:13px 20px; background:var(--navy-soft); border:1px solid #D6E1EC; border-radius:12px;">
+    <i class="material-icons" style="font-size:22px; color:var(--accent-deep); flex:none;">download</i>
+    <p style="font:500 var(--fs-small)/1.45 var(--font-body); color:var(--primary);"><span style="font-weight:700;">One filter bar</span> — date presets, Project, Source, multi-select Lead Status · <span style="font-weight:700;">Export Leads &amp; Export Calls</span> as CSV</p>
+  </div>
+
+  <!-- Two report mini cards -->
+  <div class="grid grid-cols-2" style="gap:22px; margin-top:16px;">
+    <div class="card flex items-start" style="padding:16px 20px; gap:13px;">
+      <div class="icon-tile" style="background:var(--navy-soft); color:var(--primary);"><i class="material-icons" style="font-size:21px;">table_view</i></div>
+      <div>
+        <div style="font:600 var(--fs-body)/1.3 var(--font-heading); color:var(--primary);">Leads Report</div>
+        <p style="margin-top:4px; font:400 var(--fs-small)/1.5 var(--font-body); color:var(--muted);">Detailed CSV export including full feedback history, paginated preview</p>
+      </div>
+    </div>
+    <div class="card flex items-start" style="padding:16px 20px; gap:13px;">
+      <div class="icon-tile" style="background:var(--navy-soft); color:var(--primary);"><i class="material-icons" style="font-size:21px;">group</i></div>
+      <div>
+        <div style="font:600 var(--fs-body)/1.3 var(--font-heading); color:var(--primary);">User Report</div>
+        <p style="margin-top:4px; font:400 var(--fs-small)/1.5 var(--font-body); color:var(--muted);">Per-user calls, Connected vs Not Connected, Visit Promised, day-wise fresh leads, Connection / Visit / Booking rates</p>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

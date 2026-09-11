@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Import Leads — 5-step wizard</title>
+<link rel="stylesheet" href="global.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg)}
+  .kicker{font-family:var(--font-heading);font-size:12px}
+  .headline{font-family:var(--font-heading);font-size:var(--fs-h1);font-weight:700;color:var(--primary);letter-spacing:-0.01em;line-height:1.15;margin:0}
+  .stepnum{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 18px var(--font-num);color:#FFFFFF;background:var(--primary);position:relative;z-index:1;margin:0 auto}
+  .steptitle{font-family:var(--font-heading);font-weight:600;font-size:15px;color:var(--primary);text-align:center;margin-top:12px}
+  .stepdesc{font-size:12.5px;line-height:1.45;color:var(--muted);text-align:center;margin:5px auto 0;max-width:190px}
+  .ctitle{font-family:var(--font-heading);font-weight:600;font-size:15.5px;color:var(--primary)}
+  .cdesc{font-size:13px;line-height:1.55;color:var(--muted);margin-top:11px}
+  .itile{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;flex:none}
+  .itile .material-icons{font-size:22px;color:var(--accent-deep)}
+</style>
+</head>
+<body>
+<div class="slide">
+  <div data-decor aria-hidden="true" style="position:absolute;top:-200px;left:-180px;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(16,185,129,0.09) 0%,rgba(16,185,129,0) 68%)"></div>
+
+  <div style="position:relative;height:100%;padding:56px 64px;display:flex;flex-direction:column">
+    <header>
+      <div class="kicker">MENU 03 — IMPORT LEADS · ADMIN ONLY</div>
+      <div class="accent-bar" style="margin:12px 0 14px"></div>
+      <h1 class="headline">From spreadsheet to pipeline in 5 steps</h1>
+    </header>
+
+    <!-- Timeline -->
+    <div class="card" style="margin-top:30px;padding:30px 30px 26px;position:relative">
+      <div data-decor aria-hidden="true" style="position:absolute;top:52px;left:140px;right:140px;height:2px;background:var(--border)"></div>
+      <div style="display:flex">
+        <div style="flex:1">
+          <div class="stepnum num">1</div>
+          <div class="steptitle">Upload File</div>
+          <div class="stepdesc">CSV / XLS / XLSX up to 4.5 MB</div>
+        </div>
+        <div style="flex:1">
+          <div class="stepnum num">2</div>
+          <div class="steptitle">Review &amp; Edit</div>
+          <div class="stepdesc">inline table, per-row source &amp; assignee</div>
+        </div>
+        <div style="flex:1">
+          <div class="stepnum num">3</div>
+          <div class="steptitle">Map Projects</div>
+          <div class="stepdesc">match file names to your projects</div>
+        </div>
+        <div style="flex:1">
+          <div class="stepnum num">4</div>
+          <div class="steptitle">Confirm</div>
+          <div class="stepdesc">summary + assignment recap</div>
+        </div>
+        <div style="flex:1">
+          <div class="stepnum num" style="background:var(--accent-deep)">5</div>
+          <div class="steptitle">Done</div>
+          <div class="stepdesc">imported / skipped report</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature cards -->
+    <div style="display:flex;gap:20px;flex:1;min-height:0;margin-top:22px">
+      <div class="card" style="flex:1;padding:22px">
+        <div style="display:flex;align-items:center;gap:13px">
+          <div class="itile"><i class="material-icons">content_copy</i></div>
+          <span class="ctitle">Duplicate detection</span>
+        </div>
+        <div class="cdesc">catches +91 / 91 / 0 phone variants and in-file duplicates; one-click <span style="font-weight:600;color:var(--primary)">Skip duplicates</span></div>
+      </div>
+      <div class="card" style="flex:1;padding:22px">
+        <div style="display:flex;align-items:center;gap:13px">
+          <div class="itile"><i class="material-icons">tune</i></div>
+          <span class="ctitle">Bulk tools</span>
+        </div>
+        <div class="cdesc">Select Non-Duplicates, bulk Apply Project / Source / Assignee</div>
+      </div>
+      <div class="card" style="flex:1;padding:22px">
+        <div style="display:flex;align-items:center;gap:13px">
+          <div class="itile"><i class="material-icons">auto_fix_high</i></div>
+          <span class="ctitle">Smart parsing</span>
+        </div>
+        <div class="cdesc">flexible column names, DD.MM.YY &amp; other date formats, phone normalization</div>
+      </div>
+    </div>
+
+    <!-- Footnote -->
+    <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px">
+      <i class="material-icons" style="font-size:16px;color:var(--accent-deep)">info</i>
+      <span style="font-size:13px;color:var(--muted)">Unassigned rows go to the importing admin by default.</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

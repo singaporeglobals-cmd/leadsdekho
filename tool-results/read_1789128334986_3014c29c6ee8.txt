@@ -1,0 +1,402 @@
+     1→     1→---
+     2→     2→Task ID: 1
+     3→     3→Agent: Main Agent
+     4→     4→Task: Two changes - (1) Add Enquiry menu for super admin, (2) Remove password display from sign-in page
+     5→     5→
+     6→     6→Work Log:
+     7→     7→- Read all key project files to understand architecture (SPA with Zustand routing, Next.js App Router, PostgreSQL/Prisma)
+     8→     8→- Task 1: Removed demo credentials section (Demo Accounts with email/password) from login-page.tsx
+     9→     9→- Task 2: Added GET endpoint to /api/contact/route.ts (super_admin only, returns ContactSubmission list ordered by createdAt desc)
+    10→    10→- Task 3: Created DELETE endpoint at /api/contact/[id]/route.ts for deleting individual enquiries
+    11→    11→- Task 4: Added "enquiries" to AppPage type in store.ts
+    12→    12→- Task 5: Created enquiry-management.tsx component with table view, search, view detail dialog, delete confirmation, call/email actions
+    13→    13→- Task 6: Added "Enquiries" nav item in app-layout.tsx sidebar (Mail icon, super_admin role only)
+    14→    14→- Task 7: Added page title mapping for "enquiries" in app-layout.tsx
+    15→    15→- Task 8: Added EnquiryManagement import and rendering in page.tsx
+    16→    16→- Verified build succeeds with `npx next build`
+    17→    17→
+    18→    18→Stage Summary:
+    19→    19→- Sign-in page no longer shows demo account credentials/passwords
+    20→    20→- Super admin has a new "Enquiries" menu in the sidebar that displays all home page contact form submissions
+    21→    21→- Enquiry page features: search, view details dialog, delete, call/email actions
+    22→    22→- API: GET /api/contact (super_admin only), DELETE /api/contact/[id] (super_admin only)
+    23→    23→---
+    24→    24→Task ID: 1
+    25→    25→Agent: Main Agent
+    26→    26→Task: Implement My Leads dynamic sorting and Fresh Leads auto-removal
+    27→    27→
+    28→    28→Work Log:
+    29→    29→- Read lead-list.tsx, leads API route, call-logs API route, and assign API route
+    30→    30→- Modified call-logs POST API: When feedback is given on a lead with pipelineStatus="New", auto-update to "Contacted"
+    31→    31→- Modified leads GET API: Fresh Leads filter now shows ALL New leads assigned to user (not just today's)
+    32→    32→- Modified lead-list.tsx frontend: My Leads view sorts leads so fresh/unacted (no call logs) appear at top, acted-upon leads sink to bottom
+    33→    33→- Added visual "Fresh" badge on fresh leads in My Leads view with green border indicator
+    34→    34→- Added "Previously Contacted" divider between fresh and acted-upon sections in My Leads
+    35→    35→- Built and deployed to Vercel production
+    36→    36→
+    37→    37→Stage Summary:
+    38→    38→- Fresh Leads: When user gives feedback, lead auto-moves from "New" to "Contacted" → disappears from Fresh Leads
+    39→    39→- My Leads: Fresh leads (no call logs) appear at top with green border + Fresh badge; acted-upon leads sink below divider
+    40→    40→- Both filters work with auto-refresh after feedback submission
+    41→    41→- Deployed to https://leadsdekho.in
+    42→    42→---
+    43→    43→Task ID: 2
+    44→    44→Agent: Main Agent
+    45→    45→Task: Optimize CRM loading speed
+    46→    46→
+    47→    47→Work Log:
+    48→    48→- Audited all API calls on page load - found 6 calls on lead-list page alone
+    49→    49→- Merged 3 separate /api/leads calls into 1 - main response now includes myLeadsCount and freshLeadsCount
+    50→    50→- Lazy-loaded /api/properties - only fetches when create dialog opens
+    51→    51→- Reduced lead-list page from 6 API calls to 3 on initial load
+    52→    52→- Disabled Prisma query logging in production (was logging every query)
+    53→    53→- Switched from Supabase direct connection to PgBouncer pooler connection (aws-0-ap-south-1.pooler.supabase.com:6543)
+    54→    54→- Updated Vercel environment variables with pooler URL
+    55→    55→
+    56→    56→Stage Summary:
+    57→    57→- Lead page API calls reduced: 6 → 3 (50% reduction)
+    58→    58→- PgBouncer connection pooling enabled for faster DB connections on serverless
+    59→    59→- Production query logging disabled (was causing overhead)
+    60→    60→- Properties lazy-loaded instead of on page mount
+    61→    61→- Deployed to https://leadsdekho.in
+    62→    62→
+    63→    63→---
+    64→    64→Task ID: 6
+    65→    65→Agent: Main Agent
+    66→    66→Task: Fix lead sources not showing in Lead Management and Import Lead sections
+    67→    67→
+    68→    68→Work Log:
+    69→    69→- Analyzed two user screenshots: Lead Management dropdown showed only 9 hardcoded DEFAULT_SOURCES, while Lead Sources page showed 16 database sources
+    70→    70→- Identified root cause: DEFAULT_SOURCES hardcoded arrays in 5 components were used as fallback/merge, masking API failures
+    71→    71→- Also found bug: `SOURCES` (uppercase, undefined) used in lead-list.tsx create dialog instead of `sources` (state variable)
+    72→    72→- Updated /api/lead-sources/route.ts to support ?all=true query parameter for fetching all sources including inactive (admin only)
+    73→    73→- Removed DEFAULT_SOURCES from: lead-list.tsx, lead-import.tsx, lead-source-management.tsx, reports-page.tsx, leads-report-page.tsx
+    74→    74→- Added dynamic source fetching from DB in lead-detail.tsx (was completely hardcoded)
+    75→    75→- Fixed lead-import.tsx to fetch sources for ALL authenticated users (was admin-only)
+    76→    76→- Added proper error handling with console.error for source fetch failures
+    77→    77→- Fixed SOURCES → sources typo in lead-list.tsx create dialog
+    78→    78→- Changed createForm source default from "Manual" to "" (empty, user selects from DB sources)
+    79→    79→- Built and deployed to Vercel production
+    80→    80→
+    81→    81→Stage Summary:
+    82→    82→- All 6 components now fetch lead sources dynamically from the database
+    83→    83→- No hardcoded source lists remain in the codebase
+    84→    84→- Lead Source Management page now fetches ALL sources (including inactive) via ?all=true
+    85→    85→- Dropdowns only show active sources from the database
+    86→    86→- Deployed to https://leadsdekho.in
+    87→    87→
+    88→    88→---
+    89→    89→Task ID: 7
+    90→    90→Agent: Main Agent
+    91→    91→Task: Fix Dashboard "Pending Follow-ups" card click showing ALL leads instead of only the 11 pending follow-up leads
+    92→    92→
+    93→    93→Work Log:
+    94→    94→- Investigated dashboard.tsx — found that all 3 dashboard variants (Admin, Telecalling, Sales) had non-clickable Pending Follow-ups cards or had "View Leads" buttons that only called setPage("leads") with no filter
+    95→    95→- Added pendingFollowUpsFilter: boolean flag + setPendingFollowUpsFilter action to Zustand store
+    96→    96→- Updated /api/leads to accept pendingFollowUps=true query parameter — filters leads that have at least one incomplete follow-up for the current user (using where.followUps.some {userId, completed:false})
+    97→    97→- For telecalling/sales roles, the filter also restricts to user's own leads; admin sees all
+    98→    98→- API now also returns followUps[] (1 pending follow-up) per lead so UI can show a "Follow-up <date>" badge
+    99→    99→- Made all 3 dashboard Pending Follow-ups cards clickable — they now set the filter and navigate to leads page
+   100→   100→- Updated both "View Leads" buttons (Telecalling + Sales) to also set the filter
+   101→   101→- Added a "Showing only leads with pending follow-ups" red banner at top of lead list with a Clear button when filter is active
+   102→   102→- Updated Clear All Filters button in lead-list to also reset the pendingFollowUpsFilter
+   103→   103→- Added followUps field to Lead TypeScript interface
+   104→   104→- Added CalendarClock badge next to lead name showing upcoming follow-up date
+   105→   105→- Deployed to https://leadsdekho.in
+   106→   106→
+   107→   107→Stage Summary:
+   108→   108→- Clicking "Pending Follow-ups" card on any dashboard now correctly navigates to Lead Management and shows only those specific pending follow-up leads
+   109→   109→- Red banner + Clear button at top of lead list tells the user a filter is active and lets them remove it
+   110→   110→- Each lead with pending follow-ups now shows an amber "Follow-up <DD MMM>" badge for quick visual identification
+   111→   111→
+   112→   112→---
+   113→   113→Task ID: 8
+   114→   114→Agent: Main Agent
+   115→   115→Task: Five changes — (1) Today's pending follow-ups on dashboard, (2) telecalling default to own leads, (3) Follow Up filter button, (4) expandable feedback history, (5) date picker for follow-up filter
+   116→   116→
+   117→   117→Work Log:
+   118→   118→- Added todayFollowUpsFilter + followUpDate state to Zustand store with setTodayFollowUpsFilter and setFollowUpDate actions
+   119→   119→- Updated /api/leads: 
+   120→   120→  - Added todayFollowUps=true query param that filters leads with incomplete follow-ups on a specific date (defaults to today)
+   121→   121→  - Added followUpDate=YYYY-MM-DD param to pick which date's follow-ups to show
+   122→   122→  - Changed telecalling default role-based filtering to ONLY see own leads (currentOwnerId OR primaryOwnerId), same as sales
+   123→   123→- Updated /api/leads/[id]/call-logs POST handler: auto-completes any pending follow-up for that lead due today or earlier when feedback is submitted (so leads disappear from today's follow-up filter after a call)
+   124→   124→- Dashboard (Admin/Telecalling/Sales): Renamed "Pending Follow-ups" card to "Today's Pending Follow-ups" using todayFollowUps count; clicking sets todayFollowUpsFilter and navigates to Lead Management
+   125→   125→- Lead-list.tsx:
+   126→   126→  - Added "Follow Up" red button next to Fresh button — toggles todayFollowUpsFilter
+   127→   127→  - Added date picker (input type=date) that appears only when Follow Up filter is active — defaults to today; user can pick tomorrow/day after to see future follow-ups
+   128→   128→  - Added red banner "Showing leads with follow-ups scheduled for <date>. As you complete calls, leads will disappear from this view."
+   129→   129→  - Updated Clear All Filters to reset both todayFollowUpsFilter and followUpDate
+   130→   130→  - Updated fetch useEffect to pass todayFollowUps and followUpDate params
+   131→   131→  - Added expandedFeedback state and fullCallLogs cache
+   132→   132→  - toggleFeedbackHistory function: lazily fetches /api/leads/[id]/call-logs and caches; toggles expand state
+   133→   133→  - Made "Last feedback" text on each lead row clickable — clicking expands inline panel showing ALL past feedback logs (user name, call type, timestamp, full notes)
+   134→   134→  - Each feedback log entry shows badge with call type, formatted timestamp, user name, and full notes (whitespace preserved)
+   135→   135→- Deployed to https://leadsdekho.in
+   136→   136→
+   137→   137→Stage Summary:
+   138→   138→- Dashboard Pending Follow-ups card now shows today's count, decreasing as user completes calls
+   139→   139→- Clicking the card opens Lead Management with only today's follow-up leads
+   140→   140→- Telecalling users now see ONLY their own leads by default (not all leads)
+   141→   141→- "Follow Up" button next to My Leads lets users quickly see today's follow-up queue
+   142→   142→- Date picker lets users see tomorrow's / day-after's follow-ups
+   143→   143→- When user gives feedback on a lead, that lead's pending follow-ups auto-complete, so the lead disappears from the Follow Up filter view on refresh
+   144→   144→- Clicking "Last: ..." feedback text on a lead row expands to show entire feedback history inline (no page navigation needed)
+   145→   145→
+   146→   146→---
+   147→   147→Task ID: 9
+   148→   148→Agent: Main Agent
+   149→   149→Task: Add sub-stage filter to Lead list (appears when "Not Interested" or "Not Connected" lead status is selected) — admin & user both dashboards
+   150→   150→
+   151→   151→Work Log:
+   152→   152→- Audited existing code: found that sub-stage feature was ALREADY implemented in lead-detail.tsx (CallLogForm) and lead-list.tsx feedback dialog (chips UI)
+   153→   153→- Found that prisma schema already has `subStage String?` field on Lead model and CallLog model
+   154→   154→- Found that `/api/leads` route already supports `?subStage=` query param filtering (line 26, 59)
+   155→   155→- Found centralized sub-stage definitions in `/src/lib/lead-sub-stages.ts` (NOT_INTERESTED_SUB_STAGES, NOT_CONNECTED_SUB_STAGES, getSubStagesForStatus helper)
+   156→   156→- The ONLY missing piece: top filter bar in lead-list.tsx did NOT have a sub-stage filter dropdown
+   157→   157→- Added `subStageFilter` state ("all" default) to lead-list.tsx
+   158→   158→- Imported `getSubStagesForStatus` from `@/lib/lead-sub-stages`
+   159→   159→- Modified Lead Status onValueChange handler to reset `subStageFilter` to "all" on every status change (so sub-stage filter doesn't linger when user switches to a non-sub-stage status)
+   160→   160→- Added `subStage` URL param to fetch leads API call (`?subStage=...`)
+   161→   161→- Added `subStageFilter` to useEffect dependency array so list refreshes when sub-stage filter changes
+   162→   162→- Added conditional sub-stage Select dropdown right after Lead Status dropdown — only visible when `leadStatusFilter === "Not Interested" || "Not Connected"`. Dropdown options come from `getSubStagesForStatus(leadStatusFilter)` so the right sub-stages show for the right status.
+   163→   163→- Added `subStageFilter !== "all"` to Clear button condition + reset list (so Clear button also clears sub-stage filter)
+   164→   164→- Added `subStage: string | null` field to Lead TypeScript interface (was missing)
+   165→   165→- Added sub-stage chip rendering inside lead row's leadStatus badge — when a lead has a subStage set, it now shows inline next to the leadStatus text (e.g. "Not Interested · Budget Issue")
+   166→   166→- Built successfully with `npx next build`
+   167→   167→- Deployed to Vercel production with `npx vercel@54.14.5 --prod --token ...`
+   168→   168→
+   169→   169→Stage Summary:
+   170→   170→- Lead filter bar now shows an additional "Sub-stage" dropdown ONLY when "Not Interested" or "Not Connected" is selected as Lead Status — both admin and user dashboards (since both use the same lead-list.tsx component)
+   171→   171→- The dropdown options are dynamic: Not Interested → [No Requirement, Location Mismatch, Budget Issue, Flat Size Issue, Want Land, Want Bungalow, Invalid No, ISD No]; Not Connected → [Switch Off, Incoming Call Not Available, Disconnected, Ringing, Out of Network Service]
+   172→   172→- Switching Lead Status to something else auto-clears the sub-stage filter
+   173→   173→- Clear button also clears the sub-stage filter
+   174→   174→- Each lead row now shows the sub-stage inline within its leadStatus badge for quick visual scanning
+   175→   175→- Backend `/api/leads?subStage=...` already supported filtering — no API changes needed
+   176→   176→- Deployed to https://leadsdekho.in
+   177→   177→
+   178→   178→
+   179→   179→---
+   180→   180→Task ID: 10
+   181→   181→Agent: Main Agent
+   182→   182→Task: User reported "no leads showing" after sub-stage filter deploy — add Uncategorized option + null subStage API support
+   183→   183→
+   184→   184→Work Log:
+   185→   185→- Diagnosed: existing leads in DB that were marked "Not Interested" / "Not Connected" BEFORE the sub-stage feature existed have `subStage = null`. When user filters by Lead Status = Not Interested + a specific sub-stage (e.g. "Budget Issue"), zero leads match because no lead has that exact subStage set yet.
+   186→   186→- Updated /api/leads GET route: subStage query param now accepts the sentinel value `"none"` to filter leads where subStage IS NULL. Any other non-empty value filters by exact subStage match (existing behavior).
+   187→   187→- Updated lead-list.tsx sub-stage Select dropdown: added a new "— Uncategorized —" option (value="none") at the top of the sub-stage list. Selecting it shows leads whose leadStatus matches but subStage is null (i.e., leads that were marked Not Interested/Not Connected before sub-stages were introduced, or leads where sub-stage wasn't picked).
+   188→   188→- Built successfully with `npx next build`
+   189→   189→- Deployed to Vercel production
+   190→   190→
+   191→   191→Stage Summary:
+   192→   192→- Old leads with leadStatus but no subStage can now be found via the "— Uncategorized —" filter option
+   193→   193→- "All Sub-stages" still shows all leads matching the leadStatus (no subStage filter applied)
+   194→   194→- New leads that get a subStage assigned during feedback will appear under their specific sub-stage filter
+   195→   195→- Deployed to https://leadsdekho.in
+   196→   196→
+   197→   197→
+   198→   198→---
+   199→   199→Task ID: 11
+   200→   200→Agent: Main Agent
+   201→   201→Task: Convert sub-stage chips to dropdown format + make sub-stage mandatory on both UI and API
+   202→   202→
+   203→   203→Work Log:
+   204→   204→- lead-detail.tsx CallLogForm: replaced the chip-style sub-stage picker (rose/red colored buttons) with a Select dropdown. Default value is "__none__" (placeholder "— Select sub-stage —"). The Log Call button remains disabled if leadStatus requires a sub-stage and none is selected.
+   205→   205→- lead-list.tsx feedback dialog: replaced the chip-style sub-stage picker with a Select dropdown, using the centralized `getSubStagesForStatus(leadStatus)` helper from `@/lib/lead-sub-stages` (removed the inline hardcoded NOT_INTERESTED / NOT_CONNECTED arrays).
+   206→   206→- lead-list.tsx: warning text updated from "Please pick a sub-stage above..." to "Please select a sub-stage above...".
+   207→   207→- API-level enforcement: added server-side validation in /api/leads/[id]/call-logs POST route. If leadStatus is "Not Interested" or "Not Connected" but no valid subStage is provided, the API returns HTTP 400 with error message: `Sub-stage is required for "<status>" status`. Uses the centralized `isValidSubStage` helper from `@/lib/lead-sub-stages.ts`. This prevents anyone from bypassing the UI (e.g. via direct API call) and leaving a Not Interested / Not Connected lead without a sub-stage.
+   208→   208→- Built successfully with `npx next build`.
+   209→   209→- Deployed to Vercel production.
+   210→   210→
+   211→   211→Stage Summary:
+   212→   212→- Sub-stage picker is now a dropdown (Select) in BOTH the lead detail page CallLogForm and the lead list feedback dialog.
+   213→   213→- Sub-stage is mandatory: Submit/Log Call buttons stay disabled until a sub-stage is picked when Lead Status is "Not Interested" or "Not Connected".
+   214→   214→- Backend now also rejects the API call with HTTP 400 if no valid sub-stage is sent — so the rule is enforced even if someone bypasses the UI.
+   215→   215→- Deployed to https://leadsdekho.in
+   216→   216→
+   217→   217→
+   218→   218→---
+   219→   219→Task ID: 12
+   220→   220→Agent: Main Agent
+   221→   221→Task: Two fixes — (1) Follow-up date edit not replacing old pending follow-up, (2) Convert all filter dropdowns to multi-select on admin & user dashboards
+   222→   222→
+   223→   223→Work Log:
+   224→   224→
+   225→   225→Issue 1 — Follow-up date edit bug
+   226→   226→- Root cause: When user edits feedback and sets a new follow-up date, POST /api/leads/[id]/follow-ups creates a NEW FollowUp row. The OLD pending follow-up was NOT being marked complete. So the lead had multiple pending follow-ups. The lead list API picks the earliest upcoming one (`orderBy: scheduledAt asc, take: 1`), so the OLD date kept showing.
+   227→   227→- Fix: Updated POST /api/leads/[id]/follow-ups route to auto-complete ALL pending follow-ups for the lead BEFORE creating the new one. Now only the newly scheduled follow-up remains pending.
+   228→   228→
+   229→   229→Issue 2 — Multi-select filters
+   230→   230→- Created new reusable MultiSelect component at /src/components/ui/multi-select.tsx — Popover + Checkbox based, with "All" option at top, count badge, and an "x" clear button on the trigger.
+   231→   231→- lead-list.tsx: Converted 6 filters (Pipeline Status, Source, Project, Lead Status, Sub-stage, User/Assignee) from single-select Select to MultiSelect. State changed from string ("all") to string[]. URL params sent as comma-separated. Sub-stage filter now appears when Lead Status includes "Not Interested" OR "Not Connected" (was: equals one of them).
+   232→   232→- reports-page.tsx: Converted Project, Source, Lead Status filters to MultiSelect. Updated 3 child report components (DateWiseReport, SourceWiseReport, ProjectWiseReport) to accept string[] props and send comma-separated values.
+   233→   233→- leads-report-page.tsx: Converted Source, Project filters to MultiSelect.
+   234→   234→- dashboard.tsx: Converted Assignee filter to MultiSelect (Month stays single-select — picking multiple months is conceptually odd).
+   235→   235→
+   236→   236→Backend multi-value filter support:
+   237→   237→- /api/leads/route.ts: status, leadStatus, source, project, owner now accept comma-separated values; uses Prisma `in` operator. subStage accepts comma-separated values including the special "__none__" token for matching leads where subStage IS NULL. Properly combines with search's OR clause via `andConditions` array to avoid OR overwrites.
+   238→   238→- /api/reports/date-wise/route.ts: Same multi-value support for project, source, leadStatus.
+   239→   239→- /api/reports/source-wise/route.ts: Same.
+   240→   240→- /api/reports/project-wise/route.ts: Same.
+   241→   241→- /api/reports/export/route.ts: leadsReport export now accepts comma-separated source and project.
+   242→   242→- /api/dashboard/route.ts: assignee now accepts comma-separated values; combinedFilter signature updated to use `currentOwnerId: { in: string[] }`.
+   243→   243→
+   244→   244→Build & deploy:
+   245→   245→- Build successful with `npx next build` (no TypeScript errors).
+   246→   246→- Deployed to Vercel production at https://leadsdekho.in
+   247→   247→
+   248→   248→Stage Summary:
+   249→   249→- Editing a follow-up date now correctly REPLACES the old pending follow-up (instead of creating duplicates that show the old date).
+   250→   250→- All filter dropdowns across the app now support multi-select with checkboxes — Pipeline Status, Source, Project, Lead Status, Sub-stage, User/Assignee. The MultiSelect shows a count badge and a quick clear (x) button.
+   251→   251→- The "Clear" button on each filter bar resets all multi-select filters too.
+   252→   252→- Backend APIs accept comma-separated filter values everywhere.
+   253→   253→- Deployed to https://leadsdekho.in
+   254→   254→
+   255→   255→
+   256→   256→---
+   257→   257→Task ID: 13
+   258→   258→Agent: Main Agent
+   259→   259→Task: Exclude Lost leads from Follow-up views (Today's Pending Follow-ups + Pending Follow-ups) while keeping them visible in My Leads
+   260→   260→
+   261→   261→Work Log:
+   262→   262→- Read existing code: /api/leads route.ts (pendingFollowUps + todayFollowUps filter logic), /api/dashboard route.ts (admin/telecalling/sales follow-up count queries), /api/leads/[id]/call-logs (auto-complete follow-ups on feedback), /api/leads/[id] PUT (status change), lead-detail.tsx (handleMarkLost)
+   263→   263→- Approach: Filter Lost leads OUT of follow-up queries without deleting/touching existing follow-up rows. This way, if a Lost lead is later revived, its follow-ups remain intact.
+   264→   264→- /api/leads/route.ts: Added `andConditions.push({ pipelineStatus: { not: "Lost" } })` inside both `if (pendingFollowUps)` and `if (todayFollowUps)` blocks. Used andConditions array (not direct where.pipelineStatus) to avoid overwriting any user-selected Pipeline Status multi-select filter.
+   265→   265→- /api/dashboard/route.ts: Updated all 8 follow-up-related Prisma queries across the 3 dashboard functions:
+   266→   266→  * Admin: 2 count queries (todayFollowUps, pendingFollowUps) — added `lead: { pipelineStatus: { not: "Lost" } }`
+   267→   267→  * Telecalling: 3 queries (todayFollowUps count, pendingFollowUps count, pendingFollowUpsList findMany) — added `pipelineStatus: { not: "Lost" }` to the existing `lead: { currentOwnerId: userId }` filter
+   268→   268→  * Sales: 3 queries (todayFollowUps count, pendingFollowUps count, pendingFollowUpsList findMany) — same change as telecalling
+   269→   269→- Build: `npx next build` succeeded with no TypeScript errors.
+   270→   270→- Deploy: Successfully deployed to Vercel production at https://leadsdekho.in
+   271→   271→
+   272→   272→Stage Summary:
+   273→   273→- Lost leads will now be excluded from:
+   274→   274→  * Dashboard "Today's Pending Follow-ups" card count (all 3 dashboards: admin, telecalling, sales)
+   275→   275→  * Dashboard "Pending Follow-ups" count (admin only)
+   276→   276→  * Dashboard pendingFollowUpsList (telecalling + sales dashboard widgets)
+   277→   277→  * Lead Management page when "Follow Up" filter is active (todayFollowUpsFilter)
+   278→   278→  * Lead Management page when "Pending Follow-ups" filter is active (pendingFollowUpsFilter, clicked from admin dashboard)
+   279→   279→- Lost leads still appear in My Leads, Fresh Leads, and all other Lead Management views (no Pipeline Status filter applied there).
+   280→   280→- Lost leads still appear in the Lead Detail page with their follow-up history intact.
+   281→   281→- If a Lost lead is later revived (pipelineStatus changed away from "Lost"), it will automatically re-appear in follow-up views again — no data loss.
+   282→   282→- Deployed to https://leadsdekho.in
+   283→   283→
+   284→   284→
+   285→   285→---
+   286→   286→Task ID: 14
+   287→   287→Agent: Main Agent
+   288→   288→Task: Import lead date fix — when admin imports an old lead file, the lead should take the original date from the source file (not today's date)
+   289→   289→
+   290→   290→Work Log:
+   291→   291→- Root cause: The import route parsed the `date` column from the source file, but only APPENDED it to the lead's `notes` field. The lead's `createdAt` defaulted to today via Prisma `@default(now())`. So a lead that came in 1 month ago but was imported today always showed today's date.
+   292→   292→- Approach: ONLY apply this fix to import — manual lead creation must still use today's date (unchanged). Used the source file's date column (DD.MM.YY format hint in the UI) and set it as the lead's `createdAt`.
+   293→   293→
+   294→   294→Files created:
+   295→   295→- /src/lib/parse-import-date.ts — new helper module. Robust date parser that handles:
+   296→   296→  * DD.MM.YY (e.g. "15.01.24" → 2024-01-15) — Excel-style 2-digit year with cutoff at 30 (00-29 → 2000-2029, 30-99 → 1930-1999)
+   297→   297→  * DD.MM.YYYY / DD-MM-YYYY / DD/MM/YYYY (any separator: . - /)
+   298→   298→  * ISO YYYY-MM-DD / YYYY/MM/DD
+   299→   299→  * Excel serial number (string or numeric) — converts via 1899-12-30 epoch
+   300→   300→  * Date objects (passed through)
+   301→   301→  * Strings with time component (strips the time part)
+   302→   302→  * Returns null for invalid input (e.g. 31.02.2024) so caller can fall back
+   303→   303→  * Uses local-time `new Date(year, month-1, day, 12, 0, 0)` to avoid timezone off-by-one issues
+   304→   304→
+   305→   305→Files modified:
+   306→   306→- /src/app/api/leads/import/confirm/route.ts:
+   307→   307→  * Imported parseImportDate helper
+   308→   308→  * After determining the source/project, call parseImportDate(row.date) to get a Date
+   309→   309→  * Pass it as `createdAt: leadCreatedAt` in db.lead.create() — overrides the default now()
+   310→   310→  * If date is missing or unparseable, fall back to current date/time
+   311→   311→  * If a date was provided but couldn't be parsed, append a note in the lead's notes field: "(Original date format unrecognized, used import timestamp)" — so admin can spot bad data later
+   312→   312→  * Keeps the existing `Import Date: <original>` notes string for audit trail
+   313→   313→
+   314→   314→- /src/app/api/leads/import/route.ts (XLSX parsing):
+   315→   315→  * Changed `sheet_to_json` options from `{defval: ""}` to `{defval: "", raw: false, dateNF: "dd.mm.yyyy"}`
+   316→   316→  * Reason: previously XLSX date cells returned Excel serial numbers like "45658" (useless as a date). With raw:false + dateNF, they come back as formatted strings like "15.01.2024".
+   317→   317→  * Coerced all values to string with .trim() to maintain downstream compatibility
+   318→   318→
+   319→   319→- /src/components/lead-import.tsx (UI):
+   320→   320→  * Changed the Date column from read-only text `<TableCell>{row.date || "—"}</TableCell>` to an editable Input field
+   321→   321→  * Placeholder "DD.MM.YYYY"
+   322→   322→  * Title tooltip explaining supported formats
+   323→   323→  * Width 110px, height 7 (matches other inputs in the table)
+   324→   324→  * User can now fix bad dates BEFORE importing
+   325→   325→
+   326→   326→Build & deploy:
+   327→   327→- Build successful with `npx next build` (no TypeScript errors).
+   328→   328→- Deployed to Vercel production at https://leadsdekho.in
+   329→   329→
+   330→   330→Stage Summary:
+   331→   331→- When admin imports leads from CSV/XLSX, each lead's `createdAt` is now set to the date parsed from the source file's DATE column.
+   332→   332→- A lead that came in 1 month ago but is imported today will show the original date (1 month ago) — not today's date.
+   333→   333→- Manual lead creation (via the Create Lead dialog) is UNAFFECTED — still uses current date.
+   334→   334→- Supported source formats: DD.MM.YY, DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY, YYYY-MM-DD, YYYY/MM/DD, Excel serial numbers.
+   335→   335→- XLSX files now properly extract dates as readable strings (was returning Excel serial numbers).
+   336→   336→- The Date column in the import review table is now editable, so admins can fix bad dates before importing.
+   337→   337→- If the date string is missing or unparseable, the lead falls back to current timestamp with a note flagged in the notes field for audit.
+   338→   338→- Deployed to https://leadsdekho.in
+   339→   339→
+   340→   340→
+   341→   341→---
+   342→   342→Task ID: 15
+   343→   343→Agent: Main Agent
+   344→   344→Task: Portal API leads should NOT go directly to lead dashboard — they should land in admin's Import Lead area where admin can review, assign, set project, set portal, and confirm them into the main lead dashboard
+   345→   345→
+   346→   346→Work Log:
+   347→   347→- Investigated codebase: confirmed no existing portal API; user wants a NEW public endpoint that external portals (Housing.com, MagicBricks, 99acres, etc.) can call to push leads into the system.
+   348→   348→- Designed holding-area pattern: incoming portal leads are stored in a SEPARATE PortalLead table (NOT the Lead table), so they don't pollute the main lead dashboard until admin reviews + confirms them.
+   349→   349→
+   350→   350→Database changes (prisma/schema.prisma):
+   351→   351→- Added new PortalLead model:
+   352→   352→  * Fields: id, name, phone, email, source, budget, notes, projectName, portalRef, rawPayload (JSON for audit), assignedTo, projectId, status, createdAt, updatedAt
+   353→   353→  * Status values: "pending" (default), "confirmed", "discarded"
+   354→   354→  * Indexes: (status, createdAt desc), phone, source
+   355→   355→- Ran `prisma db push` directly against production Postgres to apply schema. PortalLead table now exists in production.
+   356→   356→
+   357→   357→API routes created:
+   358→   358→1. POST /api/portal-leads (PUBLIC — no auth, called by external portals)
+   359→   359→   - Accepts ANY field-name variations (case-insensitive): name/lead_name/customerName, phone/number/mobile/contact, email/mail/mailId, source/portal/lead_source, budget, notes/message/requirement, projectName/project, portalRef/ref/lead_id/external_id
+   360→   360→   - Required: name, phone (returns 400 otherwise)
+   361→   361→   - Deduplication: if same phone + portalRef already in pending queue, returns 409
+   362→   362→   - Stores full raw payload in rawPayload JSON field for audit
+   363→   363→   - Returns { id, status: "pending", message }
+   364→   364→
+   365→   365→2. GET /api/portal-leads (ADMIN only)
+   366→   366→   - Lists portal leads filtered by ?status=pending|confirmed|discarded (default: pending)
+   367→   367→   - Returns { portalLeads[], pendingCount } so UI can show badge
+   368→   368→
+   369→   369→3. POST /api/portal-leads/confirm (ADMIN only)
+   370→   370→   - Body: { leads: [{ id, assignToId?, projectId?, source? }] }
+   371→   371→   - For each portal lead:
+   372→   372→     a) Validates assignee (must be active user) + project (must exist)
+   373→   373→     b) Phone-based duplicate check — if a Lead already exists with this phone, marks the portal lead as confirmed WITHOUT creating a duplicate Lead
+   374→   374→     c) Creates a Lead in main Lead table with chosen assignee/project/source
+   375→   375→     d) Creates timeline event + LeadAssignment record
+   376→   376→     e) Marks the PortalLead as "confirmed" (kept for audit, not deleted)
+   377→   377→   - Returns { confirmed, duplicated, failed, failedDetails }
+   378→   378→
+   379→   379→4. DELETE /api/portal-leads/[id] (ADMIN only)
+   380→   380→   - Default: marks as "discarded" (soft delete, kept for audit)
+   381→   381→   - With ?hard=true: permanently deletes the row
+   382→   382→
+   383→   383→5. PATCH /api/portal-leads/[id] (ADMIN only)
+   384→   384→   - Edit pending portal lead fields before confirming
+   385→   385→
+   386→   386→UI changes:
+   387→   387→- Created new /src/components/portal-leads.tsx — full admin review panel:
+   388→   388→  * Shows the public API endpoint URL with copy-to-clipboard button (so admin can share it with portal integrators)
+   389→   389→  * Filter tabs: pending / confirmed / discarded
+   390→   390→  * Pending view shows a table with all portal leads; each row has dropdowns for Source, Project, Assign To
+   391→   391→  * Bulk-apply bar (like the existing import-lead UI): select-all checkbox, bulk-apply Project/Source/Assignee to selected rows, "Confirm N Leads → Lead Management" button
+   392→   392→  * Per-row discard button (soft delete)
+   393→   393→  * Confirmed/Discarded views show status badge + permanent delete option
+   394→   394→  * Refresh button
+   395→   395→- Modified /src/components/lead-import.tsx to add a TAB switcher at the top:
+   396→   396→  * Tab 1: "Import from File (CSV/XLS)" — existing file-upload workflow (unchanged)
+   397→   397→  * Tab 2: "Portal Leads (API)" — shows the new <PortalLeads /> component
+   398→   398→- Both tabs live under the existing "Import Leads" sidebar menu item — no navigation changes needed
+   399→   399→
+   400→   400→Production testing:
+
+[showing lines 1-400 of 1180; use offset=401 with limit to continue reading]
