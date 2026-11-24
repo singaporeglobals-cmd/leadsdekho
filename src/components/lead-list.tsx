@@ -181,7 +181,7 @@ interface PropertyItem {
 }
 
 export function LeadList() {
-  const { user, setPage, setSelectedLeadId, pendingFollowUpsFilter, setPendingFollowUpsFilter, todayFollowUpsFilter, setTodayFollowUpsFilter, followUpDate, setFollowUpDate } = useAppStore();
+  const { user, setPage, setSelectedLeadId, pendingFollowUpsFilter, setPendingFollowUpsFilter, todayFollowUpsFilter, setTodayFollowUpsFilter, missedFollowUpsFilter, setMissedFollowUpsFilter, followUpDate, setFollowUpDate } = useAppStore();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -342,6 +342,7 @@ export function LeadList() {
         params.set("todayFollowUps", "true");
         if (followUpDate) params.set("followUpDate", followUpDate);
       }
+      if (missedFollowUpsFilter) params.set("missedFollowUps", "true");
       // Only request badge counts on first load or after explicit refresh
       if (!badgesFetched || refresh > 0) {
         params.set("includeBadgeCounts", "true");
@@ -373,7 +374,7 @@ export function LeadList() {
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [debouncedSearch, statusFilter, leadStatusFilter, subStageFilter, sourceFilter, projectFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, pendingFollowUpsFilter, todayFollowUpsFilter, followUpDate, refresh, user?.role, badgesFetched]);
+  }, [debouncedSearch, statusFilter, leadStatusFilter, subStageFilter, sourceFilter, projectFilter, userFilter, dateFrom, dateTo, myLeadsFilter, freshLeadsFilter, pendingFollowUpsFilter, todayFollowUpsFilter, missedFollowUpsFilter, followUpDate, refresh, user?.role, badgesFetched]);
 
   // Fetch users, projects, and lead sources - parallel for speed (properties lazy-loaded on dialog open)
   useEffect(() => {
@@ -793,12 +794,12 @@ export function LeadList() {
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[130px]" placeholder="From" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[130px]" placeholder="To" />
           {/* Clear all filters */}
-          {(statusFilter.length > 0 || leadStatusFilter.length > 0 || subStageFilter.length > 0 || sourceFilter.length > 0 || projectFilter.length > 0 || userFilter.length > 0 || dateFrom || dateTo || myLeadsFilter || freshLeadsFilter || pendingFollowUpsFilter || todayFollowUpsFilter) && (
+          {(statusFilter.length > 0 || leadStatusFilter.length > 0 || subStageFilter.length > 0 || sourceFilter.length > 0 || projectFilter.length > 0 || userFilter.length > 0 || dateFrom || dateTo || myLeadsFilter || freshLeadsFilter || pendingFollowUpsFilter || todayFollowUpsFilter || missedFollowUpsFilter) && (
             <Button
               variant="ghost"
               size="sm"
               className="h-9 text-muted-foreground hover:text-foreground"
-              onClick={() => { setStatusFilter([]); setLeadStatusFilter([]); setSubStageFilter([]); setSourceFilter([]); setProjectFilter([]); setUserFilter([]); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); setMyLeadsFilter(false); setFreshLeadsFilter(false); setPendingFollowUpsFilter(false); setTodayFollowUpsFilter(false); setFollowUpDate(""); }}
+              onClick={() => { setStatusFilter([]); setLeadStatusFilter([]); setSubStageFilter([]); setSourceFilter([]); setProjectFilter([]); setUserFilter([]); setDateFrom(""); setDateTo(""); setSearch(""); setDebouncedSearch(""); setMyLeadsFilter(false); setFreshLeadsFilter(false); setPendingFollowUpsFilter(false); setTodayFollowUpsFilter(false); setMissedFollowUpsFilter(false); setFollowUpDate(""); }}
             >
               <RotateCcw className="mr-1 h-3 w-3" /> Clear
             </Button>
@@ -851,6 +852,7 @@ export function LeadList() {
                 setMyLeadsFilter(false);
                 setFreshLeadsFilter(false);
                 setPendingFollowUpsFilter(false);
+                setMissedFollowUpsFilter(false);
               }
             }}
           >
@@ -866,6 +868,27 @@ export function LeadList() {
               className="h-9 w-[150px]"
             />
           )}
+          {/* Missed Follow-ups quick filter - overdue follow-ups not yet actioned */}
+          <Button
+            variant={missedFollowUpsFilter ? "default" : "outline"}
+            size="sm"
+            className={`h-9 ${missedFollowUpsFilter ? "bg-rose-500 hover:bg-rose-600 text-white" : ""}`}
+            onClick={() => {
+              const newVal = !missedFollowUpsFilter;
+              setMissedFollowUpsFilter(newVal);
+              if (newVal) {
+                // Missed is mutually exclusive with the "Follow Up" (today) date filter
+                setTodayFollowUpsFilter(false);
+                setPendingFollowUpsFilter(false);
+                setMyLeadsFilter(false);
+                setFreshLeadsFilter(false);
+                setFollowUpDate("");
+              }
+            }}
+          >
+            <AlertCircle className="mr-1 h-3 w-3" />
+            Missed Follow-ups
+          </Button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -1119,6 +1142,24 @@ export function LeadList() {
             size="sm"
             className="h-8 text-red-700 hover:text-red-900 dark:text-red-300 dark:hover:text-red-100 hover:bg-red-100 dark:hover:bg-red-900/40"
             onClick={() => setPendingFollowUpsFilter(false)}
+          >
+            <XCircle className="mr-1 h-3.5 w-3.5" /> Clear
+          </Button>
+        </div>
+      )}
+
+      {/* Missed Follow-ups Filter Banner */}
+      {missedFollowUpsFilter && (
+        <div className="flex items-center justify-between rounded-lg border border-rose-200 bg-rose-50 dark:border-rose-900 dark:bg-rose-950/40 px-4 py-2.5">
+          <div className="flex items-center gap-2 text-sm text-rose-700 dark:text-rose-300">
+            <AlertCircle className="h-4 w-4" />
+            <span className="font-medium">Showing leads with overdue (missed) follow-ups — scheduled before today and still pending.</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-rose-700 hover:text-rose-900 dark:text-rose-300 dark:hover:text-rose-100 hover:bg-rose-100 dark:hover:bg-rose-900/40"
+            onClick={() => setMissedFollowUpsFilter(false)}
           >
             <XCircle className="mr-1 h-3.5 w-3.5" /> Clear
           </Button>

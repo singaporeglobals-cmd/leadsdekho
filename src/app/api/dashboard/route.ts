@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { istDayRange, toISTDateString } from "@/lib/timezone";
+import { istDayRange, istStartOfToday, toISTDateString } from "@/lib/timezone";
 
 // GET /api/dashboard
 export async function GET(req: NextRequest) {
@@ -56,6 +56,7 @@ async function getAdminDashboard(combinedFilter: { createdAt?: { gte?: Date; lte
     pendingFollowUps,
     totalProjects,
     bookedCount,
+    missedFollowUps,
   ] = await Promise.all([
     db.lead.count({ where: combinedFilter }),
     db.lead.groupBy({ by: ["pipelineStatus"], where: combinedFilter, _count: true }),
@@ -114,6 +115,15 @@ async function getAdminDashboard(combinedFilter: { createdAt?: { gte?: Date; lte
     db.lead.count({
       where: { leadStatus: "Booked", ...combinedFilter },
     }),
+    // Missed follow-ups: pending & scheduled before start of today IST (overdue,
+    // never actioned). LOST leads excluded.
+    db.followUp.count({
+      where: {
+        lead: { pipelineStatus: { not: "Lost" } },
+        completed: false,
+        scheduledAt: { lt: istStartOfToday() },
+      },
+    }),
   ]);
 
   const statusCounts: Record<string, number> = {};
@@ -139,6 +149,7 @@ async function getAdminDashboard(combinedFilter: { createdAt?: { gte?: Date; lte
     pendingFollowUps,
     totalProjects,
     bookedCount,
+    missedFollowUps,
   });
 }
 
@@ -163,6 +174,7 @@ async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?:
     myCallLogsCount,
     allLeads,
     recentCallLogs,
+    missedFollowUps,
   ] = await Promise.all([
     db.lead.count({ where: userWhere }),
     db.lead.groupBy({
@@ -205,6 +217,14 @@ async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?:
       orderBy: { createdAt: "desc" },
       include: { lead: { select: { id: true, name: true } } },
     }),
+    // Missed follow-ups: pending & scheduled before start of today IST.
+    db.followUp.count({
+      where: {
+        lead: followUpLeadFilter,
+        completed: false,
+        scheduledAt: { lt: istStartOfToday() },
+      },
+    }),
   ]);
 
   const statusCounts: Record<string, number> = {};
@@ -222,6 +242,7 @@ async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?:
     pendingFollowUpsList,
     myCallLogsCount,
     recentCallLogs,
+    missedFollowUps,
   });
 }
 
@@ -245,6 +266,7 @@ async function getSalesDashboard(userId: string, dateFilter: { createdAt?: { gte
     pendingFollowUps,
     pendingFollowUpsList,
     bookedCount,
+    missedFollowUps,
   ] = await Promise.all([
     db.lead.count({
       where: userWhere,
@@ -311,6 +333,14 @@ async function getSalesDashboard(userId: string, dateFilter: { createdAt?: { gte
         ...dateFilter,
       },
     }),
+    // Missed follow-ups: pending & scheduled before start of today IST.
+    db.followUp.count({
+      where: {
+        lead: followUpLeadFilter,
+        completed: false,
+        scheduledAt: { lt: istStartOfToday() },
+      },
+    }),
   ]);
 
   const statusCounts: Record<string, number> = {};
@@ -329,5 +359,6 @@ async function getSalesDashboard(userId: string, dateFilter: { createdAt?: { gte
     todayFollowUps,
     pendingFollowUps,
     pendingFollowUpsList,
+    missedFollowUps,
   });
 }

@@ -55,6 +55,7 @@ interface AppState {
   // Lead list cross-page filters
   pendingFollowUpsFilter: boolean;
   todayFollowUpsFilter: boolean;
+  missedFollowUpsFilter: boolean;
   followUpDate: string; // YYYY-MM-DD for follow-up filter
 
   // Blog (selected slug for blog-detail page)
@@ -70,6 +71,7 @@ interface AppState {
   setSidebarOpen: (open: boolean) => void;
   setPendingFollowUpsFilter: (v: boolean) => void;
   setTodayFollowUpsFilter: (v: boolean) => void;
+  setMissedFollowUpsFilter: (v: boolean) => void;
   setFollowUpDate: (date: string) => void;
   setSelectedBlogSlug: (slug: string | null) => void;
 }
@@ -83,6 +85,7 @@ export const useAppStore = create<AppState>((set) => ({
   sidebarOpen: true,
   pendingFollowUpsFilter: false,
   todayFollowUpsFilter: false,
+  missedFollowUpsFilter: false,
   followUpDate: "",
   selectedBlogSlug: null,
 
@@ -92,6 +95,7 @@ export const useAppStore = create<AppState>((set) => ({
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   setPendingFollowUpsFilter: (v) => set({ pendingFollowUpsFilter: v }),
   setTodayFollowUpsFilter: (v) => set({ todayFollowUpsFilter: v }),
+  setMissedFollowUpsFilter: (v) => set({ missedFollowUpsFilter: v }),
   setFollowUpDate: (date) => set({ followUpDate: date }),
   setSelectedBlogSlug: (slug) => set({ selectedBlogSlug: slug }),
 
@@ -140,7 +144,7 @@ export const useAppStore = create<AppState>((set) => ({
     } catch {
       // ignore
     }
-    set({ user: null, isAuthenticated: false, currentPage: "landing", selectedLeadId: null, pendingFollowUpsFilter: false, todayFollowUpsFilter: false, followUpDate: "" });
+    set({ user: null, isAuthenticated: false, currentPage: "landing", selectedLeadId: null, pendingFollowUpsFilter: false, todayFollowUpsFilter: false, missedFollowUpsFilter: false, followUpDate: "" });
   },
 
   checkAuth: async () => {

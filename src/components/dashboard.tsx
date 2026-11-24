@@ -59,7 +59,7 @@ function generateMonthOptions() {
 }
 
 export function AdminDashboard() {
-  const { setPage, setTodayFollowUpsFilter, setFollowUpDate, user } = useAppStore();
+  const { setPage, setTodayFollowUpsFilter, setMissedFollowUpsFilter, setFollowUpDate, user } = useAppStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState("all");
@@ -258,6 +258,30 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
+        <Card
+          className="border-l-4 border-l-rose-500 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => {
+            setMissedFollowUpsFilter(true);
+            setTodayFollowUpsFilter(false);
+            setFollowUpDate("");
+            setPage("leads");
+          }}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Missed Follow-ups</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {data.missedFollowUps as number}
+                </p>
+              </div>
+              <div className="rounded-lg bg-rose-50 dark:bg-rose-950 p-3">
+                <AlertCircle className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="border-l-4 border-l-cyan-500">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -445,7 +469,7 @@ export function AdminDashboard() {
 }
 
 export function TelecallingDashboard() {
-  const { setPage, setTodayFollowUpsFilter, setFollowUpDate } = useAppStore();
+  const { setPage, setTodayFollowUpsFilter, setMissedFollowUpsFilter, setFollowUpDate } = useAppStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -475,6 +499,7 @@ export function TelecallingDashboard() {
   const statusCounts = (data.statusCounts || {}) as Record<string, number>;
   const todayFollowUps = (data.todayFollowUps || 0) as number;
   const pendingFollowUps = (data.pendingFollowUps || 0) as number;
+  const missedFollowUps = (data.missedFollowUps || 0) as number;
   const pendingFollowUpsList = (data.pendingFollowUpsList || []) as Array<{
     id: string;
     scheduledAt: string;
@@ -558,6 +583,30 @@ export function TelecallingDashboard() {
               </div>
               <div className="rounded-lg bg-red-50 dark:bg-red-950 p-3">
                 <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="border-l-4 border-l-rose-500 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => {
+            setMissedFollowUpsFilter(true);
+            setTodayFollowUpsFilter(false);
+            setFollowUpDate("");
+            setPage("leads");
+          }}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Missed Follow-ups</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {missedFollowUps}
+                </p>
+              </div>
+              <div className="rounded-lg bg-rose-50 dark:bg-rose-950 p-3">
+                <AlertCircle className="h-5 w-5 text-rose-600 dark:text-rose-400" />
               </div>
             </div>
           </CardContent>
@@ -704,7 +753,7 @@ export function TelecallingDashboard() {
 }
 
 export function SalesDashboard() {
-  const { setPage, setTodayFollowUpsFilter, setFollowUpDate } = useAppStore();
+  const { setPage, setTodayFollowUpsFilter, setMissedFollowUpsFilter, setFollowUpDate } = useAppStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -742,6 +791,7 @@ export function SalesDashboard() {
   }>;
   const todayFollowUps = (data.todayFollowUps || 0) as number;
   const pendingFollowUps = (data.pendingFollowUps || 0) as number;
+  const missedFollowUps = (data.missedFollowUps || 0) as number;
   const pendingFollowUpsList = (data.pendingFollowUpsList || []) as Array<{
     id: string;
     scheduledAt: string;
@@ -802,6 +852,30 @@ export function SalesDashboard() {
               </div>
               <div className="rounded-lg bg-red-50 dark:bg-red-950 p-3">
                 <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="border-l-4 border-l-rose-500 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => {
+            setMissedFollowUpsFilter(true);
+            setTodayFollowUpsFilter(false);
+            setFollowUpDate("");
+            setPage("leads");
+          }}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Missed Follow-ups</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {missedFollowUps}
+                </p>
+              </div>
+              <div className="rounded-lg bg-rose-50 dark:bg-rose-950 p-3">
+                <AlertCircle className="h-5 w-5 text-rose-600 dark:text-rose-400" />
               </div>
             </div>
           </CardContent>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { istDayRange, toISTDateString } from "@/lib/timezone";
+import { istDayRange, istStartOfToday, toISTDateString } from "@/lib/timezone";
 
 // GET /api/leads - List leads with role-based filtering
 export async function GET(req: NextRequest) {
@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
   const fresh = searchParams.get("fresh") === "true";
   const pendingFollowUps = searchParams.get("pendingFollowUps") === "true";
   const todayFollowUps = searchParams.get("todayFollowUps") === "true";
+  const missedFollowUps = searchParams.get("missedFollowUps") === "true";
   const followUpDate = searchParams.get("followUpDate"); // YYYY-MM-DD
   const dateFrom = searchParams.get("dateFrom") || searchParams.get("from");
   const dateTo = searchParams.get("dateTo") || searchParams.get("to");
@@ -130,6 +131,25 @@ export async function GET(req: NextRequest) {
       some: {
         completed: false,
         scheduledAt: { gte: startOfDay, lte: endOfDay },
+      },
+    };
+    andConditions.push({ pipelineStatus: { not: "Lost" } });
+    if (user.role === "telecalling" || user.role === "sales") {
+      where.currentOwnerId = user.id;
+      delete where.OR;
+    }
+  }
+
+  // Missed Follow-ups - leads with at least one pending follow-up whose
+  // scheduled IST day has already passed (scheduledAt < start of today IST).
+  // These are overdue reminders that were never actioned. Mutually exclusive
+  // with the "Today" bucket (which covers scheduledAt within today IST).
+  // Same ownership/visibility rules as pendingFollowUps; LOST leads excluded.
+  if (missedFollowUps) {
+    where.followUps = {
+      some: {
+        completed: false,
+        scheduledAt: { lt: istStartOfToday() },
       },
     };
     andConditions.push({ pipelineStatus: { not: "Lost" } });

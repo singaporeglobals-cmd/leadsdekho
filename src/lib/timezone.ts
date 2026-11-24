@@ -46,6 +46,12 @@ export function istDayRange(dateStr: string): { start: Date; end: Date } {
   return { start, end };
 }
 
+/** UTC Date for the start of "today" in IST (00:00:00.000 IST). */
+export function istStartOfToday(): Date {
+  const { year, month, day } = toISTParts(new Date());
+  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) - IST_OFFSET_MS);
+}
+
 /** UTC Date for the end of "today" in IST (23:59:59.999 IST). */
 export function istEndOfToday(): Date {
   const { year, month, day } = toISTParts(new Date());
