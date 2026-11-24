@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useAppStore, isAdminRole } from "@/lib/store";
 import { getSubStagesForStatus } from "@/lib/lead-sub-stages";
+import { toISTDateString, toISTDateTimeLocalString } from "@/lib/timezone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -251,7 +252,7 @@ export function LeadList() {
   }>({
     notes: "",
     callType: "Feedback",
-    callDate: new Date().toISOString().slice(0, 16),
+    callDate: toISTDateTimeLocalString(new Date()),
     assignTo: "",
     followUpDate: "",
     dropLead: false,
@@ -346,7 +347,7 @@ export function LeadList() {
         params.set("includeBadgeCounts", "true");
       }
 
-      const res = await fetch(`/api/leads?${params.toString()}`);
+      const res = await fetch(`/api/leads?${params.toString()}`, { cache: "no-store" });
       if (!cancelled && res.ok) {
         const data = await res.json();
         let leadsData: Lead[] = data.leads || [];
@@ -522,7 +523,7 @@ export function LeadList() {
       setFeedbackForm({
         notes: "",
         callType: "Feedback",
-        callDate: new Date().toISOString().slice(0, 16),
+        callDate: toISTDateTimeLocalString(new Date()),
         assignTo: "",
         followUpDate: "",
         dropLead: false,
@@ -665,7 +666,7 @@ export function LeadList() {
     setFeedbackForm({
       notes: "",
       callType: "Feedback",
-      callDate: new Date().toISOString().slice(0, 16),
+      callDate: toISTDateTimeLocalString(new Date()),
       assignTo: "",
       followUpDate: "",
       dropLead: false,
@@ -846,7 +847,7 @@ export function LeadList() {
               setTodayFollowUpsFilter(newVal);
               if (newVal) {
                 // Default to today when first activated
-                if (!followUpDate) setFollowUpDate(new Date().toISOString().split("T")[0]);
+                if (!followUpDate) setFollowUpDate(toISTDateString(new Date()));
                 setMyLeadsFilter(false);
                 setFreshLeadsFilter(false);
                 setPendingFollowUpsFilter(false);
@@ -1345,7 +1346,7 @@ export function LeadList() {
                         setFeedbackForm({
                           notes: "",
                           callType: "Follow-up",
-                          callDate: new Date().toISOString().slice(0, 16),
+                          callDate: toISTDateTimeLocalString(new Date()),
                           assignTo: "",
                           followUpDate: "",
                           dropLead: false,
@@ -1415,7 +1416,7 @@ export function LeadList() {
                               setFeedbackForm({
                                 notes: "",
                                 callType: "Follow-up",
-                                callDate: new Date().toISOString().slice(0, 16),
+                                callDate: toISTDateTimeLocalString(new Date()),
                                 assignTo: "",
                                 followUpDate: "",
                                 dropLead: false,

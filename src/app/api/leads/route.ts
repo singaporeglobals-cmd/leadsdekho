@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { istDayRange, toISTDateString } from "@/lib/timezone";
 
 // GET /api/leads - List leads with role-based filtering
 export async function GET(req: NextRequest) {
@@ -117,11 +118,13 @@ export async function GET(req: NextRequest) {
   // only restrict by CURRENT lead ownership for telecalling/sales.
   // LOST leads are EXCLUDED from follow-up views.
   if (todayFollowUps) {
-    const targetDate = followUpDate ? new Date(followUpDate) : new Date();
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Follow-ups are stored as absolute UTC instants (created from IST
+    // wall-clock via parseISTDateTimeLocal). Filter by the IST calendar day of
+    // the selected date so a follow-up set for "Nov 24 9 PM IST" still appears
+    // when the user filters "Nov 24" — regardless of the server's UTC TZ.
+    const { start: startOfDay, end: endOfDay } = istDayRange(
+      followUpDate || toISTDateString(new Date())
+    );
 
     where.followUps = {
       some: {
@@ -269,10 +272,11 @@ export async function GET(req: NextRequest) {
   const myLeadsCount = includeBadgeCounts ? counts[1] : undefined;
   const freshLeadsCount = includeBadgeCounts ? counts[2] : undefined;
 
-  // Set Cache-Control header so the browser can reuse the response for same-session navigations
-  // (60s stale-while-revalidate). Auth handled per-request via cookie so this is safe.
+  // no-store: the leads list changes whenever follow-ups / feedback are added,
+  // and stale-while-revalidate hid newly-scheduled follow-ups when the same
+  // filter URL was re-fetched within the stale window.
   const res = NextResponse.json({ leads, total, page, limit, myLeadsCount, freshLeadsCount });
-  res.headers.set("Cache-Control", "private, max-age=0, stale-while-revalidate=60");
+  res.headers.set("Cache-Control", "no-store");
   return res;
 }
 

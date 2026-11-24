@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/lib/store";
+import { toISTDateTimeLocalString } from "@/lib/timezone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1246,7 +1247,7 @@ function FollowUpForm({
   onSubmit: (scheduledAt: string, notes: string) => void;
 }) {
   const [scheduledAt, setScheduledAt] = useState(
-    new Date().toISOString().slice(0, 16)
+    toISTDateTimeLocalString(new Date())
   );
   const [notes, setNotes] = useState("");
 
@@ -1285,7 +1286,7 @@ function SiteVisitForm({
   onSubmit: (scheduledAt: string, notes: string) => void;
 }) {
   const [scheduledAt, setScheduledAt] = useState(
-    new Date(Date.now() + 86400000).toISOString().slice(0, 16)
+    toISTDateTimeLocalString(new Date(Date.now() + 86400000))
   );
   const [notes, setNotes] = useState("");
 

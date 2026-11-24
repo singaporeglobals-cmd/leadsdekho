@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { istDayRange, toISTDateString } from "@/lib/timezone";
 
 // GET /api/dashboard
 export async function GET(req: NextRequest) {
@@ -39,11 +40,9 @@ export async function GET(req: NextRequest) {
 }
 
 async function getAdminDashboard(combinedFilter: { createdAt?: { gte?: Date; lte?: Date }; currentOwnerId?: { in: string[] } }, dateFilter: { createdAt?: { gte?: Date; lte?: Date } }) {
-  // Compute today's follow-up window once
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date();
-  todayEnd.setHours(23, 59, 59, 999);
+  // Compute today's follow-up window once — using the IST calendar day so the
+  // count matches what the user sees in the Leads "Follow Up" filter.
+  const { start: todayStart, end: todayEnd } = istDayRange(toISTDateString(new Date()));
 
   const [
     totalLeads,
@@ -177,8 +176,8 @@ async function getTelecallingDashboard(userId: string, dateFilter: { createdAt?:
       where: {
         lead: followUpLeadFilter,
         scheduledAt: {
-          gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          lte: new Date(new Date().setHours(23, 59, 59, 999)),
+          gte: istDayRange(toISTDateString(new Date())).start,
+          lte: istDayRange(toISTDateString(new Date())).end,
         },
         completed: false,
       },
@@ -284,8 +283,8 @@ async function getSalesDashboard(userId: string, dateFilter: { createdAt?: { gte
       where: {
         lead: followUpLeadFilter,
         scheduledAt: {
-          gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          lte: new Date(new Date().setHours(23, 59, 59, 999)),
+          gte: istDayRange(toISTDateString(new Date())).start,
+          lte: istDayRange(toISTDateString(new Date())).end,
         },
         completed: false,
       },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { parseISTDateTimeLocal } from "@/lib/timezone";
 
 // GET /api/leads/[id]/follow-ups
 export async function GET(
@@ -38,14 +39,16 @@ export async function POST(
   const lead = await db.lead.findUnique({ where: { id } });
   if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
 
-  // Auto-complete any previously pending follow-ups for this lead so that
-  // only the NEWLY scheduled follow-up shows up as the next upcoming one.
-  // Otherwise editing feedback and setting a new date leaves the old (earlier)
-  // follow-up still pending, and the lead list UI shows the OLD date.
+  // Auto-complete only follow-ups that are already DUE (past/now) so that
+  // scheduling a new follow-up does NOT silently delete an existing FUTURE
+  // follow-up scheduled for a different date. Previously this completed ALL
+  // pending follow-ups, which made a lead vanish from a future date's
+  // "Follow Up" filter as soon as any new follow-up was added.
   await db.followUp.updateMany({
     where: {
       leadId: id,
       completed: false,
+      scheduledAt: { lte: new Date() },
     },
     data: {
       completed: true,
@@ -53,11 +56,14 @@ export async function POST(
     },
   });
 
+  // scheduledAt comes from a <input type="datetime-local"> which has NO tz
+  // offset. All users are in IST, so parse it as IST (+05:30) to get the
+  // correct absolute UTC moment regardless of the server's TZ (Vercel = UTC).
   const followUp = await db.followUp.create({
     data: {
       leadId: id,
       userId: user.id,
-      scheduledAt: new Date(scheduledAt),
+      scheduledAt: parseISTDateTimeLocal(scheduledAt),
       notes,
     },
     include: { user: { select: { id: true, name: true } } },
@@ -68,7 +74,7 @@ export async function POST(
       leadId: id,
       userId: user.id,
       eventType: "FollowUpScheduled",
-      description: `Follow-up scheduled for ${new Date(scheduledAt).toLocaleString()}`,
+      description: `Follow-up scheduled for ${parseISTDateTimeLocal(scheduledAt).toLocaleString()}`,
     },
   });
 

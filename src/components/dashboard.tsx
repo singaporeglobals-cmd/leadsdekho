@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/lib/store";
+import { toISTDateString } from "@/lib/timezone";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Users,
@@ -238,7 +239,7 @@ export function AdminDashboard() {
           className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => {
             setTodayFollowUpsFilter(true);
-            setFollowUpDate(new Date().toISOString().split("T")[0]);
+            setFollowUpDate(toISTDateString(new Date()));
             setPage("leads");
           }}
         >
@@ -543,7 +544,7 @@ export function TelecallingDashboard() {
           className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => {
             setTodayFollowUpsFilter(true);
-            setFollowUpDate(new Date().toISOString().split("T")[0]);
+            setFollowUpDate(toISTDateString(new Date()));
             setPage("leads");
           }}
         >
@@ -624,7 +625,7 @@ export function TelecallingDashboard() {
               className="text-brand"
               onClick={() => {
                 setTodayFollowUpsFilter(true);
-                setFollowUpDate(new Date().toISOString().split("T")[0]);
+                setFollowUpDate(toISTDateString(new Date()));
                 setPage("leads");
               }}
             >
@@ -787,7 +788,7 @@ export function SalesDashboard() {
           className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => {
             setTodayFollowUpsFilter(true);
-            setFollowUpDate(new Date().toISOString().split("T")[0]);
+            setFollowUpDate(toISTDateString(new Date()));
             setPage("leads");
           }}
         >
@@ -885,7 +886,7 @@ export function SalesDashboard() {
               className="text-brand"
               onClick={() => {
                 setTodayFollowUpsFilter(true);
-                setFollowUpDate(new Date().toISOString().split("T")[0]);
+                setFollowUpDate(toISTDateString(new Date()));
                 setPage("leads");
               }}
             >

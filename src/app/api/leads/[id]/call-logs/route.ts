@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { isValidSubStage } from "@/lib/lead-sub-stages";
+import { istEndOfToday, parseISTDateTimeLocal } from "@/lib/timezone";
 
 // GET /api/leads/[id]/call-logs
 export async function GET(
@@ -74,7 +75,8 @@ export async function POST(
       notes,
       callType: callType || "Feedback",
       subStage: subStage || null,
-      callDate: callDate ? new Date(callDate) : new Date(),
+      // callDate comes from a datetime-local input (no tz offset). Parse as IST.
+      callDate: callDate ? parseISTDateTimeLocal(callDate) : new Date(),
     },
     include: { user: { select: { id: true, name: true } } },
   });
@@ -140,10 +142,12 @@ export async function POST(
     },
   });
 
-  // Auto-complete pending follow-ups for this lead that are due today or earlier
-  // This makes leads disappear from "Today's Follow-ups" filter once feedback is given
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
+  // Auto-complete pending follow-ups for this lead that are due today or
+  // earlier IN IST. Uses the IST end-of-today boundary (not the server's UTC
+  // day) so a follow-up set for "today evening IST" is not wrongly completed
+  // when feedback is logged earlier the same IST day, and a future IST-evening
+  // follow-up is not caught by a UTC-day rollover.
+  const today = istEndOfToday();
   const pendingFollowUps = await db.followUp.findMany({
     where: {
       leadId: id,
